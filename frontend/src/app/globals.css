@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+/* ==========================
+   Theme Variables
+========================== */
+:root {
+  --color-brand-bg: #2d1654;
+  /* Deep purple background */
+  --color-brand-purple: #5b2b9c;
+  /* Vibrant purple (from the icon bubble) */
+  --color-brand-orange: #ff5733;
+  /* High-visibility coral orange for primary actions */
+
+  /* Semantic UI Application */
+  --color-primary: var(--color-brand-purple);
+  --color-accent: var(--color-brand-orange);
+
+  /* UI & Surface Layers */
+  /* For a transit app, you'll need a light mode for daytime map viewing, 
+     but these tokens support the dark aesthetic perfectly */
+  --color-background: #1e0d3a;
+  --color-surface: #2d1654;
+  --color-surface-hover: #3d206e;
+  --color-surface-border: #4a2983;
+
+  /* Text & Typography (Ensuring strict AA/AAA contrast ratios) */
+  --color-text-primary: #ffffff;
+  --color-text-muted: #cbd5e1;
+  /* Soft grey-purple for secondary text/labels */
+  --color-text-on-accent: #ffffff;
+
+  /* Transit-Specific Status Colors */
+  /* Tuned to stand out clearly against a deep purple canvas */
+  --color-status-on-time: #10b981;
+  /* Emerald Green */
+  --color-status-delay: #f59e0b;
+  /* Amber Orange */
+  --color-status-alert: #ef4444;
+  /* Fonts */
+  --font-primary: "Poppins", sans-serif;
+  --font-secondary: "Inter", sans-serif;
+}
+
+/* ==========================
+   Tailwind Theme Mapping
+========================== */
+@theme inline {
+  --color-primary: var(--color-primary);
+  --color-secondary: var(--color-secondary);
+  --color-accent: var(--color-accent);
+
+  --color-background: var(--color-background);
+  --color-surface: var(--color-surface);
+
+  --color-text: var(--color-text);
+  --color-text-light: var(--color-text-light);
+
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-error: var(--color-error);
+
+  --font-sans: var(--font-primary);
+}
+
+/* ==========================
+   Base Styles
+========================== */
+body {
+  background-color: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-primary);
+}
