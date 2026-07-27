@@ -1,15 +1,16 @@
+require('dotenv').config();
 const express = require('express');
-const app = express();
+const cors = require('cors');
+const connectDB = require('./config/db');
 
-// Middleware to parse JSON bodies
+const app = express();
+connectDB();
+
+app.use(cors());
 app.use(express.json());
 
-// Test route
 app.get('/', (req, res) => {
-  res.send('Server is running!');
-});
-app.get('/about', (req, res) => {
-  res.send('Server is running at about us !');
+  res.json({ message: 'Smart Public Transit Tracking System API is running' });
 });
 
 const PORT = process.env.PORT || 5000;
