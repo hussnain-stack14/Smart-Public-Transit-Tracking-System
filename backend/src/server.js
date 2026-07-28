@@ -13,7 +13,13 @@ app.get('/', (req, res) => {
   res.json({ message: 'Smart Public Transit Tracking System API is running' });
 });
 
+app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/routes', require('./routes/routeRoutes'));
+app.use('/api/stops', require('./routes/stopRoutes'));
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+
