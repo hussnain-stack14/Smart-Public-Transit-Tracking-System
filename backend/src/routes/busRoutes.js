@@ -20,3 +20,5 @@ router.put('/:id', protect, authorize('admin'), updateBus);
 router.delete('/:id', protect, authorize('admin'), deleteBus);
 
 module.exports = router;
+
+//ok
