@@ -10,7 +10,7 @@ const createRoute = async (req, res) => {
           message: " Route name, start point, and end point are required.",
         });
     }
-    const newRoute = new Route({
+    const newRoute = await Route.create({
       routeName,
       startPoint,
       endPoint,
@@ -45,14 +45,14 @@ const getRouteById = async (req, res) => {
 
 const updateRoute = async (req, res) => {
   try {
-    const Route = await Route.findByIdAndUpdate(req.params.id, req.body, {
+    const updatedRoute = await Route.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true,
     });
-    if (!Route) {
+    if (!updatedRoute) {
       return res.status(404).json({ message: "Route not found" });
     }
-    res.status(200).json(Route);
+    res.status(200).json(updatedRoute);
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
