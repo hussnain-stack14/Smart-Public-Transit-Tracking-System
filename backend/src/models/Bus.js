@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const busSchema = new mongoose.Schema(
   {
@@ -10,12 +10,12 @@ const busSchema = new mongoose.Schema(
     },
     route: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Route',
+      ref: "Route",
       required: true,
     },
     driver: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       default: null,
     },
     capacity: {
@@ -36,8 +36,8 @@ const busSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['active', 'idle', 'maintenance'],
-      default: 'idle',
+      enum: ["active", "idle", "maintenance"],
+      default: "idle",
     },
     trustScore: {
       score: { type: Number, default: 0 },
@@ -58,9 +58,9 @@ const busSchema = new mongoose.Schema(
       default: [],
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 busSchema.index({ route: 1 });
 
-module.exports = mongoose.model('Bus', busSchema);
+module.exports = mongoose.model("Bus", busSchema);

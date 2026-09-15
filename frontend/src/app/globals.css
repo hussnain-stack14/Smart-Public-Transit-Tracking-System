@@ -1,0 +1,46 @@
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+:root {
+  --background: #f5f8f7;
+  --foreground: #17332d;
+  --primary: #087f5b;
+  --primary-dark: #056044;
+  --card: #ffffff;
+  --border: #dce9e4;
+  --muted: #6b827b;
+  --success: #16845b;
+  --warning: #b97812;
+  --danger: #c94747;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+::selection {
+  background: #bce8d7;
+  color: var(--primary-dark);
+}
+
+.leaflet-container {
+  min-height: 18rem;
+  width: 100%;
+  z-index: 0;
+}

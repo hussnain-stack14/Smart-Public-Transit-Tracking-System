@@ -1,0 +1,20 @@
+"use client";
+
+import { MapContainer as LeafletMap, TileLayer } from "react-leaflet";
+import { useEffect } from "react";
+import { useMap } from "react-leaflet";
+
+export function TransitMap({ center = [31.4187, 73.0791], zoom = 12, children, className = "", onReady, onLoad }) {
+  return <LeafletMap center={center} zoom={zoom} className={className} scrollWheelZoom>
+    <TileLayer attribution='&copy; OpenStreetMap contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+    {(onReady || onLoad) && <MapReady onReady={onReady || onLoad} />}
+    {children}
+  </LeafletMap>;
+}
+
+function MapReady({ onReady }) {
+  const map = useMap();
+
+  useEffect(() => onReady(map), [map, onReady]);
+  return null;
+}
