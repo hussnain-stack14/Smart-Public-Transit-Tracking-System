@@ -10,6 +10,7 @@ const links = [
   { label: "Home", href: "/" },
   { label: "Live Map", href: "/live-map" },
   { label: "Routes", href: "/routes" },
+  { label: "Booking", href: "/booking" },
   { label: "My Trips", href: "/my-trips" },
 ];
 

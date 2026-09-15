@@ -139,7 +139,7 @@ export default function BusDetailsPage({ busId }) {
 }
 
 function StatusCard({ label, value, icon: Icon }) {
-  return <Card className="p-4"><div className="flex items-start gap-3"><span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e4f5ed] text-[var(--primary)]"><Icon size={17} /></span><div className="min-w-0"><p className="text-xs text-[var(--muted)]">{label}</p><p className="mt-1 truncate font-bold text-[var(--foreground)]">{value}</p></div></div></Card>;
+  return <Card className="p-4"><div className="flex items-start gap-3"><span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e4f5ed] text-[var(--primary)]"><Icon size={17} /></span><div className="min-w-0"><p className="text-xs text-[var(--muted)]">{label}</p><p className="mt-1 truncate font-bold text-[var(--foreground)]">{value}</p>{label === "Seat availability" && <Link href="/booking" className="mt-2 inline-flex text-xs font-semibold text-[var(--primary)] hover:text-[var(--primary-dark)]">Reserve a seat <ArrowRight size={13} /></Link>}</div></div></Card>;
 }
 
 function DetailRow({ label, value }) {

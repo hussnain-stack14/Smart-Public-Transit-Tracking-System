@@ -44,3 +44,25 @@ textarea {
   width: 100%;
   z-index: 0;
 }
+
+.field-input {
+  min-height: 2.75rem;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: white;
+  padding: 0.75rem 0.875rem;
+  color: var(--foreground);
+  outline: none;
+}
+
+.field-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px #d8f1e6;
+}
+
+.field-input:disabled {
+  cursor: not-allowed;
+  background: #f5f8f7;
+  color: var(--muted);
+}
