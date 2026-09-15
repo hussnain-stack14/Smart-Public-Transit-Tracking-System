@@ -14,6 +14,11 @@ export async function register(credentials) {
   return data;
 }
 
+export async function getProfile() {
+  const { data } = await api.get(`${API_PATHS.auth}/profile`);
+  return data;
+}
+
 export async function loginDriver(credentials) {
   return login({ ...credentials, role: "driver" });
 }
