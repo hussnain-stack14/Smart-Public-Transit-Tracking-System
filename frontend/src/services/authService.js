@@ -8,6 +8,12 @@ export async function login(credentials) {
   return data;
 }
 
+export async function register(credentials) {
+  const { data } = await api.post(`${API_PATHS.auth}/register`, credentials);
+  if (data.token || data.accessToken) setAccessToken(data.token || data.accessToken);
+  return data;
+}
+
 export async function loginDriver(credentials) {
   return login({ ...credentials, role: "driver" });
 }
