@@ -53,4 +53,7 @@ const startServer = async () => {
   });
 };
 
-startServer();
+if (require.main === module) startServer();
+
+// Tests can use the actual app and Socket.IO server with an isolated database.
+module.exports = { app, server, io, startServer };

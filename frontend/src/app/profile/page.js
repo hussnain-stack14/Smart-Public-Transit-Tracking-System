@@ -1,0 +1,6 @@
+"use client";
+import { Navbar } from "../../components/navigation/Navbar";
+import { Footer } from "../../components/navigation/Footer";
+import { ProtectedPage } from "../../components/common/ProtectedPage";
+export default function ProfilePage() { return <div className="min-h-screen bg-[var(--background)]"><Navbar /><main className="mx-auto max-w-3xl px-4 py-8"><ProtectedPage>{(user) => <section className="rounded-2xl border border-[var(--border)] bg-white p-6 shadow-sm"><p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--primary)]">Account</p><h1 className="mt-2 text-3xl font-bold">Profile</h1><dl className="mt-7 grid gap-5 border-t border-[var(--border)] pt-5 sm:grid-cols-2"><Item label="Name" value={user.name} /><Item label="Email" value={user.email} /><Item label="Phone" value={user.phone || "Not provided"} /><Item label="Role" value={user.role} /></dl><p className="mt-6 text-sm text-[var(--muted)]">Profile changes are not available because the backend currently provides a read-only profile endpoint.</p></section>}</ProtectedPage></main><Footer /></div>; }
+function Item({ label, value }) { return <div><dt className="text-sm text-[var(--muted)]">{label}</dt><dd className="mt-1 font-semibold capitalize">{value}</dd></div>; }

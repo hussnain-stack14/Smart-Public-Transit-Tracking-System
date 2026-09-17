@@ -11,7 +11,7 @@ import { Button } from "../common/Button";
 import { Card } from "../common/Card";
 import { Input } from "../common/Input";
 import { useAuth } from "../../hooks/useAuth";
-import { login } from "../../services/authService";
+import { getRoleHome, login } from "../../services/authService";
 
 const loginSchema = z.object({
   email: z.string().trim().email("Enter a valid email address."),
@@ -26,6 +26,7 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const [hasSubmittedLogin, setHasSubmittedLogin] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -33,18 +34,19 @@ export default function LoginPage() {
   const redirectTo = safeRedirect(searchParams.get("redirect"));
 
   useEffect(() => {
-    if (!authLoading && isAuthenticated) router.replace(redirectTo);
-  }, [authLoading, isAuthenticated, redirectTo, router]);
+    if (!authLoading && isAuthenticated && !hasSubmittedLogin) router.replace(redirectTo);
+  }, [authLoading, hasSubmittedLogin, isAuthenticated, redirectTo, router]);
 
   async function handleLogin(values) {
+    setHasSubmittedLogin(true);
     setSubmitting(true);
     setServerError("");
     try {
-      await login(values);
-      router.replace(redirectTo);
+      const user = await login(values);
+      router.replace(getRoleHome(user.role, redirectTo));
     } catch (error) {
-      const message = error.response?.data?.message;
-      setServerError(message === "User not found" || message === "Invalid credentials" ? "Invalid email or password." : "Unable to sign in. Please try again.");
+      setHasSubmittedLogin(false);
+      setServerError(error.response?.data?.message || "Unable to sign in. Please try again.");
     } finally {
       setSubmitting(false);
     }

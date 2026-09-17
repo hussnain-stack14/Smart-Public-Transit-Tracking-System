@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect } from "react";
 import { getSocket, connectSocket, disconnectSocket } from "../lib/socket/socket";
@@ -8,6 +8,5 @@ export function useSocket() {
     connectSocket();
     return () => disconnectSocket();
   }, []);
-
   return getSocket();
 }

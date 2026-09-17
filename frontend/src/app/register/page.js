@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import RegisterPage from "../../components/auth/RegisterPage";
 
 export const metadata = {
@@ -6,5 +7,9 @@ export const metadata = {
 };
 
 export default function RegisterRoute() {
-  return <RegisterPage />;
+  return (
+    <Suspense fallback={<div className="grid min-h-screen place-items-center bg-[var(--background)] text-sm text-[var(--muted)]">Loading...</div>}>
+      <RegisterPage />
+    </Suspense>
+  );
 }

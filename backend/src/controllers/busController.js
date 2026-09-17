@@ -1,5 +1,7 @@
 const Bus = require('../models/Bus');
 const Stop = require('../models/Stop');
+const { createFleetBus, updateFleetBus, deleteFleetBus } = require('../services/busAssignmentService');
+const { sendApiError } = require('../utils/apiError');
 const { haversineDistanceKm } = require('../utils/geo');
 
 // How close (in km) the bus must get to a stop before we consider it
@@ -69,23 +71,10 @@ const calculateNextStopAndETA = async (bus) => {
 // @route   POST /api/buses
 const createBus = async (req, res) => {
   try {
-    const { busNumber, route, driver, capacity } = req.body;
-
-    if (!busNumber || !route || capacity == null) {
-      return res.status(400).json({ message: 'busNumber, route, and capacity are required' });
-    }
-
-    const bus = await Bus.create({
-      busNumber,
-      route,
-      driver: driver || null,
-      capacity,
-      availableSeats: capacity,
-    });
-
+    const bus = await createFleetBus(req.body);
     res.status(201).json(bus);
-  } catch (err) {
-    res.status(500).json({ message: 'Server error creating bus', error: err.message });
+  } catch (error) {
+    sendApiError(res, error, 'Server error creating bus', 'A bus with this bus number already exists.');
   }
 };
 
@@ -219,29 +208,20 @@ const updateSeatAvailability = async (req, res) => {
 // @route   PUT /api/buses/:id
 const updateBus = async (req, res) => {
   try {
-    const bus = await Bus.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
-    if (!bus) {
-      return res.status(404).json({ message: 'Bus not found' });
-    }
+    const bus = await updateFleetBus(req.params.id, req.body);
     res.status(200).json(bus);
-  } catch (err) {
-    res.status(500).json({ message: 'Server error updating bus', error: err.message });
+  } catch (error) {
+    sendApiError(res, error, 'Server error updating bus', 'A bus with this bus number already exists.');
   }
 };
 
 // @route   DELETE /api/buses/:id
 const deleteBus = async (req, res) => {
   try {
-    const bus = await Bus.findByIdAndDelete(req.params.id);
-    if (!bus) {
-      return res.status(404).json({ message: 'Bus not found' });
-    }
+    await deleteFleetBus(req.params.id);
     res.status(200).json({ message: 'Bus deleted' });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error deleting bus', error: err.message });
+  } catch (error) {
+    sendApiError(res, error, 'Server error deleting bus');
   }
 };
 

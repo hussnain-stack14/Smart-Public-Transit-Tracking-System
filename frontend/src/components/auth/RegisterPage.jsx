@@ -10,7 +10,7 @@ import { BusFront, Eye, EyeOff, LockKeyhole, Mail, UserRound } from "lucide-reac
 import { Button } from "../common/Button";
 import { Card } from "../common/Card";
 import { useAuth } from "../../hooks/useAuth";
-import { register as registerUser } from "../../services/authService";
+import { getRoleHome, register as registerUser } from "../../services/authService";
 
 const registrationSchema = z.object({
   name: z.string().trim().min(1, "Enter your name."),
@@ -45,8 +45,8 @@ export default function RegisterPage() {
     setSubmitting(true);
     setServerError("");
     try {
-      await registerUser({ name: values.name, email: values.email, password: values.password });
-      router.replace(redirectTo);
+      const user = await registerUser({ name: values.name, email: values.email, password: values.password });
+      router.replace(getRoleHome(user.role, redirectTo));
     } catch (error) {
       const message = error.response?.data?.message;
       setServerError(message === "User already exists" ? "An account with this email already exists." : "Unable to create your account. Please try again.");

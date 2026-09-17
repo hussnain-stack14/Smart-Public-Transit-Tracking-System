@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import LoginPage from "../../components/auth/LoginPage";
 
 export const metadata = {
@@ -6,5 +7,9 @@ export const metadata = {
 };
 
 export default function LoginRoute() {
-  return <LoginPage />;
+  return (
+    <Suspense fallback={<div className="grid min-h-screen place-items-center bg-[var(--background)] text-sm text-[var(--muted)]">Loading...</div>}>
+      <LoginPage />
+    </Suspense>
+  );
 }
