@@ -95,7 +95,10 @@ export default function LiveMapPage() {
   const buses = useMemo(() => apiBuses.map((bus) => {
     const update = liveUpdates.find((item) => (item.id || item._id || item.busId)?.toString() === bus.id?.toString());
     if (!update) return bus;
-    return { ...bus, ...update, position: getBusPosition(update) || bus.position };
+    const direction = update.direction === "return" ? "return" : bus.direction;
+    const origin = direction === "return" ? bus.routeEnd : bus.routeStart;
+    const destination = direction === "return" ? bus.routeStart : bus.routeEnd;
+    return { ...bus, ...update, direction, directionLabel: origin && destination ? `${origin} → ${destination}` : bus.directionLabel, nextStop: update.nextStop?.stopName || update.nextStop || bus.nextStop, nextStopId: update.nextStop?._id || bus.nextStopId, eta: update.etaMinutes != null ? (update.etaMinutes <= 1 ? "Arriving" : `${Math.round(update.etaMinutes)} min`) : bus.eta, position: getBusPosition(update) || bus.position };
   }), [apiBuses, liveUpdates]);
 
   const filteredBuses = useMemo(() => {

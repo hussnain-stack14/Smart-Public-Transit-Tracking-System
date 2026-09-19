@@ -1,11 +1,12 @@
 "use client";
 
 import { Component, useEffect, useRef, useState } from "react";
-import { Marker, Popup, useMapEvents } from "react-leaflet";
+import { Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import { Button } from "../../common/Button";
 import { ClientTransitMap } from "../../map/MapShell";
 import { MapViewport } from "../../map/MapViewport";
+import { LocationSearch } from "./LocationSearch";
 
 const emptyPositions = [];
 const selectedIcon = L.divIcon({
@@ -19,13 +20,21 @@ const selectedIcon = L.divIcon({
 export function StopLocationPicker({ idPrefix, position, onChange, disabled }) {
   const [tileError, setTileError] = useState(false);
   const [retry, setRetry] = useState(0);
+  const [searchTarget, setSearchTarget] = useState(null);
+  const searchSequence = useRef(0);
   function retryMap() { setTileError(false); setRetry((value) => value + 1); }
+  function selectSearchResult(next) {
+    onChange(next);
+    searchSequence.current += 1;
+    setSearchTarget({ position: next, sequence: searchSequence.current });
+  }
 
   return <section aria-labelledby={idPrefix + "-location-title"} className="space-y-3">
     <div>
       <h3 id={idPrefix + "-location-title"} className="text-sm font-semibold">Select Stop Location</h3>
-      <p id={idPrefix + "-location-help"} className="mt-1 text-sm leading-6 text-[var(--muted)]">Click on the map to select the exact stop location. Drag the marker to refine its position.</p>
+      <p id={idPrefix + "-location-help"} className="mt-1 text-sm leading-6 text-[var(--muted)]">Search for the general area, then click the map or drag the marker to select the exact roadside stop location.</p>
     </div>
+    <LocationSearch idPrefix={idPrefix} disabled={disabled} onSelect={selectSearchResult} />
     {tileError && <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl bg-[#fff9ed] p-3 text-sm">
       <p className="text-[var(--danger)]">Map tiles could not be loaded. Check your connection and retry before choosing a location.</p>
       <Button type="button" variant="secondary" disabled={disabled} onClick={retryMap} className="min-h-11">Retry map</Button>
@@ -34,6 +43,7 @@ export function StopLocationPicker({ idPrefix, position, onChange, disabled }) {
       <LocationMapBoundary key={retry} onRetry={retryMap} disabled={disabled}>
         <ClientTransitMap center={position || undefined} zoom={position ? 17 : 13} className="h-full w-full !min-h-0" onTileError={() => setTileError(true)}>
           <MapViewport positions={emptyPositions} />
+          <SearchMapFocus target={searchTarget} />
           <LocationSelection position={position} onChange={onChange} disabled={disabled || tileError} />
         </ClientTransitMap>
       </LocationMapBoundary>
@@ -51,6 +61,15 @@ export function StopLocationPicker({ idPrefix, position, onChange, disabled }) {
     </div>
     <p role="status" className="break-words text-sm text-[var(--muted)]">{position ? "Selected Location: " + position.map((value) => value.toFixed(6)).join(", ") : "No stop location selected yet."}</p>
   </section>;
+}
+
+function SearchMapFocus({ target }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (target) map.flyTo(target.position, 17, { duration: 0.8 });
+  }, [map, target]);
+  return null;
 }
 
 function LocationSelection({ position, onChange, disabled }) {

@@ -12,19 +12,29 @@ const ARRIVAL_THRESHOLD_KM = 0.05;
 // any real speed readings yet (e.g. right after a bus starts its shift).
 const DEFAULT_SPEED_KMH = 20;
 
+const getBusDirection = (bus) => bus.direction === 'return' ? 'return' : 'outbound';
+
+const getStopsInDirection = (stops, direction) => direction === 'return' ? [...stops].reverse() : stops;
+
+const stopSummary = (stop) => stop ? { _id: stop._id, stopName: stop.stopName, stopOrder: stop.stopOrder } : null;
+
 // Works out the next stop for a bus and the ETA to it, in minutes.
 // This is the core of the ETA Estimation Module from the proposal:
 // - finds the next stop in sequence past currentStopIndex
 // - measures straight-line distance from the bus's current location
 // - divides by a 5-reading moving average of recent speeds
 const calculateNextStopAndETA = async (bus) => {
-  const stops = await Stop.find({ route: bus.route }).sort({ stopOrder: 1 });
+  const storedStops = await Stop.find({ route: bus.route }).sort({ stopOrder: 1 });
+  const direction = getBusDirection(bus);
+  const stops = getStopsInDirection(storedStops, direction);
 
   if (stops.length === 0 || bus.currentLocation.latitude == null) {
-    return { nextStop: null, distanceKm: null, etaMinutes: null };
+    return { direction, currentStop: null, nextStop: null, distanceKm: null, etaMinutes: null, terminalReached: false };
   }
 
   let nextStop = stops[bus.currentStopIndex] || null;
+  let currentStop = bus.currentStopIndex > 0 ? stops[bus.currentStopIndex - 1] : null;
+  let terminalReached = false;
 
   // If the bus is already within range of its current target stop,
   // advance to the one after it (this is what "detects arrival" means).
@@ -37,14 +47,18 @@ const calculateNextStopAndETA = async (bus) => {
     );
 
     if (distToCurrentTarget <= ARRIVAL_THRESHOLD_KM && bus.currentStopIndex < stops.length - 1) {
+      currentStop = nextStop;
       bus.currentStopIndex += 1;
       nextStop = stops[bus.currentStopIndex];
+    } else if (distToCurrentTarget <= ARRIVAL_THRESHOLD_KM && bus.currentStopIndex === stops.length - 1) {
+      currentStop = nextStop;
+      terminalReached = true;
     }
   }
 
   if (!nextStop) {
     // Bus has passed the last stop on the route
-    return { nextStop: null, distanceKm: 0, etaMinutes: 0 };
+    return { direction, currentStop: stopSummary(currentStop), nextStop: null, distanceKm: 0, etaMinutes: 0, terminalReached };
   }
 
   const distanceKm = haversineDistanceKm(
@@ -62,10 +76,59 @@ const calculateNextStopAndETA = async (bus) => {
   const etaMinutes = avgSpeed > 0 ? (distanceKm / avgSpeed) * 60 : null;
 
   return {
-    nextStop: { _id: nextStop._id, stopName: nextStop.stopName, stopOrder: nextStop.stopOrder },
+    direction,
+    currentStop: stopSummary(currentStop),
+    nextStop: stopSummary(nextStop),
     distanceKm: Math.round(distanceKm * 100) / 100,
     etaMinutes: etaMinutes != null ? Math.round(etaMinutes * 10) / 10 : null,
+    terminalReached,
   };
+};
+
+// @route   POST /api/buses/assigned/return-trip
+// @desc    Start the authenticated driver's return trip at the outbound terminal
+// @access  Private (driver)
+const startReturnTrip = async (req, res) => {
+  try {
+    if (!req.user.assignedBus) return res.status(400).json({ message: 'No bus assigned.' });
+
+    const bus = await Bus.findById(req.user.assignedBus);
+    if (!bus) return res.status(404).json({ message: 'Assigned bus not found.' });
+    if (!bus.driver || !bus.driver.equals(req.user._id)) return res.status(403).json({ message: 'Forbidden: this bus is not assigned to you.' });
+    if (!bus.route) return res.status(400).json({ message: 'No route assigned.' });
+    if (getBusDirection(bus) === 'return') return res.status(409).json({ message: 'Return trip has already started.' });
+
+    const stops = await Stop.find({ route: bus.route }).sort({ stopOrder: 1 });
+    if (stops.length < 2) return res.status(400).json({ message: 'Return trip is not available for this route.' });
+
+    const terminal = stops[stops.length - 1];
+    const atTerminal = bus.currentLocation.latitude != null && bus.currentLocation.longitude != null &&
+      bus.currentStopIndex === stops.length - 1 &&
+      haversineDistanceKm(bus.currentLocation.latitude, bus.currentLocation.longitude, terminal.latitude, terminal.longitude) <= ARRIVAL_THRESHOLD_KM;
+    if (!atTerminal) return res.status(409).json({ message: 'Return trip can only start at the terminal.' });
+
+    const updated = await Bus.findOneAndUpdate(
+      { _id: bus._id, driver: req.user._id, direction: { $ne: 'return' }, currentStopIndex: stops.length - 1 },
+      { $set: { direction: 'return', currentStopIndex: 0 } },
+      { new: true, runValidators: true }
+    );
+    if (!updated) return res.status(409).json({ message: 'Return trip has already started.' });
+
+    const etaInfo = await calculateNextStopAndETA(updated);
+    await updated.save();
+    const payload = {
+      busId: updated._id,
+      latitude: updated.currentLocation.latitude,
+      longitude: updated.currentLocation.longitude,
+      lastLocationUpdate: updated.lastLocationUpdate,
+      status: updated.status,
+      ...etaInfo,
+    };
+    req.app.get('io').to(`bus:${updated._id}`).emit('locationUpdate', payload);
+    res.status(200).json({ ...updated.toObject(), ...etaInfo });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error starting return trip', error: err.message });
+  }
 };
 
 // @route   POST /api/buses
@@ -231,6 +294,7 @@ module.exports = {
   getBusById,
   getBusETA,
   updateBusLocation,
+  startReturnTrip,
   updateSeatAvailability,
   updateBus,
   deleteBus,

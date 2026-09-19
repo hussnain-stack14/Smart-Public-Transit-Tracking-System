@@ -97,6 +97,7 @@ before(async () => {
     const result = await request('/api/buses', adminToken, 'POST', { busNumber: number, route: route._id, capacity: 40 });
     assert.equal(result.status, 201);
     assert.equal(result.data.availableSeats, 40);
+    assert.equal(result.data.direction, 'outbound');
     if (!busA) busA = result.data; else busB = result.data;
   }
 }, { timeout: 60000 });
@@ -329,6 +330,81 @@ test('ordinary bus edits keep their contract and update operators cannot bypass 
   assert.equal(result.data.driver, null);
   assert.equal((await request('/api/buses/' + busA._id, adminToken, 'PUT', { $set: { driver: driverA._id } })).status, 400);
   await assertLinks(busA, null);
+});
+
+test('return trip is assigned-driver-only, terminal-gated, atomic and direction-aware', async () => {
+  const endpoint = '/api/buses/assigned/return-trip';
+  assert.equal((await request(endpoint, null, 'POST')).status, 401);
+  assert.equal((await request(endpoint, commuterToken, 'POST')).status, 403);
+  const noBus = await request(endpoint, driverTokenA, 'POST');
+  assert.equal(noBus.status, 400);
+  assert.equal(noBus.data.message, 'No bus assigned.');
+
+  assert.equal((await assign(busA, driverA)).status, 200);
+  await User.updateOne({ _id: driverB._id }, { $set: { assignedBus: busA._id } });
+  const otherDriver = await request(endpoint, driverTokenB, 'POST');
+  assert.equal(otherDriver.status, 403);
+  await User.updateOne({ _id: driverB._id }, { $set: { assignedBus: null } });
+
+  await Bus.updateOne({ _id: busA._id }, { $unset: { route: 1 } });
+  const noRoute = await request(endpoint, driverTokenA, 'POST');
+  assert.equal(noRoute.status, 400);
+  assert.equal(noRoute.data.message, 'No route assigned.');
+  await Bus.updateOne({ _id: busA._id }, { $set: { route: route._id } });
+
+  const tooShort = await request(endpoint, driverTokenA, 'POST');
+  assert.equal(tooShort.status, 400);
+  assert.equal(tooShort.data.message, 'Return trip is not available for this route.');
+
+  const secondStop = await Stop.create({ route: route._id, stopName: 'Middle Stop', latitude: 31.43, longitude: 73.09, stopOrder: 2 });
+  const terminalStop = await Stop.create({ route: route._id, stopName: 'Outbound Terminal', latitude: 31.44, longitude: 73.1, stopOrder: 3 });
+  await Bus.updateOne({ _id: busA._id }, { $set: { direction: 'outbound', currentStopIndex: 1, currentLocation: { latitude: secondStop.latitude, longitude: secondStop.longitude } } });
+  const tooEarly = await request(endpoint, driverTokenA, 'POST');
+  assert.equal(tooEarly.status, 409);
+  assert.equal(tooEarly.data.message, 'Return trip can only start at the terminal.');
+
+  await Bus.updateOne({ _id: busA._id }, { $set: { currentStopIndex: 2, currentLocation: { latitude: terminalStop.latitude, longitude: terminalStop.longitude } } });
+  const socket = createSocket(baseUrl, { transports: ['websocket'], reconnection: false, timeout: 5000 });
+  try {
+    await new Promise((resolve, reject) => { socket.once('connect', resolve); socket.once('connect_error', reject); });
+    socket.emit('watchBus', busA._id);
+    for (let n = 0; n < 100 && !io.sockets.adapter.rooms.has('bus:' + busA._id); n++) await delay(25);
+    const eventPromise = new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Return direction event not delivered')), 8000);
+      socket.once('locationUpdate', (event) => { clearTimeout(timeout); resolve(event); });
+    });
+    const attempts = await Promise.all([request(endpoint, driverTokenA, 'POST'), request(endpoint, driverTokenA, 'POST')]);
+    assert.deepEqual(attempts.map((result) => result.status).sort(), [200, 409]);
+    const success = attempts.find((result) => result.status === 200).data;
+    assert.equal(success.direction, 'return');
+    assert.equal(success.currentStopIndex, 1);
+    assert.equal(success.currentStop.stopName, terminalStop.stopName);
+    assert.equal(success.nextStop.stopName, secondStop.stopName);
+    assert.equal(success.terminalReached, false);
+    const event = await eventPromise;
+    assert.equal(event.direction, 'return');
+    assert.equal(event.nextStop.stopName, secondStop.stopName);
+  } finally {
+    socket.disconnect();
+  }
+
+  const saved = await Bus.findById(busA._id);
+  assert.equal(saved.direction, 'return');
+  assert.equal(saved.currentStopIndex, 1);
+  const eta = await request('/api/buses/' + busA._id + '/eta');
+  assert.equal(eta.status, 200);
+  assert.equal(eta.data.direction, 'return');
+  assert.equal(eta.data.nextStop.stopName, secondStop.stopName);
+  const freshIdentity = await login(driverA.email);
+  const refreshedBus = await request('/api/buses/' + (await profile(freshIdentity.token)).assignedBus);
+  assert.equal(refreshedBus.data.direction, 'return');
+
+  const returnLocation = await request('/api/buses/' + busA._id + '/location', driverTokenA, 'PATCH', { latitude: secondStop.latitude, longitude: secondStop.longitude, speed: 15 });
+  assert.equal(returnLocation.status, 200);
+  assert.equal(returnLocation.data.direction, 'return');
+  assert.equal(returnLocation.data.currentStop.stopName, secondStop.stopName);
+  assert.equal(returnLocation.data.nextStop.stopName, 'Integration Stop');
+  assert.equal(returnLocation.data.currentStopIndex, 2);
 });
 
 test('existing GPS, real Socket.IO delivery, ETA, seats, bookings, routes and analytics work after assignment', async () => {

@@ -23,6 +23,7 @@ import { stopService } from "../../services/stopService";
 import { alertService } from "../../services/alertService";
 import { getProfile } from "../../services/authService";
 import { getEtaLabel } from "../../lib/transit/format";
+import { getBusDirection, getDirectionLabel, getStopsInDirection } from "../../lib/transit/direction";
 import { hasRole, ROLES } from "../../lib/auth/permissions";
 
 export default function DriverDashboardPage() {
@@ -44,6 +45,8 @@ function DriverOperations({ user }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [connection, setConnection] = useState(socket.connected ? "Connected" : "Connecting");
+  const [returnBusy, setReturnBusy] = useState(false);
+  const [returnError, setReturnError] = useState("");
 
   const load = useCallback(async () => {
     const id = ++requestId.current;
@@ -104,8 +107,8 @@ function DriverOperations({ user }) {
         if (current.bus?._id !== location.busId) return current;
         return {
           ...current,
-          bus: { ...current.bus, currentLocation: { latitude: location.latitude, longitude: location.longitude }, lastLocationUpdate: location.lastLocationUpdate, status: location.status },
-          eta: { nextStop: location.nextStop, etaMinutes: location.etaMinutes, distanceKm: location.distanceKm },
+          bus: { ...current.bus, currentLocation: { latitude: location.latitude, longitude: location.longitude }, lastLocationUpdate: location.lastLocationUpdate, status: location.status, direction: location.direction || current.bus.direction },
+          eta: { direction: location.direction, currentStop: location.currentStop, nextStop: location.nextStop, etaMinutes: location.etaMinutes, distanceKm: location.distanceKm, terminalReached: location.terminalReached },
           errors: { ...current.errors, eta: false },
         };
       });
@@ -129,11 +132,29 @@ function DriverOperations({ user }) {
       return {
         ...current,
         bus: { ...current.bus, ...updated },
-        eta: { nextStop: updated.nextStop, etaMinutes: updated.etaMinutes, distanceKm: updated.distanceKm },
+        eta: { direction: updated.direction, currentStop: updated.currentStop, nextStop: updated.nextStop, etaMinutes: updated.etaMinutes, distanceKm: updated.distanceKm, terminalReached: updated.terminalReached },
         errors: { ...current.errors, eta: false },
       };
     });
   }, []);
+  const startReturnTrip = useCallback(async () => {
+    if (returnBusy) return;
+    setReturnBusy(true);
+    setReturnError("");
+    try {
+      const updated = await busService.startReturnTrip();
+      setData((current) => ({
+        ...current,
+        bus: current.bus?._id === updated._id ? { ...current.bus, ...updated } : current.bus,
+        eta: { direction: updated.direction, currentStop: updated.currentStop, nextStop: updated.nextStop, etaMinutes: updated.etaMinutes, distanceKm: updated.distanceKm, terminalReached: updated.terminalReached },
+        errors: { ...current.errors, eta: false },
+      }));
+    } catch (requestError) {
+      setReturnError(requestError.response?.data?.message || "Unable to start the return trip. Try again.");
+    } finally {
+      setReturnBusy(false);
+    }
+  }, [returnBusy]);
   const seatsUpdated = useCallback((updated) => {
     setData((current) => {
       if (current.bus?._id !== updated._id) return current;
@@ -142,6 +163,9 @@ function DriverOperations({ user }) {
   }, []);
 
   const { profile, bus, route, stops, eta, alerts, errors } = data;
+  const direction = getBusDirection(bus);
+  const directionalStops = getStopsInDirection(stops, direction);
+  const directionLabel = getDirectionLabel(route, direction);
   const nextStopId = eta?.nextStop?._id;
   const retry = <Button type="button" variant="secondary" className="min-h-12 gap-2" onClick={load} disabled={loading}><RefreshCw size={16} />{loading ? "Refreshing..." : "Refresh dashboard"}</Button>;
 
@@ -161,19 +185,20 @@ function DriverOperations({ user }) {
       {(!loading || bus) && !error && (
         <section aria-label="Driver assignment and shift" className="mt-6 grid gap-4 md:grid-cols-3">
           <Card className="min-w-0 p-5"><dl><Detail label="Assigned bus" value={bus?.busNumber || "No bus assigned"} /></dl>{bus && <Badge className="mt-3" tone={bus.status === "active" ? "success" : "neutral"}>Bus status: {bus.status}</Badge>}</Card>
-          <Card className="min-w-0 p-5"><dl><Detail label="Current route" value={errors.route ? "Unable to load route" : route?.routeName || bus?.route?.routeName || (bus ? "Unavailable" : "No bus assigned")} /></dl>{route && <p className="mt-3 break-words text-sm text-[var(--muted)]">{route.startPoint} to {route.endPoint}</p>}</Card>
+          <Card className="min-w-0 p-5"><dl><Detail label="Current route" value={errors.route ? "Unable to load route" : route?.routeName || bus?.route?.routeName || (bus ? "Unavailable" : "No bus assigned")} /></dl>{route && <><p className="mt-3 break-words text-sm text-[var(--muted)]">{route.startPoint} ↔ {route.endPoint}</p><p className="mt-2 break-words text-sm font-semibold text-[var(--foreground)]">Direction: {directionLabel}</p></>}</Card>
           <Card className="min-w-0 p-5"><dl><Detail label="Shift status" value="Unavailable" /></dl><p id="shift-help" className="mt-3 text-sm leading-6 text-[var(--muted)]">Start Shift is currently unavailable because shift management is not supported by the backend.{!bus && " A bus assignment is also required."}</p><Button type="button" disabled aria-describedby="shift-help" className="mt-4 min-h-12 w-full">Start Shift</Button></Card>
         </section>
       )}
       {loading && !bus ? <div className="grid min-h-80 place-items-center"><LoadingSpinner label="Loading assigned bus, route, ETA and alerts..." /></div> : error ? <div className="mt-6"><ErrorState title="Driver information unavailable" description={error} action={retry} /></div> : !bus ? <div className="mt-6"><EmptyState title="No bus assigned" description="No bus is currently assigned to you. Contact the transit team for your assignment." /></div> : (
         <>
-          <section aria-label="Stop and arrival information" className="mt-6 grid gap-4 sm:grid-cols-3">
-            <Card className="min-w-0 p-5"><dl><Detail label="Current stop" value="Not reported" /></dl><p className="mt-2 text-xs text-[var(--muted)]">Arrival detection advances the next stop automatically. A current stop is not reported.</p></Card>
+          <section aria-label="Stop and arrival information" className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Card className="min-w-0 p-5"><dl><Detail label="Current stop" value={eta?.currentStop?.stopName || "Not reported"} /></dl><p className="mt-2 text-xs text-[var(--muted)]">Arrival detection advances route progress automatically.</p></Card>
             <Card className="min-w-0 p-5"><dl><Detail label="Next stop" value={errors.eta ? "Unable to load next stop" : eta?.nextStop?.stopName || "Unavailable"} /></dl></Card>
             <Card className="min-w-0 p-5"><dl><Detail label="ETA to next stop" value={errors.eta ? "Unable to load ETA" : getEtaLabel(eta) || "Unavailable"} /></dl><p className="mt-2 text-xs text-[var(--muted)]">Updated from saved bus location.</p></Card>
+            <Card className="min-w-0 p-5"><dl><Detail label="Direction" value={directionLabel} /></dl>{direction === "outbound" && eta?.terminalReached ? <><p className="mt-2 text-sm font-semibold text-[var(--success)]">Terminal Reached</p><p className="mt-1 text-sm text-[var(--muted)]">{eta.currentStop?.stopName}</p><Button type="button" className="mt-4 min-h-12 w-full" onClick={startReturnTrip} disabled={returnBusy}>{returnBusy ? "Starting return..." : "Start Return Trip"}</Button></> : <p className="mt-2 text-xs text-[var(--muted)]">{direction === "return" ? "Return trip in progress." : "Return trip becomes available at the terminal."}</p>}{returnError && <p role="alert" className="mt-3 text-sm text-[var(--danger)]">{returnError}</p>}</Card>
           </section>
           <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-            <DriverMap bus={bus} stops={stops} nextStopId={nextStopId} connection={connection} />
+            <DriverMap bus={bus} stops={directionalStops} nextStopId={nextStopId} connection={connection} />
             <Card className="min-w-0 p-5">
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--primary)]">Assigned bus</p>
               <div className="mt-2 flex flex-wrap items-center justify-between gap-3"><h2 className="break-words text-2xl font-bold">{bus.busNumber}</h2><Badge tone={bus.status === "active" ? "success" : "neutral"}>{bus.status}</Badge></div>
@@ -183,7 +208,7 @@ function DriverOperations({ user }) {
             </Card>
           </div>
           <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-            <DriverRouteCard route={route} stops={stops} nextStopId={nextStopId} errors={errors} />
+            <DriverRouteCard route={route} stops={directionalStops} nextStopId={nextStopId} errors={errors} directionLabel={directionLabel} />
             <section className="min-w-0" aria-labelledby="alerts-title">
               <h2 id="alerts-title" className="text-xl font-bold">Route alerts</h2>
               <div className="mt-4 grid gap-3">{errors.alerts ? <SectionError label="route alerts" /> : !bus.route ? <p className="text-sm text-[var(--muted)]">No route assigned.</p> : alerts.length ? alerts.map((alert) => <Card key={alert._id} className="break-words border-[#f0d7aa] bg-[#fff9ed] p-4 text-sm text-[#6f531d]">{alert.message}</Card>) : <p className="text-sm text-[var(--muted)]">No active alerts for this route.</p>}</div>

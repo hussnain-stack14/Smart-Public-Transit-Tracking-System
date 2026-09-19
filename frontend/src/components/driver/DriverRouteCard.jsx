@@ -2,7 +2,7 @@
 import { Badge } from "../common/Badge";
 import { Card } from "../common/Card";
 
-export function DriverRouteCard({ route, stops, nextStopId, errors }) {
+export function DriverRouteCard({ route, stops, nextStopId, errors, directionLabel }) {
   const nextIndex = stops.findIndex((stop) => stop._id === nextStopId);
 
   return (
@@ -21,6 +21,7 @@ export function DriverRouteCard({ route, stops, nextStopId, errors }) {
             <div><dt className="text-[var(--muted)]">Starting point</dt><dd className="mt-1 break-words font-semibold">{route.startPoint}</dd></div>
             <div><dt className="text-[var(--muted)]">Destination</dt><dd className="mt-1 break-words font-semibold">{route.endPoint}</dd></div>
           </dl>
+          <p className="mt-3 text-sm font-semibold text-[var(--foreground)]">Active direction: {directionLabel}</p>
         </>
       ) : <p className="mt-3 text-sm text-[var(--muted)]">No route assigned.</p>}
       <h3 className="mt-6 font-bold">Route progress</h3>

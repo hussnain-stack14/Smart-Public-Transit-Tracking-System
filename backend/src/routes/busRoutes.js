@@ -6,6 +6,7 @@ const {
   getBusById,
   getBusETA,
   updateBusLocation,
+  startReturnTrip,
   updateSeatAvailability,
   updateBus,
   deleteBus,
@@ -16,6 +17,7 @@ router.get('/', getBuses);
 router.get('/:id', getBusById);
 router.get('/:id/eta', getBusETA);
 router.post('/', protect, authorize('admin'), createBus);
+router.post('/assigned/return-trip', protect, authorize('driver'), startReturnTrip);
 router.patch('/:id/location', protect, authorize('driver'), updateBusLocation);
 router.patch('/:id/seats', protect, authorize('driver', 'admin'), updateSeatAvailability);
 router.put('/:id', protect, authorize('admin'), updateBus);

@@ -51,6 +51,11 @@ const busSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    direction: {
+      type: String,
+      enum: ["outbound", "return"],
+      default: "outbound",
+    },
     // Last 5 speed readings (km/h) reported by the driver's device,
     // used as a moving average to smooth out GPS noise.
     recentSpeeds: {
