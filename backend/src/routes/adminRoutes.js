@@ -5,6 +5,7 @@ const {
   getBookingsAnalytics,
   getOccupancyByRoute,
   getReportsSummary,
+  getShifts,
 } = require('../controllers/adminController');
 const { protect, authorize } = require('../middleware/auth');
 const { getDrivers, createDriver, updateDriver, deleteDriver } = require('../controllers/adminDriverController');
@@ -16,6 +17,7 @@ router.get('/overview', getFleetOverview);
 router.get('/analytics/bookings', getBookingsAnalytics);
 router.get('/analytics/occupancy', getOccupancyByRoute);
 router.get('/analytics/reports', getReportsSummary);
+router.get('/shifts', getShifts);
 
 router.get('/drivers', getDrivers);
 router.post('/drivers', createDriver);

@@ -1,5 +1,6 @@
 const Bus = require('../models/Bus');
 const Stop = require('../models/Stop');
+const Shift = require('../models/Shift');
 const { createFleetBus, updateFleetBus, deleteFleetBus } = require('../services/busAssignmentService');
 const { sendApiError } = require('../utils/apiError');
 const { haversineDistanceKm } = require('../utils/geo');
@@ -17,6 +18,8 @@ const getBusDirection = (bus) => bus.direction === 'return' ? 'return' : 'outbou
 const getStopsInDirection = (stops, direction) => direction === 'return' ? [...stops].reverse() : stops;
 
 const stopSummary = (stop) => stop ? { _id: stop._id, stopName: stop.stopName, stopOrder: stop.stopOrder } : null;
+
+const sameId = (left, right) => left && right && left.toString() === right.toString();
 
 // Works out the next stop for a bus and the ETA to it, in minutes.
 // This is the core of the ETA Estimation Module from the proposal:
@@ -94,8 +97,11 @@ const startReturnTrip = async (req, res) => {
 
     const bus = await Bus.findById(req.user.assignedBus);
     if (!bus) return res.status(404).json({ message: 'Assigned bus not found.' });
-    if (!bus.driver || !bus.driver.equals(req.user._id)) return res.status(403).json({ message: 'Forbidden: this bus is not assigned to you.' });
+    if (!sameId(bus.driver, req.user._id)) return res.status(403).json({ message: 'Forbidden: this bus is not assigned to you.' });
     if (!bus.route) return res.status(400).json({ message: 'No route assigned.' });
+    if (!await Shift.exists({ driver: req.user._id, bus: bus._id, status: 'active' })) {
+      return res.status(409).json({ message: 'Start an active shift before starting a return trip.' });
+    }
     if (getBusDirection(bus) === 'return') return res.status(409).json({ message: 'Return trip has already started.' });
 
     const stops = await Stop.find({ route: bus.route }).sort({ stopOrder: 1 });
@@ -167,7 +173,6 @@ const getBusById = async (req, res) => {
     if (!bus) {
       return res.status(404).json({ message: 'Bus not found' });
     }
-
     res.status(200).json(bus);
   } catch (err) {
     res.status(500).json({ message: 'Server error fetching bus', error: err.message });
@@ -207,6 +212,12 @@ const updateBusLocation = async (req, res) => {
     const bus = await Bus.findById(req.params.id);
     if (!bus) {
       return res.status(404).json({ message: 'Bus not found' });
+    }
+    if (!sameId(req.user.assignedBus, bus._id) || !sameId(bus.driver, req.user._id)) {
+      return res.status(403).json({ message: 'Forbidden: this bus is not assigned to you.' });
+    }
+    if (!await Shift.exists({ driver: req.user._id, bus: bus._id, status: 'active' })) {
+      return res.status(409).json({ message: 'Start an active shift before updating location.' });
     }
 
     bus.currentLocation = { latitude, longitude };

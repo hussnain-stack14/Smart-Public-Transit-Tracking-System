@@ -16,6 +16,7 @@ const Booking = require('../src/models/Booking');
 const Report = require('../src/models/Report');
 const RouteAlert = require('../src/models/RouteAlert');
 const SafetySession = require('../src/models/SafetySession');
+const Shift = require('../src/models/Shift');
 
 const testDatabase = 'transit_driver_test_' + crypto.randomBytes(8).toString('hex');
 const password = crypto.randomBytes(18).toString('hex');
@@ -81,7 +82,7 @@ before(async () => {
   assert.equal(mongoose.connection.name, testDatabase);
   const topology = await mongoose.connection.db.admin().command({ hello: 1 });
   assert.ok(topology.setName || topology.msg === 'isdbgrid', 'Integration tests require transaction-capable MongoDB');
-  for (const model of [User, Bus, Route, Stop, Booking, Report, RouteAlert, SafetySession]) await model.init();
+  for (const model of [User, Bus, Route, Stop, Booking, Report, RouteAlert, SafetySession, Shift]) await model.init();
   const admin = await User.create({ name: 'Integration Admin', email: 'admin@integration.example', password, role: 'admin' });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   baseUrl = 'http://127.0.0.1:' + server.address().port;
@@ -332,11 +333,75 @@ test('ordinary bus edits keep their contract and update operators cannot bypass 
   await assertLinks(busA, null);
 });
 
+test('driver shifts are assigned-bus-only, persistent and safe under concurrent starts', async () => {
+  const startEndpoint = '/api/buses/assigned/start-shift';
+  assert.equal((await request(startEndpoint, null, 'POST')).status, 401);
+  assert.equal((await request(startEndpoint, commuterToken, 'POST')).status, 403);
+  assert.equal((await request(startEndpoint, adminToken, 'POST')).status, 403);
+
+  const noBus = await request(startEndpoint, driverTokenA, 'POST');
+  assert.equal(noBus.status, 400);
+  assert.equal(noBus.data.message, 'No bus assigned.');
+
+  const missingBusId = new mongoose.Types.ObjectId();
+  await User.updateOne({ _id: driverB._id }, { $set: { assignedBus: missingBusId } });
+  const missingBus = await request(startEndpoint, driverTokenB, 'POST');
+  assert.equal(missingBus.status, 404);
+  assert.equal(missingBus.data.message, 'Assigned bus not found.');
+  await User.updateOne({ _id: driverB._id }, { $set: { assignedBus: null } });
+
+  assert.equal((await assign(busA, driverA)).status, 200);
+  const crossBusLocation = await request('/api/buses/' + busB._id + '/location', driverTokenA, 'PATCH', { latitude: 31.4, longitude: 73.08 });
+  assert.equal(crossBusLocation.status, 403);
+  const beforeShiftLocation = await request('/api/buses/' + busA._id + '/location', driverTokenA, 'PATCH', { latitude: 31.4, longitude: 73.08 });
+  assert.equal(beforeShiftLocation.status, 409);
+
+  await User.updateOne({ _id: driverB._id }, { $set: { assignedBus: busA._id } });
+  assert.equal((await request(startEndpoint, driverTokenB, 'POST')).status, 403);
+  await User.updateOne({ _id: driverB._id }, { $set: { assignedBus: null } });
+
+  await Bus.updateOne({ _id: busA._id }, { $unset: { route: 1 } });
+  const noRoute = await request(startEndpoint, driverTokenA, 'POST');
+  assert.equal(noRoute.status, 400);
+  assert.equal(noRoute.data.message, 'No route assigned.');
+  await Bus.updateOne({ _id: busA._id }, { $set: { route: route._id, direction: 'return', currentStopIndex: 4 } });
+
+  const attempts = await Promise.all([
+    request(startEndpoint, driverTokenA, 'POST'),
+    request(startEndpoint, driverTokenA, 'POST'),
+  ]);
+  assert.deepEqual(attempts.map((result) => result.status).sort(), [201, 409]);
+  const success = attempts.find((result) => result.status === 201).data;
+  assert.equal(success.message, 'Shift started successfully');
+  assert.equal(success.shift.status, 'active');
+  assert.equal(success.shift.startDirection, 'outbound');
+  assert.equal(success.shift.bus.status, 'active');
+  assert.equal(success.shift.bus.direction, 'outbound');
+  assert.equal(success.shift.bus.currentStopIndex, 0);
+  assert.equal(String(success.shift.driver._id), driverA._id);
+  assert.equal(String(success.shift.route._id), route._id);
+  assert.equal(await Shift.countDocuments({ driver: driverA._id, status: 'active' }), 1);
+
+  const refreshedProfile = await profile(driverTokenA);
+  assert.equal(refreshedProfile.activeShift.status, 'active');
+  assert.equal(String(refreshedProfile.activeShift.bus._id), busA._id);
+  const freshIdentity = await login(driverA.email);
+  assert.equal((await profile(freshIdentity.token)).activeShift.status, 'active');
+
+  const overview = await request('/api/admin/overview', adminToken);
+  assert.equal(overview.status, 200);
+  assert.equal(overview.data.activeShifts, 1);
+  const adminShifts = await request('/api/admin/shifts', adminToken);
+  assert.equal(adminShifts.status, 200);
+  assert.equal(adminShifts.data.length, 1);
+  assert.equal((await request('/api/admin/shifts', driverTokenA)).status, 403);
+});
+
 test('return trip is assigned-driver-only, terminal-gated, atomic and direction-aware', async () => {
   const endpoint = '/api/buses/assigned/return-trip';
   assert.equal((await request(endpoint, null, 'POST')).status, 401);
   assert.equal((await request(endpoint, commuterToken, 'POST')).status, 403);
-  const noBus = await request(endpoint, driverTokenA, 'POST');
+  const noBus = await request(endpoint, driverTokenB, 'POST');
   assert.equal(noBus.status, 400);
   assert.equal(noBus.data.message, 'No bus assigned.');
 
@@ -359,6 +424,16 @@ test('return trip is assigned-driver-only, terminal-gated, atomic and direction-
   const secondStop = await Stop.create({ route: route._id, stopName: 'Middle Stop', latitude: 31.43, longitude: 73.09, stopOrder: 2 });
   const terminalStop = await Stop.create({ route: route._id, stopName: 'Outbound Terminal', latitude: 31.44, longitude: 73.1, stopOrder: 3 });
   await Bus.updateOne({ _id: busA._id }, { $set: { direction: 'outbound', currentStopIndex: 1, currentLocation: { latitude: secondStop.latitude, longitude: secondStop.longitude } } });
+  const outboundLocation = await request('/api/buses/' + busA._id + '/location', driverTokenA, 'PATCH', {
+    latitude: secondStop.latitude,
+    longitude: secondStop.longitude,
+    speed: 15,
+  });
+  assert.equal(outboundLocation.status, 200);
+  assert.equal(outboundLocation.data.direction, 'outbound');
+  assert.equal(outboundLocation.data.currentStop.stopName, secondStop.stopName);
+  assert.equal(outboundLocation.data.nextStop.stopName, terminalStop.stopName);
+  assert.equal(outboundLocation.data.currentStopIndex, 2);
   const tooEarly = await request(endpoint, driverTokenA, 'POST');
   assert.equal(tooEarly.status, 409);
   assert.equal(tooEarly.data.message, 'Return trip can only start at the terminal.');
@@ -435,12 +510,48 @@ test('existing GPS, real Socket.IO delivery, ETA, seats, bookings, routes and an
     assert.equal((await request('/api/bookings/' + booking.data._id + '/cancel', commuterToken, 'PATCH')).status, 200);
     assert.equal((await request('/api/buses/' + busA._id)).data.availableSeats, 34);
     for (const path of ['/api/routes', '/api/routes/' + route._id, '/api/stops/route/' + route._id, '/api/route-alerts/route/' + route._id]) assert.equal((await request(path)).status, 200);
-    for (const path of ['/api/admin/overview', '/api/admin/analytics/bookings', '/api/admin/analytics/occupancy', '/api/admin/analytics/reports', '/api/reports']) assert.equal((await request(path, adminToken)).status, 200);
+    for (const path of ['/api/admin/overview', '/api/admin/analytics/bookings', '/api/admin/analytics/occupancy', '/api/admin/analytics/reports', '/api/admin/shifts', '/api/reports']) assert.equal((await request(path, adminToken)).status, 200);
     assert.equal((await request('/api/bookings/me', commuterToken)).status, 200);
     assert.equal((await request('/api/safety/sessions/me', commuterToken)).status, 200);
   } finally {
     socket.disconnect();
   }
+});
+
+test('ending a shift is atomic, disables GPS and preserves completed history', async () => {
+  const endpoint = '/api/buses/assigned/end-shift';
+  assert.equal((await request(endpoint, null, 'POST')).status, 401);
+  assert.equal((await request(endpoint, commuterToken, 'POST')).status, 403);
+  assert.equal((await request(endpoint, adminToken, 'POST')).status, 403);
+
+  const attempts = await Promise.all([
+    request(endpoint, driverTokenA, 'POST'),
+    request(endpoint, driverTokenA, 'POST'),
+  ]);
+  assert.deepEqual(attempts.map((result) => result.status).sort(), [200, 409]);
+  const success = attempts.find((result) => result.status === 200).data;
+  assert.equal(success.message, 'Shift ended successfully');
+  assert.equal(success.shift.status, 'completed');
+  assert.ok(success.shift.endedAt);
+  assert.equal(success.shift.bus.status, 'idle');
+
+  const savedShift = await Shift.findById(success.shift._id);
+  assert.equal(savedShift.status, 'completed');
+  assert.ok(savedShift.endedAt);
+  assert.equal(await Shift.countDocuments({ driver: driverA._id }), 1);
+  assert.equal((await Bus.findById(busA._id)).status, 'idle');
+  assert.equal((await profile(driverTokenA)).activeShift, null);
+
+  const rejectedLocation = await request('/api/buses/' + busA._id + '/location', driverTokenA, 'PATCH', { latitude: 31.42, longitude: 73.082 });
+  assert.equal(rejectedLocation.status, 409);
+  const duplicateEnd = await request(endpoint, driverTokenA, 'POST');
+  assert.equal(duplicateEnd.status, 409);
+  assert.equal(duplicateEnd.data.message, 'No active shift found.');
+
+  const adminShifts = await request('/api/admin/shifts', adminToken);
+  const completed = adminShifts.data.find((shift) => shift._id === success.shift._id);
+  assert.equal(completed.status, 'completed');
+  assert.ok(completed.endedAt);
 });
 
 test('driver hard deletion clears fleet links and makes its existing JWT unusable', async () => {

@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Shift = require('../models/Shift');
 const generateToken = require('../utils/generateToken');
 const { ApiError, sendApiError } = require('../utils/apiError');
 const { requireObjectBody, validateAccountFields } = require('../utils/accountValidation');
@@ -47,7 +48,17 @@ const loginUser = async (req, res) => {
 // @route   GET /api/auth/profile
 // @access  Private (current authenticated user, without password)
 const getMe = async (req, res) => {
-  res.status(200).json(req.user);
+  try {
+    const activeShift = req.user.role === 'driver'
+      ? await Shift.findOne({ driver: req.user._id, status: 'active' })
+        .populate('bus', 'busNumber status direction currentStopIndex route')
+        .populate('route', 'routeName startPoint endPoint')
+        .lean()
+      : null;
+    res.status(200).json({ ...req.user.toObject(), activeShift });
+  } catch (error) {
+    sendApiError(res, error, 'Server error fetching profile');
+  }
 };
 
 module.exports = { registerUser, loginUser, getMe };

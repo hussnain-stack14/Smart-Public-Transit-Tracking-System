@@ -41,6 +41,7 @@ export default function DriverDashboardPage() {
 function DriverOperations({ user }) {
   const socket = useSocket();
   const requestId = useRef(0);
+  const returnInFlight = useRef(false);
   const [data, setData] = useState({ profile: user, bus: null, route: null, stops: [], eta: null, alerts: [], errors: {} });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -138,7 +139,8 @@ function DriverOperations({ user }) {
     });
   }, []);
   const startReturnTrip = useCallback(async () => {
-    if (returnBusy) return;
+    if (returnInFlight.current) return;
+    returnInFlight.current = true;
     setReturnBusy(true);
     setReturnError("");
     try {
@@ -152,9 +154,10 @@ function DriverOperations({ user }) {
     } catch (requestError) {
       setReturnError(requestError.response?.data?.message || "Unable to start the return trip. Try again.");
     } finally {
+      returnInFlight.current = false;
       setReturnBusy(false);
     }
-  }, [returnBusy]);
+  }, []);
   const seatsUpdated = useCallback((updated) => {
     setData((current) => {
       if (current.bus?._id !== updated._id) return current;
@@ -186,7 +189,7 @@ function DriverOperations({ user }) {
         <section aria-label="Driver assignment and shift" className="mt-6 grid gap-4 md:grid-cols-3">
           <Card className="min-w-0 p-5"><dl><Detail label="Assigned bus" value={bus?.busNumber || "No bus assigned"} /></dl>{bus && <Badge className="mt-3" tone={bus.status === "active" ? "success" : "neutral"}>Bus status: {bus.status}</Badge>}</Card>
           <Card className="min-w-0 p-5"><dl><Detail label="Current route" value={errors.route ? "Unable to load route" : route?.routeName || bus?.route?.routeName || (bus ? "Unavailable" : "No bus assigned")} /></dl>{route && <><p className="mt-3 break-words text-sm text-[var(--muted)]">{route.startPoint} ↔ {route.endPoint}</p><p className="mt-2 break-words text-sm font-semibold text-[var(--foreground)]">Direction: {directionLabel}</p></>}</Card>
-          <Card className="min-w-0 p-5"><dl><Detail label="Shift status" value="Unavailable" /></dl><p id="shift-help" className="mt-3 text-sm leading-6 text-[var(--muted)]">Start Shift is currently unavailable because shift management is not supported by the backend.{!bus && " A bus assignment is also required."}</p><Button type="button" disabled aria-describedby="shift-help" className="mt-4 min-h-12 w-full">Start Shift</Button></Card>
+          <Card className="min-w-0 p-5"><dl><Detail label="Shift status" value="Unavailable" /></dl><p id="shift-help" className="mt-3 text-sm leading-6 text-[var(--muted)]">Shift management is not currently supported by the backend.</p><Button type="button" variant="secondary" disabled={true} aria-describedby="shift-help" className="mt-4 min-h-12 w-full disabled:border-[var(--border)] disabled:bg-[#eef1f0] disabled:text-[var(--muted)] disabled:opacity-100 disabled:hover:bg-[#eef1f0]">Start Shift</Button></Card>
         </section>
       )}
       {loading && !bus ? <div className="grid min-h-80 place-items-center"><LoadingSpinner label="Loading assigned bus, route, ETA and alerts..." /></div> : error ? <div className="mt-6"><ErrorState title="Driver information unavailable" description={error} action={retry} /></div> : !bus ? <div className="mt-6"><EmptyState title="No bus assigned" description="No bus is currently assigned to you. Contact the transit team for your assignment." /></div> : (

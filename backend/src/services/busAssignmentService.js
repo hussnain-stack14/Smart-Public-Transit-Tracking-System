@@ -1,8 +1,8 @@
-const mongoose = require('mongoose');
 const Bus = require('../models/Bus');
 const User = require('../models/User');
 const { ApiError } = require('../utils/apiError');
 const { assertObjectId, requireObjectBody } = require('../utils/accountValidation');
+const { runInTransaction } = require('./transactionService');
 
 const BUS_FIELDS = ['busNumber', 'route', 'driver', 'capacity', 'availableSeats', 'currentLocation', 'lastLocationUpdate', 'status', 'trustScore', 'currentStopIndex', 'recentSpeeds'];
 
@@ -12,17 +12,6 @@ function busUpdates(body) {
     throw new ApiError(400, 'Only editable bus fields can be provided.');
   }
   return body;
-}
-
-function transaction(work) {
-  // All relationship writes use the same session, sequentially. MongoDB retries
-  // transient write conflicts and aborts the complete operation on failure.
-  return mongoose.connection.transaction(work, {
-    readPreference: 'primary',
-    readConcern: { level: 'snapshot' },
-    writeConcern: { w: 'majority' },
-    maxCommitTimeMS: 10000,
-  });
 }
 
 async function setDriver(bus, driverId, session) {
@@ -60,7 +49,7 @@ async function createFleetBus(body) {
   const { busNumber, route, capacity, driver } = body;
   if (!busNumber || !route || capacity == null) throw new ApiError(400, 'busNumber, route, and capacity are required');
   assertObjectId(route, 'Route ID');
-  return transaction(async (session) => {
+  return runInTransaction(async (session) => {
     const bus = new Bus({ busNumber, route, capacity, availableSeats: capacity });
     await setDriver(bus, driver === undefined || driver === '' ? null : driver, session);
     await bus.save({ session });
@@ -76,7 +65,7 @@ async function updateFleetBus(id, body) {
     if (!bus) throw new ApiError(404, 'Bus not found.');
     return bus;
   }
-  return transaction(async (session) => {
+  return runInTransaction(async (session) => {
     const bus = await Bus.findById(id).session(session);
     if (!bus) throw new ApiError(404, 'Bus not found.');
     const { driver, ...fields } = updates;
@@ -89,7 +78,7 @@ async function updateFleetBus(id, body) {
 
 async function deleteFleetBus(id) {
   assertObjectId(id, 'Bus ID');
-  return transaction(async (session) => {
+  return runInTransaction(async (session) => {
     const bus = await Bus.findById(id).select('_id').session(session);
     if (!bus) throw new ApiError(404, 'Bus not found.');
     await User.updateMany({ assignedBus: bus._id }, { $set: { assignedBus: null } }, { session });
@@ -99,7 +88,7 @@ async function deleteFleetBus(id) {
 
 async function removeDriver(id) {
   assertObjectId(id, 'Driver ID');
-  return transaction(async (session) => {
+  return runInTransaction(async (session) => {
     const driver = await User.findOne({ _id: id, role: 'driver' }).select('_id').session(session);
     if (!driver) throw new ApiError(404, 'Driver not found.');
     const buses = await Bus.find({ driver: driver._id }).select('_id').session(session);

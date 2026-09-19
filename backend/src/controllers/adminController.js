@@ -2,6 +2,7 @@ const Bus = require('../models/Bus');
 const Route = require('../models/Route');
 const Booking = require('../models/Booking');
 const Report = require('../models/Report');
+const Shift = require('../models/Shift');
 
 // @route   GET /api/admin/overview
 // @desc    High-level fleet snapshot for the dashboard home screen
@@ -19,6 +20,7 @@ const getFleetOverview = async (req, res) => {
       totalRoutes,
       bookingsToday,
       openReports,
+      activeShifts,
     ] = await Promise.all([
       Bus.countDocuments({}),
       Bus.countDocuments({ status: 'active' }),
@@ -27,6 +29,7 @@ const getFleetOverview = async (req, res) => {
       Route.countDocuments({ isActive: true }),
       Booking.countDocuments({ createdAt: { $gte: startOfToday } }),
       Report.countDocuments({ status: 'open' }),
+      Shift.countDocuments({ status: 'active' }),
     ]);
 
     res.status(200).json({
@@ -34,6 +37,7 @@ const getFleetOverview = async (req, res) => {
       routes: { total: totalRoutes },
       bookingsToday,
       openReports,
+      activeShifts,
     });
   } catch (err) {
     res.status(500).json({ message: 'Server error fetching fleet overview', error: err.message });
@@ -148,9 +152,23 @@ const getReportsSummary = async (req, res) => {
   }
 };
 
+const getShifts = async (req, res) => {
+  try {
+    const shifts = await Shift.find({})
+      .populate('driver', 'name email phone')
+      .populate('bus', 'busNumber status direction')
+      .populate('route', 'routeName startPoint endPoint')
+      .sort({ startedAt: -1 });
+    res.status(200).json(shifts);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error fetching shifts' });
+  }
+};
+
 module.exports = {
   getFleetOverview,
   getBookingsAnalytics,
   getOccupancyByRoute,
   getReportsSummary,
+  getShifts,
 };
