@@ -2,7 +2,17 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, BusFront, CheckCircle2, Clock3, MapPin, RefreshCw, Ticket } from "lucide-react";
+import {
+  ArrowLeft,
+  BusFront,
+  CheckCircle2,
+  Clock3,
+  MapPin,
+  RefreshCw,
+  Ticket,
+  UserRound,
+  WalletCards,
+} from "lucide-react";
 import { Navbar } from "../navigation/Navbar";
 import { Footer } from "../navigation/Footer";
 import { BookingProgress } from "./BookingProgress";
@@ -16,9 +26,35 @@ import { busService } from "../../services/busService";
 import { routeService } from "../../services/routeService";
 import { useAuth } from "../../hooks/useAuth";
 
-function formatDate(value) {
+function formatDateTime(value) {
   if (!value) return "Not provided";
-  return new Date(value).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not provided";
+  return date.toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function capitalize(value, fallback = "Not provided") {
+  if (!value) return fallback;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function statusTone(status) {
+  if (status === "confirmed" || status === "paid") return "success";
+  if (status === "failed" || status === "cancelled") return "danger";
+  if (status === "pending") return "warning";
+  return "neutral";
+}
+
+function pickupStatus(booking) {
+  if (booking.locationSharingActive) return "Shared with assigned driver";
+  if (booking.pickupLocation) return "Sharing stopped";
+  return "Not shared";
 }
 
 export default function ConfirmationPage({ bookingId }) {
@@ -30,21 +66,31 @@ export default function ConfirmationPage({ bookingId }) {
   const [error, setError] = useState("");
 
   const loadConfirmation = useCallback(async () => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError("");
     try {
-      const bookingsResponse = await bookingService.listMine();
-      const bookings = Array.isArray(bookingsResponse) ? bookingsResponse : bookingsResponse.bookings || [];
-      const currentBooking = bookings.find((item) => item._id === bookingId);
+      const bookingsResponse = await bookingService.getMyBookings();
+      const bookings = Array.isArray(bookingsResponse)
+        ? bookingsResponse
+        : bookingsResponse.bookings || [];
+      const currentBooking = bookings.find((item) => String(item._id) === String(bookingId));
       if (!currentBooking) {
+        setBooking(null);
         setError("not-found");
         return;
       }
-      const busId = currentBooking.bus?._id || currentBooking.bus;
-      const busData = currentBooking.bus?._id ? currentBooking.bus : await busService.get(busId);
-      const routeId = busData.route?._id || busData.route;
-      const routeData = routeId ? await routeService.get(routeId) : null;
+
+      let busData = currentBooking.bus || null;
+      if (busData && typeof busData !== "object") busData = await busService.get(busData);
+
+      let routeData = currentBooking.route || busData?.route || null;
+      if (routeData && typeof routeData !== "object") routeData = await routeService.get(routeData);
+
       setBooking(currentBooking);
       setBus(busData);
       setRoute(routeData);
@@ -63,33 +109,215 @@ export default function ConfirmationPage({ bookingId }) {
     Promise.resolve().then(() => loadConfirmation());
   }, [loadConfirmation]);
 
-  if (authLoading || loading) return <PageShell><div className="grid min-h-96 place-items-center"><LoadingSpinner label="Loading booking confirmation..." /></div></PageShell>;
-  if (!isAuthenticated || error === "auth") return <PageShell><StateCard title="Log in to view this booking" description="Your confirmation is available from your authenticated booking history." actionHref={`/login?redirect=/booking/${bus?._id || ""}/confirmation?booking=${bookingId}`} actionLabel="Log in" /></PageShell>;
-  if (error === "not-found") return <PageShell><StateCard title="Booking not found" description="This booking does not exist in your booking history or is no longer available." actionHref="/booking" actionLabel="Back to booking" /></PageShell>;
-  if (error || !booking) return <PageShell><ErrorState title="Unable to load confirmation" description="We couldn't retrieve this booking right now." action={<Button type="button" variant="secondary" onClick={loadConfirmation}><RefreshCw size={16} /> Try again</Button>} /></PageShell>;
+  if (authLoading || (isAuthenticated && loading)) {
+    return (
+      <PageShell>
+        <div className="grid min-h-96 place-items-center">
+          <LoadingSpinner label="Loading booking confirmation..." />
+        </div>
+      </PageShell>
+    );
+  }
+  if (!isAuthenticated || error === "auth") {
+    const redirect = encodeURIComponent(`/booking/${bookingId}/confirmation`);
+    return (
+      <PageShell>
+        <StateCard
+          title="Log in to view this booking"
+          description="Your confirmation is available only from your authenticated booking history."
+          actionHref={`/login?redirect=${redirect}`}
+          actionLabel="Log in"
+        />
+      </PageShell>
+    );
+  }
+  if (error === "not-found") {
+    return (
+      <PageShell>
+        <StateCard
+          title="Booking not found"
+          description="This booking is not in your booking history, or you are not authorized to view it."
+          actionHref="/my-trips"
+          actionLabel="View My Trips"
+        />
+      </PageShell>
+    );
+  }
+  if (error || !booking) {
+    return (
+      <PageShell>
+        <ErrorState
+          title="Unable to load confirmation"
+          description="We couldn't retrieve this booking right now."
+          action={
+            <Button type="button" variant="secondary" onClick={loadConfirmation}>
+              <RefreshCw size={16} /> Try again
+            </Button>
+          }
+        />
+      </PageShell>
+    );
+  }
 
   const routeName = route?.routeName || bus?.route?.routeName || "Route unavailable";
-  const statusTone = booking.status === "confirmed" ? "success" : "neutral";
+  const driverName = booking.driver?.name || bus?.driver?.name || "Not provided";
+  const isConfirmed = booking.status === "confirmed";
 
-  return <PageShell><div className="mx-auto max-w-4xl"><BookingProgress currentStep={3} /><section className="mt-8 text-center"><span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[#dff2e8] text-[var(--success)]"><CheckCircle2 size={34} /></span><p className="mt-5 text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary)]">Booking complete</p><h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--foreground)] sm:text-4xl">Booking Confirmed</h1><p className="mt-2 text-sm text-[var(--muted)]">Your trip has been successfully booked.</p></section><Card className="mt-8 overflow-hidden"><div className="flex flex-col justify-between gap-4 border-b border-[var(--border)] bg-[#f0f7f4] p-5 sm:flex-row sm:items-center sm:p-6"><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-[var(--primary)]"><Ticket size={19} /></span><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--primary)]">Booking reference</p><p className="mt-1 break-all font-mono text-sm font-bold text-[var(--foreground)]">{booking._id}</p></div></div><Badge tone={statusTone}>{booking.status || "Confirmed"}</Badge></div><div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-2"><div><h2 className="text-lg font-bold text-[var(--foreground)]">Trip Summary</h2><dl className="mt-5 grid gap-4 text-sm"><DetailRow label="Route" value={routeName} /><DetailRow label="Bus" value={bus?.busNumber || "Not provided"} /><DetailRow label="Travel date" value={formatDate(booking.createdAt)} /><DetailRow label="Time" value="Not provided" /><DetailRow label="Selected seat" value={booking.seatNumber || "Not assigned"} /></dl></div><div><h2 className="text-lg font-bold text-[var(--foreground)]">Journey Information</h2><div className="mt-5 grid gap-4 text-sm"><InfoRow icon={BusFront} label="Bus service" value={bus?.busNumber || "Not provided"} /><InfoRow icon={MapPin} label="Route" value={routeName} /><InfoRow icon={Clock3} label="Booking created" value={formatDate(booking.createdAt)} /></div></div></div></Card><div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center"><Link href="/booking" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-white px-5 text-sm font-semibold text-[var(--foreground)] hover:border-[var(--primary)] hover:text-[var(--primary)]"><ArrowLeft size={16} /> New booking</Link><Link href="/live-map" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--primary-dark)]">Back to Live Map <ArrowRightIcon /></Link></div></div></PageShell>;
+  return (
+    <PageShell>
+      <div className="mx-auto max-w-4xl">
+        <BookingProgress currentStep={3} />
+        <section className="mt-8 text-center">
+          <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[#dff2e8] text-[var(--success)]">
+            <CheckCircle2 size={34} />
+          </span>
+          <p className="mt-5 text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary)]">
+            Booking saved
+          </p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--foreground)] sm:text-4xl">
+            {isConfirmed ? "Booking Confirmed" : `Booking ${capitalize(booking.status)}`}
+          </h1>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            These details come from your authenticated backend booking record.
+          </p>
+        </section>
+
+        <Card className="mt-8 overflow-hidden">
+          <div className="flex flex-col justify-between gap-4 border-b border-[var(--border)] bg-[#f0f7f4] p-5 sm:flex-row sm:items-center sm:p-6">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-[var(--primary)]">
+                <Ticket size={19} />
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--primary)]">
+                  Booking ID
+                </p>
+                <p className="mt-1 break-all font-mono text-sm font-bold text-[var(--foreground)]">
+                  {booking._id}
+                </p>
+              </div>
+            </div>
+            <Badge tone={statusTone(booking.status)}>{capitalize(booking.status)}</Badge>
+          </div>
+
+          <div className="grid gap-8 p-5 sm:p-6 lg:grid-cols-2">
+            <section>
+              <h2 className="text-lg font-bold text-[var(--foreground)]">Trip details</h2>
+              <dl className="mt-5 grid gap-4 text-sm">
+                <DetailRow label="Route" value={routeName} />
+                <DetailRow label="Bus" value={bus?.busNumber || "Not provided"} />
+                <DetailRow label="Driver" value={driverName} />
+                <DetailRow label="Seat" value={booking.seatNumber || "Not assigned"} />
+                <DetailRow label="Booked at" value={formatDateTime(booking.createdAt)} />
+              </dl>
+            </section>
+
+            <section>
+              <h2 className="text-lg font-bold text-[var(--foreground)]">Booking status</h2>
+              <div className="mt-5 grid gap-3 text-sm">
+                <InfoRow
+                  icon={Ticket}
+                  label="Booking"
+                  value={capitalize(booking.status)}
+                  badgeTone={statusTone(booking.status)}
+                />
+                <InfoRow
+                  icon={WalletCards}
+                  label={`Payment · ${capitalize(booking.paymentMethod, "Method unavailable")}`}
+                  value={capitalize(booking.paymentStatus, "Unavailable")}
+                  badgeTone={statusTone(booking.paymentStatus)}
+                />
+                <InfoRow
+                  icon={MapPin}
+                  label="Pickup location"
+                  value={pickupStatus(booking)}
+                />
+                <InfoRow icon={UserRound} label="Assigned driver" value={driverName} />
+                <InfoRow icon={BusFront} label="Bus service" value={bus?.busNumber || "Not provided"} />
+                <InfoRow icon={Clock3} label="Created" value={formatDateTime(booking.createdAt)} />
+              </div>
+            </section>
+          </div>
+        </Card>
+
+        {booking.paymentStatus === "pending" && (
+          <p className="mt-4 rounded-xl border border-[#f0d7aa] bg-[#fff9ed] p-4 text-sm leading-6 text-[#6f531d]">
+            Payment is pending. Smart Safar does not currently provide a customer payment gateway, so
+            no successful payment is claimed on this page.
+          </p>
+        )}
+
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+          <Link
+            href="/booking"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-white px-5 text-sm font-semibold text-[var(--foreground)] hover:border-[var(--primary)] hover:text-[var(--primary)]"
+          >
+            <ArrowLeft size={16} /> New booking
+          </Link>
+          <Link
+            href="/my-trips"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--primary-dark)]"
+          >
+            View My Trips
+          </Link>
+        </div>
+      </div>
+    </PageShell>
+  );
 }
 
 function PageShell({ children }) {
-  return <div className="min-h-screen overflow-x-hidden bg-[var(--background)]"><Navbar /><main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">{children}</main><Footer /></div>;
+  return (
+    <div className="min-h-screen overflow-x-hidden bg-[var(--background)]">
+      <Navbar />
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">{children}</main>
+      <Footer />
+    </div>
+  );
 }
 
 function DetailRow({ label, value }) {
-  return <div className="flex items-start justify-between gap-4"><dt className="text-[var(--muted)]">{label}</dt><dd className="max-w-[60%] text-right font-semibold text-[var(--foreground)]">{value}</dd></div>;
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <dt className="text-[var(--muted)]">{label}</dt>
+      <dd className="max-w-[62%] break-words text-right font-semibold text-[var(--foreground)]">
+        {value}
+      </dd>
+    </div>
+  );
 }
 
-function InfoRow({ icon: Icon, label, value }) {
-  return <div className="flex items-center gap-3 rounded-xl bg-[#f5f8f7] p-3"><span className="grid h-9 w-9 place-items-center rounded-lg bg-[#e4f5ed] text-[var(--primary)]"><Icon size={16} /></span><div><p className="text-xs text-[var(--muted)]">{label}</p><p className="mt-1 font-semibold text-[var(--foreground)]">{value}</p></div></div>;
+function InfoRow({ icon: Icon, label, value, badgeTone }) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl bg-[#f5f8f7] p-3">
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#e4f5ed] text-[var(--primary)]">
+        <Icon size={16} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-[var(--muted)]">{label}</p>
+        {badgeTone ? (
+          <Badge tone={badgeTone} className="mt-1">
+            {value}
+          </Badge>
+        ) : (
+          <p className="mt-1 break-words font-semibold text-[var(--foreground)]">{value}</p>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function StateCard({ title, description, actionHref, actionLabel }) {
-  return <Card className="mx-auto max-w-lg p-8 text-center"><h1 className="text-2xl font-bold text-[var(--foreground)]">{title}</h1><p className="mt-2 text-sm leading-6 text-[var(--muted)]">{description}</p><Link href={actionHref} className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-white">{actionLabel}</Link></Card>;
-}
-
-function ArrowRightIcon() {
-  return <span aria-hidden="true">-&gt;</span>;
+  return (
+    <Card className="mx-auto max-w-lg p-8 text-center">
+      <h1 className="text-2xl font-bold text-[var(--foreground)]">{title}</h1>
+      <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{description}</p>
+      <Link
+        href={actionHref}
+        className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-white"
+      >
+        {actionLabel}
+      </Link>
+    </Card>
+  );
 }

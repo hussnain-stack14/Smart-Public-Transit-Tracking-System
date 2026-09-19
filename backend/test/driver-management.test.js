@@ -7,6 +7,9 @@ const { io: createSocket } = require('socket.io-client');
 // All HTTP handlers, middleware, hashing and persistence are the actual backend.
 // A separate, uniquely named database prevents fixtures reaching the live fleet.
 process.env.JWT_SECRET = crypto.randomBytes(32).toString('hex');
+process.env.BOOKING_FARE = '50';
+process.env.BOOKING_CURRENCY = 'PKR';
+process.env.PAYMENT_WEBHOOK_SECRET = crypto.randomBytes(32).toString('hex');
 const { server, io } = require('../src/server');
 const User = require('../src/models/User');
 const Bus = require('../src/models/Bus');
@@ -20,17 +23,33 @@ const Shift = require('../src/models/Shift');
 
 const testDatabase = 'transit_driver_test_' + crypto.randomBytes(8).toString('hex');
 const password = crypto.randomBytes(18).toString('hex');
-let baseUrl, adminToken, commuter, commuterToken, driverA, driverB, driverTokenA, driverTokenB, route, busA, busB;
+let baseUrl, adminToken, commuter, commuterToken, driverA, driverB, driverTokenA, driverTokenB, route, busA, busB, routeFirstBooking;
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function request(path, token, method = 'GET', body) {
+async function request(path, token, method = 'GET', body, extraHeaders = {}) {
   const response = await fetch(baseUrl + path, {
     method,
-    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: 'Bearer ' + token } : {}),
+      ...extraHeaders,
+    },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     signal: AbortSignal.timeout(45000),
   });
   return { status: response.status, data: await response.json() };
+}
+
+function paymentSignature(body) {
+  const message = JSON.stringify([
+    body.paymentReference,
+    body.status,
+    Number(body.amount),
+    body.currency.toUpperCase(),
+    body.providerTransactionId,
+    body.failureReason || null,
+  ]);
+  return crypto.createHmac('sha256', process.env.PAYMENT_WEBHOOK_SECRET).update(message).digest('hex');
 }
 
 function assertSafeDriver(record) {
@@ -518,11 +537,359 @@ test('existing GPS, real Socket.IO delivery, ETA, seats, bookings, routes and an
   }
 });
 
+test('route-first and manual bookings resolve only valid active assignments and protect seats/payment state', async () => {
+  const seatsBefore = (await Bus.findById(busA._id)).availableSeats;
+
+  const fakePaid = await request('/api/bookings', commuterToken, 'POST', {
+    routeId: route._id,
+    seatNumber: 'RF-FAKE',
+    paymentMethod: 'online',
+    paymentStatus: 'paid',
+    amount: 1,
+  });
+  assert.equal(fakePaid.status, 400);
+
+  const created = await request('/api/bookings', commuterToken, 'POST', {
+    routeId: route._id,
+    seatNumber: 'RF-1',
+    paymentMethod: 'online',
+    fare: 1,
+  });
+  assert.equal(created.status, 201);
+  routeFirstBooking = created.data;
+  assert.equal(routeFirstBooking.route._id, route._id);
+  assert.equal(routeFirstBooking.bus._id, busA._id);
+  assert.equal(routeFirstBooking.driver._id, driverA._id);
+  assert.equal(routeFirstBooking.fare, 50);
+  assert.equal(routeFirstBooking.currency, 'PKR');
+  assert.equal(routeFirstBooking.paymentStatus, 'pending');
+  assert.equal((await Bus.findById(busA._id)).availableSeats, seatsBefore - 1);
+
+  const duplicate = await request('/api/bookings', commuterToken, 'POST', {
+    routeId: route._id,
+    seatNumber: 'RF-OTHER',
+  });
+  assert.equal(duplicate.status, 409);
+
+  const manualIdentity = await request('/api/auth/register', null, 'POST', {
+    name: 'Manual Booking Passenger',
+    email: 'manual.booking@integration.example',
+    password,
+  });
+  assert.equal(manualIdentity.status, 201);
+  const manualToken = manualIdentity.data.token;
+
+  const wrongDriver = await request('/api/bookings', manualToken, 'POST', {
+    routeId: route._id,
+    bus: busA._id,
+    driverId: driverB._id,
+    seatNumber: 'RF-2',
+  });
+  assert.equal(wrongDriver.status, 400);
+
+  const occupiedSeat = await request('/api/bookings', manualToken, 'POST', {
+    routeId: route._id,
+    bus: busA._id,
+    driverId: driverA._id,
+    seatNumber: 'RF-1',
+  });
+  assert.equal(occupiedSeat.status, 409);
+
+  const manual = await request('/api/bookings', manualToken, 'POST', {
+    routeId: route._id,
+    bus: busA._id,
+    driverId: driverA._id,
+    seatNumber: 'RF-2',
+    fare: 0,
+  });
+  assert.equal(manual.status, 201);
+  assert.equal(manual.data.driver._id, driverA._id);
+  assert.equal(manual.data.fare, 50);
+  assert.equal(
+    (await request('/api/bookings/' + manual.data._id + '/cancel', manualToken, 'PATCH')).status,
+    200
+  );
+  assert.equal((await Bus.findById(busA._id)).availableSeats, seatsBefore - 1);
+});
+
+test('consensual passenger locations reach only the assigned active driver and stop on cancellation', async () => {
+  const otherDriver = await createDriver('location.driver@integration.example', 'Other Route Driver');
+  const otherIdentity = await login(otherDriver.email);
+  const otherRouteResponse = await request('/api/routes', adminToken, 'POST', {
+    routeName: 'Other Location Route',
+    startPoint: 'Other Start',
+    endPoint: 'Other End',
+  });
+  assert.equal(otherRouteResponse.status, 201);
+  const otherRoute = otherRouteResponse.data;
+  assert.equal(
+    (
+      await request('/api/stops', adminToken, 'POST', {
+        route: otherRoute._id,
+        stopName: 'Other Stop',
+        latitude: 31.5,
+        longitude: 73.2,
+        stopOrder: 1,
+      })
+    ).status,
+    201
+  );
+  const otherBusResponse = await request('/api/buses', adminToken, 'POST', {
+    busNumber: 'LOCATION-OTHER',
+    route: otherRoute._id,
+    capacity: 20,
+    driver: otherDriver._id,
+  });
+  assert.equal(otherBusResponse.status, 201);
+  assert.equal(
+    (await request('/api/buses/assigned/start-shift', otherIdentity.token, 'POST')).status,
+    201
+  );
+
+  const passengerIdentity = await request('/api/auth/register', null, 'POST', {
+    name: 'Location Passenger',
+    email: 'location.passenger@integration.example',
+    password,
+  });
+  assert.equal(passengerIdentity.status, 201);
+  const passengerToken = passengerIdentity.data.token;
+
+  const socket = createSocket(baseUrl, {
+    transports: ['websocket'],
+    reconnection: false,
+    timeout: 5000,
+  });
+  try {
+    await new Promise((resolve, reject) => {
+      socket.once('connect', resolve);
+      socket.once('connect_error', reject);
+    });
+    const subscription = await new Promise((resolve) => {
+      socket.emit('watchDriverBookings', { token: driverTokenA }, resolve);
+    });
+    assert.equal(subscription.ok, true);
+    assert.equal(subscription.busId, busA._id);
+    assert.ok(io.sockets.adapter.rooms.has('driver:' + driverA._id));
+
+    const initialEventPromise = new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Initial passenger location was not delivered')), 8000);
+      socket.once('passengerLocationUpdate', (event) => {
+        clearTimeout(timeout);
+        resolve(event);
+      });
+    });
+    const booking = await request('/api/bookings', passengerToken, 'POST', {
+      routeId: route._id,
+      seatNumber: 'LOC-1',
+      pickupLocation: {
+        latitude: 31.418,
+        longitude: 73.079,
+        accuracy: 8,
+        timestamp: new Date().toISOString(),
+      },
+      shareLocation: true,
+    });
+    assert.equal(booking.status, 201);
+    const initialEvent = await initialEventPromise;
+    assert.equal(initialEvent.bookingId, booking.data._id);
+    assert.equal(initialEvent.sharing, true);
+    assert.equal(initialEvent.latitude, 31.418);
+
+    const assignedLocations = await request(
+      '/api/bookings/assigned/passenger-locations',
+      driverTokenA
+    );
+    assert.equal(assignedLocations.status, 200);
+    assert.equal(
+      assignedLocations.data.some((item) => item.bookingId === booking.data._id),
+      true
+    );
+    assert.equal(
+      (await request('/api/bookings/assigned/passenger-locations', commuterToken)).status,
+      403
+    );
+    const unrelatedLocations = await request(
+      '/api/bookings/assigned/passenger-locations',
+      otherIdentity.token
+    );
+    assert.equal(unrelatedLocations.status, 200);
+    assert.deepEqual(unrelatedLocations.data, []);
+
+    const unauthorizedUpdate = await request(
+      '/api/bookings/' + booking.data._id + '/location',
+      commuterToken,
+      'PATCH',
+      { shareLocation: false }
+    );
+    assert.equal(unauthorizedUpdate.status, 403);
+
+    const updateEventPromise = new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Passenger location update was not delivered')), 8000);
+      socket.once('passengerLocationUpdate', (event) => {
+        clearTimeout(timeout);
+        resolve(event);
+      });
+    });
+    const updated = await request(
+      '/api/bookings/' + booking.data._id + '/location',
+      passengerToken,
+      'PATCH',
+      {
+        shareLocation: true,
+        pickupLocation: {
+          latitude: 31.419,
+          longitude: 73.08,
+          accuracy: 5,
+          timestamp: new Date().toISOString(),
+        },
+      }
+    );
+    assert.equal(updated.status, 200);
+    assert.equal((await updateEventPromise).latitude, 31.419);
+
+    const stoppedEventPromise = new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Passenger location stop was not delivered')), 8000);
+      socket.once('passengerLocationUpdate', (event) => {
+        clearTimeout(timeout);
+        resolve(event);
+      });
+    });
+    assert.equal(
+      (
+        await request(
+          '/api/bookings/' + booking.data._id + '/cancel',
+          passengerToken,
+          'PATCH'
+        )
+      ).status,
+      200
+    );
+    const stoppedEvent = await stoppedEventPromise;
+    assert.equal(stoppedEvent.bookingId, booking.data._id);
+    assert.equal(stoppedEvent.sharing, false);
+    assert.equal(Object.hasOwn(stoppedEvent, 'latitude'), false);
+
+    const locationsAfterCancel = await request(
+      '/api/bookings/assigned/passenger-locations',
+      driverTokenA
+    );
+    assert.equal(locationsAfterCancel.status, 200);
+    assert.equal(
+      locationsAfterCancel.data.some((item) => item.bookingId === booking.data._id),
+      false
+    );
+    assert.equal((await Booking.findById(booking.data._id)).locationSharingActive, false);
+  } finally {
+    socket.disconnect();
+  }
+});
+
+test('signed payment notifications verify success/failure and release failed bookings', async () => {
+  const successNotification = {
+    paymentReference: routeFirstBooking.paymentReference,
+    status: 'paid',
+    amount: 50,
+    currency: 'PKR',
+    providerTransactionId: 'provider-success-1',
+  };
+  const paid = await request(
+    '/api/bookings/payments/webhook',
+    null,
+    'POST',
+    successNotification,
+    { 'x-payment-signature': paymentSignature(successNotification) }
+  );
+  assert.equal(paid.status, 200);
+  assert.equal(paid.data.booking.paymentStatus, 'paid');
+  assert.ok(paid.data.booking.paidAt);
+
+  const failureIdentity = await request('/api/auth/register', null, 'POST', {
+    name: 'Failed Payment Passenger',
+    email: 'failed.payment@integration.example',
+    password,
+  });
+  assert.equal(failureIdentity.status, 201);
+  const seatsBefore = (await Bus.findById(busA._id)).availableSeats;
+  const pending = await request('/api/bookings', failureIdentity.data.token, 'POST', {
+    routeId: route._id,
+    seatNumber: 'PAY-FAIL',
+    paymentMethod: 'online',
+  });
+  assert.equal(pending.status, 201);
+  assert.equal(pending.data.paymentStatus, 'pending');
+  assert.equal((await Bus.findById(busA._id)).availableSeats, seatsBefore - 1);
+
+  const failureNotification = {
+    paymentReference: pending.data.paymentReference,
+    status: 'failed',
+    amount: 50,
+    currency: 'PKR',
+    providerTransactionId: 'provider-failure-1',
+    failureReason: 'Provider declined the payment.',
+  };
+  const forged = await request(
+    '/api/bookings/payments/webhook',
+    null,
+    'POST',
+    failureNotification,
+    { 'x-payment-signature': '0'.repeat(64) }
+  );
+  assert.equal(forged.status, 401);
+  assert.equal((await Booking.findById(pending.data._id)).paymentStatus, 'pending');
+
+  const failed = await request(
+    '/api/bookings/payments/webhook',
+    null,
+    'POST',
+    failureNotification,
+    { 'x-payment-signature': paymentSignature(failureNotification) }
+  );
+  assert.equal(failed.status, 200);
+  assert.equal(failed.data.booking.paymentStatus, 'failed');
+  assert.equal(failed.data.booking.status, 'cancelled');
+  assert.equal((await Bus.findById(busA._id)).availableSeats, seatsBefore);
+});
 test('ending a shift is atomic, disables GPS and preserves completed history', async () => {
   const endpoint = '/api/buses/assigned/end-shift';
   assert.equal((await request(endpoint, null, 'POST')).status, 401);
   assert.equal((await request(endpoint, commuterToken, 'POST')).status, 403);
   assert.equal((await request(endpoint, adminToken, 'POST')).status, 403);
+  const sharedBeforeEnd = await request(
+    '/api/bookings/' + routeFirstBooking._id + '/location',
+    commuterToken,
+    'PATCH',
+    {
+      shareLocation: true,
+      pickupLocation: {
+        latitude: 31.42,
+        longitude: 73.082,
+        accuracy: 4,
+        timestamp: new Date().toISOString(),
+      },
+    }
+  );
+  assert.equal(sharedBeforeEnd.status, 200);
+  assert.equal(sharedBeforeEnd.data.locationSharingActive, true);
+
+  const socket = createSocket(baseUrl, { transports: ['websocket'], reconnection: false, timeout: 5000 });
+  await new Promise((resolve, reject) => { socket.once('connect', resolve); socket.once('connect_error', reject); });
+  socket.emit('watchBus', busA._id);
+  for (let n = 0; n < 100 && !io.sockets.adapter.rooms.has('bus:' + busA._id); n++) await delay(25);
+  const driverSubscription = await new Promise((resolve) => {
+    socket.emit('watchDriverBookings', { token: driverTokenA }, resolve);
+  });
+  assert.equal(driverSubscription.ok, true);
+  const accessEnded = new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('Passenger access end event not delivered')), 8000);
+    socket.once('passengerLocationAccessEnded', (event) => {
+      clearTimeout(timeout);
+      resolve(event);
+    });
+  });
+  const statusEvent = new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('End-shift status event not delivered')), 8000);
+    socket.once('locationUpdate', (event) => { clearTimeout(timeout); resolve(event); });
+  });
 
   const attempts = await Promise.all([
     request(endpoint, driverTokenA, 'POST'),
@@ -535,12 +902,25 @@ test('ending a shift is atomic, disables GPS and preserves completed history', a
   assert.ok(success.shift.endedAt);
   assert.equal(success.shift.bus.status, 'idle');
 
+  const endEvent = await statusEvent;
+  assert.equal(endEvent.busId, busA._id);
+  assert.equal(endEvent.status, 'idle');
+  const accessEndEvent = await accessEnded;
+  assert.equal(accessEndEvent.reason, 'shift-ended');
+  for (let n = 0; n < 100 && io.sockets.adapter.rooms.has('driver:' + driverA._id); n++) await delay(25);
+  assert.equal(io.sockets.adapter.rooms.has('driver:' + driverA._id), false);
+
   const savedShift = await Shift.findById(success.shift._id);
   assert.equal(savedShift.status, 'completed');
   assert.ok(savedShift.endedAt);
   assert.equal(await Shift.countDocuments({ driver: driverA._id }), 1);
   assert.equal((await Bus.findById(busA._id)).status, 'idle');
+  assert.equal((await Booking.findById(routeFirstBooking._id)).locationSharingActive, false);
   assert.equal((await profile(driverTokenA)).activeShift, null);
+  const commuterFleet = await request('/api/buses');
+  assert.equal(commuterFleet.status, 200);
+  const endedBus = commuterFleet.data.find((bus) => bus._id === busA._id);
+  assert.equal(endedBus.status, 'idle');
 
   const rejectedLocation = await request('/api/buses/' + busA._id + '/location', driverTokenA, 'PATCH', { latitude: 31.42, longitude: 73.082 });
   assert.equal(rejectedLocation.status, 409);
@@ -552,6 +932,7 @@ test('ending a shift is atomic, disables GPS and preserves completed history', a
   const completed = adminShifts.data.find((shift) => shift._id === success.shift._id);
   assert.equal(completed.status, 'completed');
   assert.ok(completed.endedAt);
+  socket.disconnect();
 });
 
 test('driver hard deletion clears fleet links and makes its existing JWT unusable', async () => {

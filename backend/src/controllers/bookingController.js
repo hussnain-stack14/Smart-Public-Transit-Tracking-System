@@ -1,40 +1,27 @@
 const Booking = require('../models/Booking');
-const Bus = require('../models/Bus');
+const { sendApiError } = require('../utils/apiError');
+const {
+  applyVerifiedPayment,
+  cancelUserBooking,
+  createBookingFromRequest,
+  emitPassengerLocation,
+  getPassengerLocationsForDriver,
+  updatePassengerLocation,
+} = require('../services/bookingService');
+const { verifyPaymentNotification } = require('../services/paymentService');
 
 // @route   POST /api/bookings
-// @desc    Create a seat booking on a bus (decrements available seats)
-// @access  Private (any logged-in user)
+// @desc    Create a route-first or validated manual booking
+// @access  Private
 const createBooking = async (req, res) => {
   try {
-    const { bus, seatNumber, fare } = req.body;
-    const userId = req.user._id; // set by the `protect` middleware
-
-    if (!bus) {
-      return res.status(400).json({ message: 'bus is required' });
+    const booking = await createBookingFromRequest(req.user._id, req.body);
+    if (booking.locationSharingActive) {
+      await emitPassengerLocation(req.app.get('io'), booking, true);
     }
-
-    const busDoc = await Bus.findById(bus);
-    if (!busDoc) {
-      return res.status(404).json({ message: 'Bus not found' });
-    }
-    if (busDoc.availableSeats <= 0) {
-      return res.status(400).json({ message: 'No seats available on this bus' });
-    }
-
-    const booking = await Booking.create({
-      user: userId,
-      bus,
-      seatNumber: seatNumber || null,
-      fare: fare || 0,
-    });
-
-    // Decrement seat count since a seat was just taken
-    busDoc.availableSeats -= 1;
-    await busDoc.save();
-
     res.status(201).json(booking);
-  } catch (err) {
-    res.status(500).json({ message: 'Server error creating booking', error: err.message });
+  } catch (error) {
+    sendApiError(res, error, 'Server error creating booking');
   }
 };
 
@@ -44,43 +31,92 @@ const createBooking = async (req, res) => {
 const getMyBookings = async (req, res) => {
   try {
     const bookings = await Booking.find({ user: req.user._id })
-      .populate('bus', 'busNumber route')
+      .populate('bus', 'busNumber route status')
+      .populate('route', 'routeName startPoint endPoint')
+      .populate('driver', 'name')
       .sort({ createdAt: -1 });
     res.status(200).json(bookings);
-  } catch (err) {
-    res.status(500).json({ message: 'Server error fetching bookings', error: err.message });
+  } catch (error) {
+    sendApiError(res, error, 'Server error fetching bookings');
   }
 };
 
 // @route   PATCH /api/bookings/:id/cancel
-// @desc    Cancel a booking (releases the seat back to the bus)
-// @access  Private (only the user who owns the booking)
+// @desc    Cancel the authenticated user's booking and release its seat
+// @access  Private
 const cancelBooking = async (req, res) => {
   try {
-    const booking = await Booking.findById(req.params.id);
-    if (!booking) {
-      return res.status(404).json({ message: 'Booking not found' });
+    const result = await cancelUserBooking(req.params.id, req.user._id);
+    if (result.locationStopped) {
+      await emitPassengerLocation(req.app.get('io'), result.booking, false);
     }
-
-    // Only the user who made the booking can cancel it
-    if (booking.user.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Not authorized to cancel this booking' });
-    }
-
-    if (booking.status === 'cancelled') {
-      return res.status(400).json({ message: 'Booking is already cancelled' });
-    }
-
-    booking.status = 'cancelled';
-    await booking.save();
-
-    // Release the seat back to the bus
-    await Bus.findByIdAndUpdate(booking.bus, { $inc: { availableSeats: 1 } });
-
-    res.status(200).json({ message: 'Booking cancelled', booking });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error cancelling booking', error: err.message });
+    res.status(200).json({ message: 'Booking cancelled', booking: result.booking });
+  } catch (error) {
+    sendApiError(res, error, 'Server error cancelling booking');
   }
 };
 
-module.exports = { createBooking, getMyBookings, cancelBooking };
+// @route   PATCH /api/bookings/:id/location
+// @desc    Start, update, or stop consensual passenger location sharing
+// @access  Private (booking owner)
+const updateBookingLocation = async (req, res) => {
+  try {
+    const booking = await updatePassengerLocation(req.params.id, req.user._id, req.body);
+    await emitPassengerLocation(
+      req.app.get('io'),
+      booking,
+      booking.locationSharingActive
+    );
+    res.status(200).json(booking);
+  } catch (error) {
+    sendApiError(res, error, 'Server error updating passenger location');
+  }
+};
+
+// @route   GET /api/bookings/assigned/passenger-locations
+// @desc    Return shared locations for the authenticated driver's active assignment
+// @access  Private (driver)
+const getAssignedPassengerLocations = async (req, res) => {
+  try {
+    const locations = await getPassengerLocationsForDriver(req.user._id);
+    res.status(200).json(locations);
+  } catch (error) {
+    sendApiError(res, error, 'Server error fetching passenger locations');
+  }
+};
+
+// @route   POST /api/bookings/payments/webhook
+// @desc    Apply a cryptographically verified payment provider notification
+// @access  Payment provider (HMAC signature)
+const paymentWebhook = async (req, res) => {
+  try {
+    const notification = verifyPaymentNotification(
+      req.body,
+      req.headers['x-payment-signature']
+    );
+    const result = await applyVerifiedPayment(notification);
+    if (result.locationStopped) {
+      await emitPassengerLocation(req.app.get('io'), result.booking, false);
+    }
+    res.status(200).json({
+      message: 'Payment notification processed',
+      booking: {
+        _id: result.booking._id,
+        status: result.booking.status,
+        paymentStatus: result.booking.paymentStatus,
+        paidAt: result.booking.paidAt,
+      },
+    });
+  } catch (error) {
+    sendApiError(res, error, 'Server error processing payment notification');
+  }
+};
+
+module.exports = {
+  cancelBooking,
+  createBooking,
+  getAssignedPassengerLocations,
+  getMyBookings,
+  paymentWebhook,
+  updateBookingLocation,
+};

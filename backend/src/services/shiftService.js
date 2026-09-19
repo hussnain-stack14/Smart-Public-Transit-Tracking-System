@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Bus = require('../models/Bus');
 const Shift = require('../models/Shift');
+const Booking = require('../models/Booking');
 const { ApiError } = require('../utils/apiError');
 const { runInTransaction } = require('./transactionService');
 
@@ -11,7 +12,7 @@ function sameId(left, right) {
 function populatedShift(id) {
   return Shift.findById(id)
     .populate('driver', 'name email phone')
-    .populate('bus', 'busNumber status direction currentStopIndex route')
+    .populate('bus', 'busNumber status direction currentStopIndex route currentLocation lastLocationUpdate')
     .populate('route', 'routeName startPoint endPoint');
 }
 
@@ -76,6 +77,17 @@ async function endDriverShift(driverId) {
     bus.status = 'idle';
     await shift.save({ session });
     await bus.save({ session });
+    await Booking.updateMany(
+      {
+        driver: driver._id,
+        bus: bus._id,
+        route: shift.route,
+        status: 'confirmed',
+        locationSharingActive: true,
+      },
+      { $set: { locationSharingActive: false } },
+      { session }
+    );
     return shift._id;
   });
 

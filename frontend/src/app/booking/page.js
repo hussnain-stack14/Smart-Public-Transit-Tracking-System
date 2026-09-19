@@ -7,5 +7,5 @@ export const metadata = {
 
 export default async function BookingRoute({ searchParams }) {
   const params = await searchParams;
-  return <BookingPage initialBusId={params?.bus || ""} />;
+  return <BookingPage initialBusId={params?.bus || ""} initialRouteId={params?.route || ""} />;
 }

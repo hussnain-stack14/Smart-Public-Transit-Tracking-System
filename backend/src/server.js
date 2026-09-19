@@ -2,8 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
+const jwt = require('jsonwebtoken');
 const { Server } = require('socket.io');
 const connectDB = require('./config/db');
+const { activeDriverContext } = require('./services/bookingService');
 
 const app = express();
 const server = http.createServer(app);
@@ -36,6 +38,41 @@ io.on('connection', (socket) => {
 
   socket.on('watchBus', (busId) => {
     socket.join(`bus:${busId}`);
+  });
+
+  socket.on('watchDriverBookings', async (payload = {}, acknowledge) => {
+    try {
+      const suppliedToken =
+        typeof payload.token === 'string' ? payload.token : socket.handshake.auth?.token;
+      const token = suppliedToken?.replace(/^Bearer\s+/i, '');
+      if (!token) throw new Error('Missing token.');
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const { driver, bus } = await activeDriverContext(decoded.id);
+      const room = `driver:${driver._id}`;
+
+      if (socket.data.driverBookingRoom) {
+        await socket.leave(socket.data.driverBookingRoom);
+      }
+      await socket.join(room);
+      socket.data.driverBookingRoom = room;
+
+      if (typeof acknowledge === 'function') {
+        acknowledge({ ok: true, busId: bus._id.toString() });
+      }
+    } catch (_error) {
+      if (typeof acknowledge === 'function') {
+        acknowledge({ ok: false, message: 'Driver authentication and an active shift are required.' });
+      }
+    }
+  });
+
+  socket.on('unwatchDriverBookings', async (acknowledge) => {
+    if (socket.data.driverBookingRoom) {
+      await socket.leave(socket.data.driverBookingRoom);
+      delete socket.data.driverBookingRoom;
+    }
+    if (typeof acknowledge === 'function') acknowledge({ ok: true });
   });
 
   socket.on('disconnect', () => {
