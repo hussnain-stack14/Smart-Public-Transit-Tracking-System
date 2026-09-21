@@ -1,7 +1,7 @@
 import ConfirmationPage from "../../../../components/booking/ConfirmationPage";
 
 export async function generateMetadata() {
-  return { title: "Booking Confirmation | Smart Transit Faisalabad" };
+  return { title: "Booking Confirmation | Smart Safar Faisalabad" };
 }
 
 export default async function ConfirmationRoute({ params, searchParams }) {

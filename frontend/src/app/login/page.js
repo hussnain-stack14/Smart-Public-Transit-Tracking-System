@@ -2,8 +2,8 @@ import { Suspense } from "react";
 import LoginPage from "../../components/auth/LoginPage";
 
 export const metadata = {
-  title: "Sign In | Smart Transit Faisalabad",
-  description: "Sign in to your Smart Transit Faisalabad account.",
+  title: "Sign In | Smart Safar Faisalabad",
+  description: "Sign in to your Smart Safar Faisalabad account.",
 };
 
 export default function LoginRoute() {

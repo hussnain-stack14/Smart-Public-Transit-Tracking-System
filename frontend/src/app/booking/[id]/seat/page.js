@@ -3,7 +3,7 @@ import SeatSelectionPage from "../../../../components/booking/SeatSelectionPage"
 export async function generateMetadata({ params }) {
   const { id } = await params;
   return {
-    title: "Seat Selection | Smart Transit Faisalabad",
+    title: "Seat Selection | Smart Safar Faisalabad",
     description: `Choose a seat for bus ${id}.`,
   };
 }

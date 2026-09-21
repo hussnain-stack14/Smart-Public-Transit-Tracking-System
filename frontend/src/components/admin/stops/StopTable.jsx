@@ -37,7 +37,7 @@ export function StopTable({ stops, loading, onEdit, onDelete, onAddClick }) {
   return (
     <div>
       {/* Desktop Table */}
-      <div className="hidden lg:block overflow-hidden rounded-2xl border border-[var(--border)] bg-white shadow-sm">
+      <div className="hidden xl:block overflow-hidden rounded-2xl border border-[var(--border)] bg-white shadow-sm">
         <table className="min-w-full divide-y divide-[var(--border)] text-left">
           <thead className="bg-[#f8faf9] text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
             <tr>
@@ -94,7 +94,7 @@ export function StopTable({ stops, loading, onEdit, onDelete, onAddClick }) {
       </div>
 
       {/* Mobile Cards */}
-      <div className="grid gap-3 lg:hidden">
+      <div className="grid gap-3 xl:hidden">
         {stops.map((stop) => {
           const stopId = stop._id || stop.id;
           return (

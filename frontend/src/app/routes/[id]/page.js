@@ -3,7 +3,7 @@ import RouteDetailsRouteClient from "../../../components/route/RouteDetailsRoute
 export async function generateMetadata({ params }) {
   const { id } = await params;
   return {
-    title: `Route ${id} | Smart Transit Faisalabad`,
+    title: `Route ${id} | Smart Safar Faisalabad`,
     description: "View route stops, active buses and live transit information.",
   };
 }

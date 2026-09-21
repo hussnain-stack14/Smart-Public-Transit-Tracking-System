@@ -1,7 +1,7 @@
 import BookingPage from "../../components/booking/BookingPage";
 
 export const metadata = {
-  title: "Booking | Smart Transit Faisalabad",
+  title: "Booking | Smart Safar Faisalabad",
   description: "Choose a route and bus to start reserving a transit seat.",
 };
 

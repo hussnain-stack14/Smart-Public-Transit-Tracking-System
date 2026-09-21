@@ -1,7 +1,7 @@
 import BusManagementClient from "../../../components/admin/buses/BusManagementClient";
 
 export const metadata = {
-  title: "Bus Management | Smart Transit Faisalabad",
+  title: "Bus Management | Smart Safar Faisalabad",
   description: "Manage and monitor the buses operating in the transit system.",
 };
 

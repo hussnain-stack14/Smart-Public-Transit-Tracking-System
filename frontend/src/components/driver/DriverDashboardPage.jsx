@@ -378,7 +378,7 @@ function DriverOperations({ user }) {
         </div>
         <div className="flex flex-wrap items-center gap-3"><Badge tone={connection === "Connected" ? "success" : "warning"}>Live feed: {connection}</Badge>{retry}</div>
       </header>
-      <nav aria-label="Driver navigation" className="mt-6 flex flex-wrap gap-2 text-sm font-semibold">
+      <nav aria-label="Driver page links" className="driver-page-links mt-6 flex flex-wrap gap-2 text-sm font-semibold">
         {[{ href: "/driver/dashboard", label: "Dashboard" }, { href: "/driver/dashboard#driver-map", label: "Route map" }, { href: "/reports", label: "Report an issue" }, { href: "/profile", label: "Profile" }].map((item, index) => <Link key={item.href} href={item.href} aria-current={index === 0 ? "page" : undefined} className={`inline-flex min-h-11 items-center rounded-xl border border-[var(--border)] px-4 focus-visible:outline-2 focus-visible:outline-[var(--primary)] ${index === 0 ? "bg-[var(--primary)] text-white" : "bg-white text-[var(--primary)]"}`}>{item.label}</Link>)}
       </nav>
       {(!loading || bus) && !error && (

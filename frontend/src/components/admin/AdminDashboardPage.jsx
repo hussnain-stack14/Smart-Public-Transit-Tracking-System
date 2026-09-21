@@ -237,7 +237,7 @@ export default function AdminDashboardPage() {
           </div>
           <h1 className="mt-4 text-2xl font-bold text-[var(--foreground)]">Sign In Required</h1>
           <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-            You must be signed in with an administrator account to access the Smart Transit Admin Console.
+            You must be signed in with an administrator account to access the Smart Safar Admin Console.
           </p>
           <div className="mt-6 flex flex-col gap-2.5 sm:flex-row sm:justify-center">
             <Link

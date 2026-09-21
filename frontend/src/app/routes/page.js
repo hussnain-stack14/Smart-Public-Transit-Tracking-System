@@ -1,7 +1,7 @@
 import RoutesPage from "../../components/routes/RoutesPage";
 
 export const metadata = {
-  title: "Routes | Smart Transit Faisalabad",
+  title: "Routes | Smart Safar Faisalabad",
   description: "Browse public transit routes across Faisalabad.",
 };
 

@@ -247,6 +247,7 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
                 <Field label="Route" error={errors.route?.message}>
                   <select
                     {...register("route", { onChange: handleRouteChange })}
+                    value={selectedRouteId || ""}
                     className="field-input"
                   >
                     <option value="">Select route</option>
