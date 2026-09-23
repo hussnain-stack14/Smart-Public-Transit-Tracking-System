@@ -53,7 +53,6 @@ export function RoutePreviewModal({ route, onClose }) {
 
   return <AdminDialog id="route-preview" title={route.routeName} descriptionId="route-preview-help" onClose={onClose} className="max-w-2xl">
     <p id="route-preview-help" className="mt-4 break-words text-sm text-[var(--muted)]">{route.startPoint} to {route.endPoint}</p>
-    <p className="mt-2 break-all text-xs text-[var(--muted)]">Route ID: {routeId}</p>
     <div className="mt-5 space-y-5">
       {current.status === "loading" ? <div className="grid min-h-48 place-items-center"><LoadingSpinner label="Loading route details..." /></div> : <>
         {current.status === "error" ? <ErrorState title="Unable to load route stops" description="The saved stop list could not be confirmed. Check your connection and retry." action={<Button type="button" onClick={reload} className="min-h-12">Retry</Button>} /> : <>
@@ -73,7 +72,7 @@ export function RoutePreviewModal({ route, onClose }) {
               const position = getStopPosition(stop);
               return <li key={stop._id} data-stop-id={stop._id} className="flex items-center gap-3 rounded-xl border border-[var(--border)] p-3">
                 {Number.isFinite(stop.stopOrder) && <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#e5f4ee] text-xs font-bold text-[var(--primary)]">{stop.stopOrder}</span>}
-                <div className="min-w-0 flex-1"><p className="break-words text-sm font-semibold">{stop.stopName}</p><p className="mt-1 break-words text-xs text-[var(--muted)]">{position ? position.map((value) => value.toFixed(5)).join(", ") : "Coordinates unavailable or invalid"}</p></div>
+                <div className="min-w-0 flex-1"><p className="break-words text-sm font-semibold">{stop.stopName}</p><p className="mt-1 break-words text-xs text-[var(--muted)]">{position ? "Location saved" : "Location is not available"}</p></div>
               </li>;
             })}</ol>}
           </section>

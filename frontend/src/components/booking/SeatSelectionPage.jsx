@@ -245,7 +245,7 @@ export default function SeatSelectionPage({
           href={actualRouteId ? `/booking?route=${actualRouteId}` : "/booking"}
           className="font-semibold text-[var(--primary)] hover:text-[var(--primary-dark)]"
         >
-          <ArrowLeft size={15} className="mr-1 inline" /> Trip Details
+          <ArrowLeft size={19} aria-hidden="true" /><span className="sr-only">Back to trip details</span>
         </Link>
         <span>/</span>
         <span>Seat and pickup</span>
@@ -269,7 +269,7 @@ export default function SeatSelectionPage({
         <div className="grid gap-3 sm:grid-cols-4">
           <SummaryItem label="Route" value={route?.routeName || bus.route?.routeName || "Not available"} />
           <SummaryItem label="Bus preview" value={bus.busNumber} />
-          <SummaryItem label="Assigned driver" value={driver?.name || "Assigned by backend"} />
+          <SummaryItem label="Assigned driver" value={driver?.name || "Not assigned"} />
           <SummaryItem label="Date" value={formatDate(travelDate)} />
         </div>
         {bookingMode === "route" && (
@@ -437,7 +437,7 @@ export default function SeatSelectionPage({
           <div className="mt-6 grid gap-4 border-t border-[var(--border)] pt-5 text-sm">
             <SummaryItem label="Route" value={route?.routeName || bus.route?.routeName || "Not available"} />
             <SummaryItem label="Bus preview" value={bus.busNumber} />
-            <SummaryItem label="Driver" value={driver?.name || "Resolved by backend"} />
+            <SummaryItem label="Driver" value={driver?.name || "Not assigned"} />
             <SummaryItem label="Date" value={formatDate(travelDate)} />
             <SummaryItem label="Selected seat" value={selectedSeat || "Select a seat"} />
             <SummaryItem
