@@ -2,20 +2,13 @@
 
 import { Component, useEffect, useRef, useState } from "react";
 import { Marker, Popup, useMap, useMapEvents } from "react-leaflet";
-import L from "leaflet";
 import { Button } from "../../common/Button";
 import { ClientTransitMap } from "../../map/MapShell";
 import { MapViewport } from "../../map/MapViewport";
+import { selectedStopMapIcon } from "../../map/transitMarkerIcons";
 import { LocationSearch } from "./LocationSearch";
 
 const emptyPositions = [];
-const selectedIcon = L.divIcon({
-  className: "!border-0 !bg-transparent",
-  html: '<svg width="32" height="40" viewBox="0 0 32 40" aria-hidden="true"><path d="M16 39S2 24 2 16a14 14 0 0 1 28 0c0 8-14 23-14 23Z" fill="#087f5b" stroke="white" stroke-width="2"/><circle cx="16" cy="16" r="5" fill="white"/></svg>',
-  iconSize: [32, 40],
-  iconAnchor: [16, 39],
-  popupAnchor: [0, -36],
-});
 
 export function StopLocationPicker({ idPrefix, position, onChange, disabled }) {
   const [tileError, setTileError] = useState(false);
@@ -86,7 +79,7 @@ function LocationSelection({ position, onChange, disabled }) {
   }, [map]);
   if (!position) return null;
 
-  return <Marker position={position} icon={selectedIcon} title="Selected stop location" draggable={!disabled} eventHandlers={{
+  return <Marker position={position} icon={selectedStopMapIcon} title="Selected stop location" zIndexOffset={200} riseOnHover draggable={!disabled} eventHandlers={{
     dragend(event) {
       if (disabled) return;
       const location = event.target.getLatLng();

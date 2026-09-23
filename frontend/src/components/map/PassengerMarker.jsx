@@ -1,16 +1,8 @@
 "use client";
 
 import { Marker, Popup } from "react-leaflet";
-import L from "leaflet";
 import { isValidPosition } from "../../lib/transit/coordinates";
-
-const passengerIcon = L.divIcon({
-  className: "!border-0 !bg-transparent",
-  html: '<span style="display:grid;width:30px;height:30px;place-items:center;border-radius:999px;background:#fbbf24;border:3px solid #ffffff;box-shadow:0 3px 10px #17332d55;color:#17332d;font-size:14px;font-weight:800">P</span>',
-  iconSize: [30, 30],
-  iconAnchor: [15, 15],
-  popupAnchor: [0, -16],
-});
+import { passengerMapIcon } from "./transitMarkerIcons";
 
 function formatTime(value) {
   if (!value) return "Time unavailable";
@@ -25,7 +17,7 @@ export function PassengerMarker({ passengerLocation }) {
 
   const passengerName = passengerLocation.passenger?.name || "Booked passenger";
   return (
-    <Marker position={position} title={`${passengerName} pickup`} icon={passengerIcon}>
+    <Marker position={position} title={`${passengerName} pickup`} icon={passengerMapIcon} zIndexOffset={400} riseOnHover>
       <Popup>
         <strong>{passengerName}</strong>
         <p className="mt-1">Passenger pickup</p>

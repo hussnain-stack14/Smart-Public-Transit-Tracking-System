@@ -46,6 +46,12 @@ export default function StopManagementPage() {
   const [editingStop, setEditingStop] = useState(null);
   const [deletingStop, setDeletingStop] = useState(null);
 
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("action") === "add") {
+      queueMicrotask(() => setIsAddOpen(true));
+    }
+  }, []);
+
   const loadData = useCallback(async () => {
     if (!isAuthenticated) return;
     setError("");
