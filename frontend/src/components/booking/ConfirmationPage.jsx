@@ -109,7 +109,7 @@ export default function ConfirmationPage({ bookingId }) {
     Promise.resolve().then(() => loadConfirmation());
   }, [loadConfirmation]);
 
-  if (authLoading || (isAuthenticated && loading)) {
+  if (authLoading || (isAuthenticated && loading && !booking)) {
     return (
       <PageShell>
         <div className="grid min-h-96 place-items-center">

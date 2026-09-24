@@ -17,8 +17,11 @@ export function DeleteStopModal({ isOpen, onClose, onDeleted, stop }) {
     setError("");
     setSubmitting(true);
     try {
-      await stopService.delete(stopId);
-      onDeleted(stopId);
+      await stopService.delete(stopId, {
+        route: stop.route?._id || stop.route?.id || stop.route,
+        routeStopId: stop.routeStopId,
+      });
+      onDeleted(stop.routeStopId || `${stopId}:${stop.route?._id || stop.route?.id || stop.route}`);
       onClose();
     } catch (err) {
       console.error("Delete stop error", err);
@@ -38,7 +41,7 @@ export function DeleteStopModal({ isOpen, onClose, onDeleted, stop }) {
           Delete Stop?
         </h2>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          Are you sure you want to delete <strong className="text-[var(--foreground)]">{stop.stopName}</strong>? This cannot be undone.
+          Remove <strong className="text-[var(--foreground)]">{stop.stopName}</strong> from this route? The physical stop remains available to other routes.
         </p>
 
         {error && (

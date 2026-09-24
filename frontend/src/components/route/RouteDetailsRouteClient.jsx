@@ -1,10 +1,12 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { LoadingSpinner } from "../common/LoadingSpinner";
+
 
 const RouteDetailsPage = dynamic(() => import("./RouteDetailsPage"), {
   ssr: false,
-  loading: () => <div className="grid min-h-screen place-items-center bg-[var(--background)] text-sm text-[var(--muted)]">Loading route details...</div>,
+  loading: () => <div className="grid min-h-screen place-items-center bg-[var(--background)] text-sm text-[var(--muted)]"><LoadingSpinner label="Loading route details..." /></div>,
 });
 
 export default function RouteDetailsRouteClient({ routeId }) {

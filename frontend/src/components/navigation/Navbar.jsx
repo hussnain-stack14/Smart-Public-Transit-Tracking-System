@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { ArrowRight, BusFront, House, Route, Search } from "lucide-react";
+import { ArrowRight, BusFront, House, Route, UserRound } from "lucide-react";
 import { BrandMark } from "../common/BrandMark";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -17,20 +16,13 @@ const mobileLinks = [
   { href: "/", label: "Home", icon: House },
   { href: "/live-map", label: "Live Buses", icon: BusFront },
   { href: "/routes", label: "Routes", icon: Route },
-  { href: "/#transit-search", label: "Search", icon: Search },
+  { href: "/login", label: "Profile", icon: UserRound },
 ];
 
 export function Navbar() {
   const pathname = usePathname();
-  const [activeHash, setActiveHash] = useState("");
   const { isAuthenticated } = useAuth();
 
-  useEffect(() => {
-    const updateHash = () => setActiveHash(window.location.hash);
-    updateHash();
-    window.addEventListener("hashchange", updateHash);
-    return () => window.removeEventListener("hashchange", updateHash);
-  }, [pathname]);
 
   if (isAuthenticated) return null;
 
@@ -47,9 +39,7 @@ export function Navbar() {
       </div>
     </header>
     <nav className="public-bottom-nav md:hidden" aria-label="Public mobile navigation">{mobileLinks.map(({ href, label, icon: Icon }) => {
-      const searchItem = href.includes("#transit-search");
-      const targetPath = href.split("#")[0] || "/";
-      const active = searchItem ? pathname === "/" && activeHash === "#transit-search" : pathname === targetPath && !(targetPath === "/" && activeHash === "#transit-search");
+      const active = pathname === href || (href !== "/" && pathname.startsWith(href + "/"));
       return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={active ? "is-active" : undefined}><Icon size={20} /><span>{label}</span></Link>;
     })}</nav>
   </>;

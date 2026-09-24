@@ -50,7 +50,7 @@ export function StopTable({ stops, loading, onEdit, onDelete, onAddClick }) {
           </thead>
           <tbody className="divide-y divide-[var(--border)] text-sm">
             {stops.map((stop) => {
-              const stopId = stop._id || stop.id;
+              const stopId = stop.routeStopId || `${stop._id || stop.id}:${stop.route?._id || stop.route?.id || stop.route}`;
               return (
                 <tr key={stopId} className="hover:bg-[#fafcfb] transition-colors">
                   <td className="px-5 py-4">
@@ -96,7 +96,7 @@ export function StopTable({ stops, loading, onEdit, onDelete, onAddClick }) {
       {/* Mobile Cards */}
       <div className="grid gap-3 xl:hidden">
         {stops.map((stop) => {
-          const stopId = stop._id || stop.id;
+          const stopId = stop.routeStopId || `${stop._id || stop.id}:${stop.route?._id || stop.route?.id || stop.route}`;
           return (
             <Card key={stopId} className="p-4">
               <div className="flex items-start justify-between gap-3">

@@ -3,6 +3,7 @@
 import { LocateFixed, MapPin, RefreshCw, ShieldCheck, Users } from "lucide-react";
 import { Badge } from "../common/Badge";
 import { Button } from "../common/Button";
+import { LoadingSpinner } from "../common/LoadingSpinner";
 import { Card } from "../common/Card";
 
 function formatTime(value) {
@@ -14,7 +15,7 @@ function formatTime(value) {
 export function DriverPassengerPanel({ active, passengers, loading, error, onRetry }) {
   return (
     <Card className="p-5" aria-labelledby="passenger-pickups-title">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#fff2d9] text-[#9b6a19]">
             <Users size={18} />
@@ -36,10 +37,8 @@ export function DriverPassengerPanel({ active, passengers, loading, error, onRet
           Start your assigned shift to access opted-in passenger pickup locations. No passenger
           locations are retained on this dashboard after the shift ends.
         </div>
-      ) : loading ? (
-        <p role="status" className="mt-4 text-sm text-[var(--muted)]">
-          Loading assigned passenger pickups...
-        </p>
+      ) : loading && !passengers.length ? (
+        <LoadingSpinner className="mt-4" label="Loading passenger pickups..." />
       ) : error ? (
         <div className="mt-4">
           <p role="alert" className="text-sm leading-6 text-[var(--danger)]">

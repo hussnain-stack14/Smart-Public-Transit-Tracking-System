@@ -206,7 +206,7 @@ export default function SeatSelectionPage({
     }
   }
 
-  if (loading) {
+  if (loading && !bus) {
     return (
       <PageShell>
         <div className="grid min-h-96 place-items-center">
@@ -280,7 +280,7 @@ export default function SeatSelectionPage({
         )}
       </Card>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.85fr)] lg:items-start">
         <div className="grid min-w-0 gap-6">
           <Card className="p-5 sm:p-6">
             <div className="flex items-start justify-between gap-4">

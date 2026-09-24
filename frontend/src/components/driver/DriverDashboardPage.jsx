@@ -5,7 +5,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { Navbar } from "../navigation/Navbar";
 import { Footer } from "../navigation/Footer";
-import { Badge } from "../common/Badge";
 import { Button } from "../common/Button";
 import { Card } from "../common/Card";
 import { EmptyState } from "../common/EmptyState";
@@ -24,7 +23,7 @@ import { routeService } from "../../services/routeService";
 import { stopService } from "../../services/stopService";
 import { alertService } from "../../services/alertService";
 import { getProfile } from "../../services/authService";
-import { getEtaLabel } from "../../lib/transit/format";
+import { DriverStatusCard } from "./DriverStatusCard";
 import { getBusDirection, getDirectionLabel, getStopsInDirection } from "../../lib/transit/direction";
 import { hasRole, ROLES } from "../../lib/auth/permissions";
 import { getAccessToken } from "../../lib/auth/token";
@@ -364,47 +363,28 @@ function DriverOperations({ user }) {
   const directionalStops = getStopsInDirection(stops, direction);
   const directionLabel = getDirectionLabel(route, direction);
   const nextStopId = eta?.nextStop?._id;
-  const shiftLabel = shiftActive ? "Shift Active" : shiftCompleted ? "Shift Completed" : "Shift Not Started";
-  const gpsLabel = gpsStatus.state === "sharing" ? "Sharing Location" : gpsStatus.state === "permission-denied" ? "Permission Required" : gpsStatus.state === "error" ? "Location Error" : "Starting GPS";
   const retry = <Button type="button" variant="secondary" className="min-h-12 gap-2" onClick={load} disabled={loading}><RefreshCw size={16} />{loading ? "Refreshing..." : "Refresh dashboard"}</Button>;
 
   return (
     <>
-      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary)]">Driver operations</p>
-          <h1 className="mt-2 text-3xl font-bold sm:text-4xl">Driver Dashboard</h1>
-          <div className="mt-3 flex flex-wrap items-center gap-3"><p className="break-words text-sm text-[var(--muted)]">{profile.name} | Driver</p><Badge tone="success">Authenticated</Badge></div>
-        </div>
-        <div className="flex flex-wrap items-center gap-3"><Badge tone={connection === "Connected" ? "success" : "warning"}>Live feed: {connection}</Badge>{retry}</div>
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0"><h1 className="text-2xl font-bold">Driver Dashboard</h1><p className="mt-1 break-words text-sm text-[var(--muted)]">{profile.name}</p></div>
+        {retry}
       </header>
-      {(!loading || bus) && !error && (
-        <section id="driver-shift" aria-label="Driver assignment and shift" className="mt-6 scroll-mt-20 grid gap-4 md:grid-cols-3">
-          <Card className="min-w-0 p-5"><dl><Detail label="Assigned bus" value={bus?.busNumber || "No bus assigned"} /></dl>{bus && <Badge className="mt-3" tone={bus.status === "active" ? "success" : "neutral"}>Bus status: {bus.status}</Badge>}</Card>
-          <Card className="min-w-0 p-5"><dl><Detail label="Current route" value={errors.route ? "Unable to load route" : route?.routeName || bus?.route?.routeName || (bus ? "Unavailable" : "No bus assigned")} /></dl>{route && <><p className="mt-3 break-words text-sm text-[var(--muted)]">{route.startPoint} ↔ {route.endPoint}</p><p className="mt-2 break-words text-sm font-semibold text-[var(--foreground)]">Direction: {directionLabel}</p></>}</Card>
-          <Card className="min-w-0 p-5"><div className="flex flex-wrap items-start justify-between gap-3"><dl><Detail label="Shift status" value={shiftLabel} /></dl><Badge tone={shiftActive ? "success" : shiftCompleted ? "neutral" : "warning"}>{shiftActive ? "Active" : shiftCompleted ? "Completed" : "Not started"}</Badge></div><dl className="mt-4 grid gap-3 border-t border-[var(--border)] pt-4 text-sm"><Detail label="Assigned bus" value={bus?.busNumber || "No Bus Assigned"} /><Detail label="Route" value={!bus ? "No bus assigned" : !hasRouteAssignment ? "Route Not Assigned" : route?.routeName || bus.route?.routeName || "Route assigned"} />{shiftActive && <><Detail label="Direction" value={direction === "return" ? "Return" : "Outbound"} /><Detail label="GPS" value={gpsLabel} /><Detail label="Current stop" value={eta?.currentStop?.stopName || "Not reported"} /><Detail label="Next stop" value={errors.eta ? "Unable to load next stop" : eta?.nextStop?.stopName || "Unavailable"} /><Detail label="ETA" value={errors.eta ? "Unable to load ETA" : getEtaLabel(eta) || "Unavailable"} /></>}</dl>{!bus && <p className="mt-3 text-sm leading-6 text-[var(--muted)]">Please contact the administrator to get a bus assigned before starting a shift.</p>}{bus && !hasRouteAssignment && <p className="mt-3 text-sm leading-6 text-[var(--muted)]">Your assigned bus does not currently have a route.</p>}{shiftActive && gpsStatus.message && <p role="alert" className="mt-3 text-sm text-[var(--danger)]">{gpsStatus.message}</p>}<Button type="button" variant={shiftActive ? "secondary" : "primary"} disabled={Boolean(shiftBusy) || !bus || !hasRouteAssignment} onClick={shiftActive ? endShift : startShift} aria-busy={Boolean(shiftBusy)} className="mt-4 min-h-12 w-full">{shiftBusy === "starting" ? "Starting Shift..." : shiftBusy === "ending" ? "Ending Shift..." : shiftActive ? "End Shift" : "Start Shift"}</Button>{shiftError && <p role="alert" className="mt-3 text-sm text-[var(--danger)]">{shiftError}</p>}</Card>
-        </section>
-      )}
+      {bus && !error && <DriverStatusCard bus={bus} route={route} eta={eta} errors={errors} direction={direction} directionLabel={directionLabel} shiftActive={shiftActive} shiftCompleted={shiftCompleted} shiftBusy={shiftBusy} shiftError={shiftError} hasRouteAssignment={hasRouteAssignment} gpsStatus={gpsStatus} onShift={shiftActive ? endShift : startShift} returnBusy={returnBusy} returnError={returnError} onReturn={startReturnTrip}>
+        <DriverLocationControl key={`location-${bus._id}-${activeShift?._id || "inactive"}`} bus={bus} enabled={shiftActive} onUpdate={locationUpdated} onStatusChange={locationStatusChanged} />
+      </DriverStatusCard>}
       {loading && !bus ? <div className="grid min-h-80 place-items-center"><LoadingSpinner label="Loading assigned bus, route, ETA and alerts..." /></div> : error ? <div className="mt-6"><ErrorState title="Driver information unavailable" description={error} action={retry} /></div> : !bus ? <div className="mt-6"><EmptyState title="No Bus Assigned" description="Please contact the administrator to get a bus assigned before starting a shift." /></div> : (
         <>
-          <section aria-label="Stop and arrival information" className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card className="min-w-0 p-5"><dl><Detail label="Current stop" value={eta?.currentStop?.stopName || "Not reported"} /></dl><p className="mt-2 text-xs text-[var(--muted)]">Arrival detection advances route progress automatically.</p></Card>
-            <Card className="min-w-0 p-5"><dl><Detail label="Next stop" value={errors.eta ? "Unable to load next stop" : eta?.nextStop?.stopName || "Unavailable"} /></dl></Card>
-            <Card className="min-w-0 p-5"><dl><Detail label="ETA to next stop" value={errors.eta ? "Unable to load ETA" : getEtaLabel(eta) || "Unavailable"} /></dl><p className="mt-2 text-xs text-[var(--muted)]">Updated from saved bus location.</p></Card>
-            <Card className="min-w-0 p-5"><dl><Detail label="Direction" value={directionLabel} /></dl>{shiftActive && direction === "outbound" && eta?.terminalReached ? <><p className="mt-2 text-sm font-semibold text-[var(--success)]">Terminal Reached</p><p className="mt-1 text-sm text-[var(--muted)]">{eta.currentStop?.stopName}</p><Button type="button" className="mt-4 min-h-12 w-full" onClick={startReturnTrip} disabled={returnBusy}>{returnBusy ? "Starting return..." : "Start Return Trip"}</Button></> : <p className="mt-2 text-xs text-[var(--muted)]">{!shiftActive ? "Start your shift to begin route operations." : direction === "return" ? "Return trip in progress." : "Return trip becomes available at the terminal."}</p>}{returnError && <p role="alert" className="mt-3 text-sm text-[var(--danger)]">{returnError}</p>}</Card>
-          </section>
-          <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-            <DriverMap bus={bus} stops={directionalStops} nextStopId={nextStopId} connection={connection} passengers={passengerLocations} />
+          <div className="driver-main-grid mt-4 grid items-start gap-4 md:grid-cols-2">
             <Card className="min-w-0 p-5">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--primary)]">Assigned bus</p>
-              <div className="mt-2 flex flex-wrap items-center justify-between gap-3"><h2 className="break-words text-2xl font-bold">{bus.busNumber}</h2><Badge tone={bus.status === "active" ? "success" : "neutral"}>{bus.status}</Badge></div>
-              <dl className="mt-5 grid gap-4 border-t border-[var(--border)] pt-4 text-sm"><Detail label="Route" value={route?.routeName || "Unavailable"} /><Detail label="Available seats" value={`${bus.availableSeats ?? "Unavailable"} / ${bus.capacity}`} /><Detail label="Occupancy" value="Not provided" /><Detail label="Bus trust score" value={bus.trustScore?.score ?? "Unavailable"} /></dl>
-              <DriverLocationControl key={`location-${bus._id}-${activeShift?._id || "inactive"}`} bus={bus} enabled={shiftActive} onUpdate={locationUpdated} onStatusChange={locationStatusChanged} />
+              <h2 className="font-bold">Bus controls</h2>
               <DriverSeatControl key={`seats-${bus._id}`} bus={bus} onUpdate={seatsUpdated} />
             </Card>
+            <DriverMap bus={bus} stops={directionalStops} nextStopId={nextStopId} connection={connection} passengers={passengerLocations} />
           </div>
-          <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-            <DriverRouteCard route={route} stops={directionalStops} nextStopId={nextStopId} errors={errors} directionLabel={directionLabel} />
+          <div className="driver-detail-grid mt-4 grid items-start gap-4 md:grid-cols-2">
+            <DriverRouteCard route={route} stops={directionalStops} nextStopId={nextStopId} errors={errors} />
             <section className="min-w-0" aria-labelledby="alerts-title">
               <h2 id="alerts-title" className="text-xl font-bold">Route alerts</h2>
               <div className="mt-4 grid gap-3">{errors.alerts ? <SectionError label="route alerts" /> : !bus.route ? <p className="text-sm text-[var(--muted)]">No route assigned.</p> : alerts.length ? alerts.map((alert) => <Card key={alert._id} className="break-words border-[#f0d7aa] bg-[#fff9ed] p-4 text-sm text-[#6f531d]">{alert.message}</Card>) : <p className="text-sm text-[var(--muted)]">No active alerts for this route.</p>}</div>
@@ -415,10 +395,6 @@ function DriverOperations({ user }) {
       )}
     </>
   );
-}
-
-function Detail({ label, value }) {
-  return <div><dt className="text-sm text-[var(--muted)]">{label}</dt><dd className="mt-1 break-words font-semibold">{value}</dd></div>;
 }
 
 function SectionError({ label }) {

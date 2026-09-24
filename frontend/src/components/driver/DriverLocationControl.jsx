@@ -100,16 +100,12 @@ export function DriverLocationControl({ bus, enabled, onUpdate, onStatusChange }
   const canRetry = enabled && ["error", "permission-denied"].includes(gps.state);
 
   return (
-    <section className="mt-5 border-t border-[var(--border)] pt-4" aria-labelledby="location-title">
-      <h3 id="location-title" className="font-semibold">Live location</h3>
-      <p className="mt-2 text-sm" role="status">{gps.status}</p>
-      <p className="mt-2 break-words text-xs text-[var(--muted)]">Saved coordinates: {bus.currentLocation?.latitude != null && bus.currentLocation?.longitude != null ? bus.currentLocation.latitude + ", " + bus.currentLocation.longitude : "No location received yet"}</p>
-      <p className="mt-2 break-words text-xs text-[var(--muted)]">Last saved: {bus.lastLocationUpdate ? new Date(bus.lastLocationUpdate).toLocaleString() : "No location update received"}</p>
-      <Button type="button" className="mt-4 min-h-12 w-full" onClick={retryLocation} disabled={!canRetry}>
-        {!enabled ? "Start shift to share location" : canRetry ? "Retry location sharing" : gps.state === "sharing" ? "GPS sharing active" : "Starting GPS..."}
-      </Button>
-      <p className="mt-2 text-xs leading-5 text-[var(--muted)]">Location sharing starts with an active shift and stops when the shift ends.</p>
-      {gps.error && <p role="alert" className="mt-3 text-sm text-[var(--danger)]">{gps.error}</p>}
+    <section className="mt-3 border-t border-[var(--border)] pt-3" aria-label="Live location controls">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-[var(--muted)]" role="status">{!enabled ? "Start your shift to share location." : gps.state === "sharing" ? `Last location update: ${bus.lastLocationUpdate ? new Date(bus.lastLocationUpdate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Not received"}` : gps.status}</p>
+        {canRetry && <Button type="button" variant="secondary" className="min-h-11" onClick={retryLocation}>Retry GPS</Button>}
+      </div>
+      {gps.error && <p role="alert" className="mt-2 break-words text-sm text-[var(--danger)]">{gps.error}</p>}
     </section>
   );
 }

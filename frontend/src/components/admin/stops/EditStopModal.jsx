@@ -45,7 +45,16 @@ function EditStopForm({ onClose, onUpdated, routes, stop }) {
     const order = Number(form.stopOrder);
     if (!Number.isInteger(order) || order < 1) { setError("Enter a valid stop order of 1 or greater."); return; }
     if (!position) { setError("Please select the stop location on the map."); return; }
-    const payload = { route: form.route, stopName: form.stopName.trim(), stopOrder: order, latitude: position[0], longitude: position[1] };
+    const payload = {
+      route: form.route,
+      originalRoute: stop.route?._id || stop.route?.id || stop.route,
+      routeStopId: stop.routeStopId,
+      stopName: form.stopName.trim(),
+      stopOrder: order,
+      latitude: position[0],
+      longitude: position[1],
+      location: stop.location || "",
+    };
     inFlight.current = true;
     setSubmitting(true);
     try {

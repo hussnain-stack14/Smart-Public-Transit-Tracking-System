@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "node --test --test-concurrency=1 test/driver-management.test.js",
-    "dev": "nodemon src/server.js"
+    "dev": "nodemon src/server.js",
+    "migrate:stops": "node scripts/migrate-stops.js"
   },
   "keywords": [],
   "author": "",

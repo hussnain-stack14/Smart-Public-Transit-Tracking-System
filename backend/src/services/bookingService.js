@@ -2,12 +2,12 @@ const Booking = require('../models/Booking');
 const Bus = require('../models/Bus');
 const Route = require('../models/Route');
 const Shift = require('../models/Shift');
-const Stop = require('../models/Stop');
 const User = require('../models/User');
 const { ApiError } = require('../utils/apiError');
 const { assertObjectId, requireObjectBody } = require('../utils/accountValidation');
 const { runInTransaction } = require('./transactionService');
 const { getBookingPrice } = require('./paymentService');
+const { routeHasStops } = require('./routeStopService');
 
 function sameId(left, right) {
   return Boolean(left && right && left.toString() === right.toString());
@@ -132,7 +132,7 @@ async function requireActiveRoute(routeId, session) {
   const route = await Route.findOne({ _id: routeId, isActive: true }).session(session);
   if (!route) throw new ApiError(404, 'Active route not found.');
 
-  const hasStop = await Stop.exists({ route: route._id }).session(session);
+  const hasStop = await routeHasStops(route._id, { session });
   if (!hasStop) throw new ApiError(409, 'The selected route has no valid stops.');
   return route;
 }

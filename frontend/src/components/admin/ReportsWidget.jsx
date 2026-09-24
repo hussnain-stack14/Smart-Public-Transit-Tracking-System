@@ -17,7 +17,7 @@ export function ReportsWidget({ reports = [], reportsSummary, loading }) {
 
   if (loading) {
     return (
-      <Card className="p-5 animate-pulse">
+      <Card className="h-full p-5 animate-pulse">
         <div className="h-5 w-48 bg-[#e1ede8] rounded mb-4" />
         <div className="h-40 bg-[#e1ede8] rounded" />
       </Card>
@@ -37,7 +37,7 @@ export function ReportsWidget({ reports = [], reportsSummary, loading }) {
   });
 
   return (
-    <Card className="p-5">
+    <Card className="h-full p-5">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-[var(--border)] pb-4">
         <div>

@@ -6,5 +6,5 @@ export const stopService = {
   get: (id) => api.get(`${API_PATHS.stops}/${id}`).then(({ data }) => data),
   create: (payload) => api.post(API_PATHS.stops, payload).then(({ data }) => data),
   update: (id, payload) => api.put(`${API_PATHS.stops}/${id}`, payload).then(({ data }) => data),
-  delete: (id) => api.delete(`${API_PATHS.stops}/${id}`).then(({ data }) => data),
+  delete: (id, assignment = {}) => api.delete(`${API_PATHS.stops}/${id}`, { params: assignment }).then(({ data }) => data),
 };

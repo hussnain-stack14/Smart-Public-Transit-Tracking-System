@@ -12,7 +12,7 @@ import { EmptyState } from "../common/EmptyState";
 import { ErrorState } from "../common/ErrorState";
 import { BusCard } from "../bus/BusCard";
 import { RouteStopTimeline } from "./RouteStopTimeline";
-import { RouteDetailsSkeleton } from "./RouteDetailsSkeleton";
+import { LoadingSpinner } from "../common/LoadingSpinner";
 import { ClientTransitMap } from "../map/MapShell";
 import { BusMarker } from "../map/BusMarker";
 import { StopMarker } from "../map/StopMarker";
@@ -124,7 +124,7 @@ export default function RouteDetailsPage({ routeId }) {
   const mapPositions = [...positions, ...busPositions];
   const routeLabel = route?.routeCode || route?.number || "Route";
 
-  if (loading) return <div className="min-h-screen bg-[var(--background)]"><Navbar /><main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8"><RouteDetailsSkeleton /></main><Footer /></div>;
+  if (loading && !route) return <div className="min-h-screen bg-[var(--background)]"><Navbar /><main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8"><div className="grid min-h-64 place-items-center"><LoadingSpinner label="Loading route details..." /></div></main><Footer /></div>;
   if (error === "not-found") return <NotFoundState />;
   if (error || !route) return <RouteErrorState onRetry={loadRoute} />;
 
@@ -137,7 +137,7 @@ export default function RouteDetailsPage({ routeId }) {
 
       {selectedStop && <Card className="mt-4 p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--primary)]">Selected stop</p><h2 className="mt-1 text-lg font-bold text-[var(--foreground)]">{selectedStop.stopName}</h2><p className="mt-2 text-sm text-[var(--muted)]">Stop {selectedStop.stopOrder ?? ""} on this route. Arrival information is shown when provided by the backend.</p></div><button type="button" onClick={() => setSelectedStop(null)} className="grid h-8 w-8 place-items-center rounded-lg text-[var(--muted)] hover:bg-[#eef7f3]" aria-label="Close stop information"><X size={17} /></button></div></Card>}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]"><RouteStopTimeline stops={stops} selectedStop={selectedStop} onSelect={setSelectedStop} /><section><div className="flex items-end justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--primary)]">On this route</p><h2 className="mt-1 text-xl font-bold text-[var(--foreground)]">Buses on this route</h2></div><span className="text-sm text-[var(--muted)]">{displayedBuses.length} active</span></div><div className="mt-4 grid gap-4">{displayedBuses.length ? displayedBuses.map((bus) => <Link key={bus.id} href={`/buses/${bus.id}`} className="block"><BusCard bus={bus} /></Link>) : <EmptyState title="No active buses" description="There are currently no buses broadcasting live locations on this route." />}</div></section></div>
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.85fr)]"><RouteStopTimeline stops={stops} selectedStop={selectedStop} onSelect={setSelectedStop} /><section><div className="flex items-end justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--primary)]">On this route</p><h2 className="mt-1 text-xl font-bold text-[var(--foreground)]">Buses on this route</h2></div><span className="text-sm text-[var(--muted)]">{displayedBuses.length} active</span></div><div className="mt-4 grid gap-4">{displayedBuses.length ? displayedBuses.map((bus) => <Link key={bus.id} href={`/buses/${bus.id}`} className="block"><BusCard bus={bus} /></Link>) : <EmptyState title="No active buses" description="There are currently no buses broadcasting live locations on this route." />}</div></section></div>
 
       {route.description && <Card className="mt-6 p-5"><div className="flex items-start gap-3"><span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e4f5ed] text-[var(--primary)]"><Clock3 size={17} /></span><div><h2 className="font-bold text-[var(--foreground)]">About this route</h2><p className="mt-2 text-sm leading-6 text-[var(--muted)]">{route.description}</p></div></div></Card>}
     </main><Footer /></div>;

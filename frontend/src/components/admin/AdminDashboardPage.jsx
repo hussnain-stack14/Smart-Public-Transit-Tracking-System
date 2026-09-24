@@ -218,11 +218,11 @@ export default function AdminDashboardPage() {
 
   // --- Render Protection / Loading / Error Views ---
 
-  if (authLoading || (loading && !profile && !error)) {
+  if (authLoading || (isAuthenticated && loading && !error)) {
     return (
       <PageShell>
         <div className="grid min-h-[60vh] place-items-center">
-          <LoadingSpinner label="Authenticating administrator..." />
+          <LoadingSpinner label="Loading administration dashboard..." />
         </div>
       </PageShell>
     );
@@ -344,11 +344,11 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* 3. Live Transit Map & Fleet Panel Grid */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <div>
+      <div className="mt-6 grid items-stretch gap-6 xl:grid-cols-12">
+        <div className="h-full min-w-0 xl:col-span-8">
           <AdminMapWidget buses={liveBuses} stops={stops} stopsError={Boolean(widgetErrors.stops)} stopsLoading={loading || refreshing} />
         </div>
-        <div>
+        <div className="h-full min-w-0 xl:col-span-4">
           <LiveTransitPanel buses={liveBuses} loading={loading} />
         </div>
       </div>
@@ -363,15 +363,15 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* 5. Incident Reports & System Quick Actions Grid */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <div>
+      <div className="mt-6 grid items-stretch gap-6 xl:grid-cols-12">
+        <div className="h-full min-w-0 xl:col-span-8">
           <ReportsWidget
             reports={reports}
             reportsSummary={reportsSummary}
             loading={loading}
           />
         </div>
-        <div>
+        <div className="h-full min-w-0 xl:col-span-4">
           <QuickActions
             activeBusesCount={activeBusesCount}
             totalBusesCount={liveBuses.length}

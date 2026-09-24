@@ -8,6 +8,7 @@ import { clearAccessToken } from "../../lib/auth/token";
 import { getProfile, getRoleHome } from "../../services/authService";
 import { alertService } from "../../services/alertService";
 import { routeService } from "../../services/routeService";
+import { LoadingSpinner } from "../common/LoadingSpinner";
 import { BrandMark } from "../common/BrandMark";
 
 const commuter = [
@@ -132,9 +133,9 @@ export function AppExperience({ children }) {
   if (!token || pathname.startsWith("/safety/track/")) return children;
   if (error === "load") return <div className="app-auth-state"><p>Unable to verify your account. Check your connection and try again.</p><button type="button" onClick={() => setRetry(n => n + 1)}>Try again</button></div>;
   if (error === "auth") return <div className="app-auth-state"><p>Your session has expired.</p><Link href="/login">Sign in</Link></div>;
-  if (!user) return <div className="app-auth-state" role="status">Loading your account…</div>;
+  if (!user) return <div className="app-auth-state" ><LoadingSpinner label="Loading your account..." /></div>;
   if (!allowed(pathname, user.role)) return <div className="app-auth-state"><p>You don&apos;t have permission to access this page.</p><Link href={getRoleHome(user.role)}>Go to your dashboard</Link></div>;
-  if (authPage || (pathname === "/" && user.role !== "commuter")) return <div className="app-auth-state" role="status">Opening your dashboard…</div>;
+  if (authPage || (pathname === "/" && user.role !== "commuter")) return <div className="app-auth-state" ><LoadingSpinner label="Opening your dashboard..." /></div>;
 
   const role = user.role;
   const items = role === "admin" ? admin : role === "driver" ? driver : commuter;

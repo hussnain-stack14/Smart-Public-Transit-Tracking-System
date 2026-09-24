@@ -213,7 +213,7 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
 
         <BookingProgress currentStep={1} />
 
-        {loadError ? (
+        {routesLoading && !routes.length ? <div className="mt-6"><LoadingSpinner label="Loading booking options..." /></div> : loadError ? (
           <div className="mt-8">
             <ErrorState
               title="Unable to load routes"
@@ -228,7 +228,7 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
         ) : (
           <form
             onSubmit={handleSubmit(continueToSeatSelection)}
-            className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start"
+            className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.85fr)] lg:items-start"
           >
             <Card className="p-5 sm:p-6">
               <div className="flex items-start gap-3">

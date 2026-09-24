@@ -131,17 +131,25 @@ export default function StopManagementPage() {
     setMessage("Stop updated.");
     setStops((prev) =>
       prev.map((s) => {
-        if ((s._id || s.id) === (updatedStop._id || updatedStop.id)) {
+        const samePhysicalStop = (s._id || s.id) === (updatedStop._id || updatedStop.id);
+        const sameAssignment = (s.routeStopId && s.routeStopId === updatedStop.routeStopId) ||
+          (!s.routeStopId && samePhysicalStop);
+        if (sameAssignment) {
           const route = routes.find((r) => (r._id || r.id) === (updatedStop.route?._id || updatedStop.route?.id || updatedStop.route));
           return { ...updatedStop, _routeName: route?.routeName || s._routeName };
+        }
+        if (samePhysicalStop) {
+          return { ...s, stopName: updatedStop.stopName, latitude: updatedStop.latitude, longitude: updatedStop.longitude, location: updatedStop.location };
         }
         return s;
       })
     );
   }
 
-  function handleDeleted(deletedId) {
-    setStops((prev) => prev.filter((s) => (s._id || s.id) !== deletedId));
+  function handleDeleted(deletedAssignment) {
+    setStops((prev) => prev.filter((s) =>
+      (s.routeStopId || `${s._id || s.id}:${s.route?._id || s.route?.id || s.route}`) !== deletedAssignment
+    ));
   }
 
   if (authLoading || (loading && !profile && !error)) {

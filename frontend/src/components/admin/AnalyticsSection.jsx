@@ -7,12 +7,12 @@ import { EmptyState } from "../common/EmptyState";
 export function AnalyticsSection({ bookingAnalytics = [], occupancyAnalytics = [], loading }) {
   if (loading) {
     return (
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="p-5 animate-pulse">
+      <div className="grid items-stretch gap-6 lg:grid-cols-2">
+        <Card className="h-full p-5 animate-pulse">
           <div className="h-5 w-44 bg-[#e1ede8] rounded mb-4" />
           <div className="h-48 bg-[#e1ede8] rounded" />
         </Card>
-        <Card className="p-5 animate-pulse">
+        <Card className="h-full p-5 animate-pulse">
           <div className="h-5 w-44 bg-[#e1ede8] rounded mb-4" />
           <div className="h-48 bg-[#e1ede8] rounded" />
         </Card>
@@ -27,9 +27,9 @@ export function AnalyticsSection({ bookingAnalytics = [], occupancyAnalytics = [
   const maxDailyBookings = Math.max(1, ...bookingAnalytics.map((d) => d.totalBookings || 0));
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
+    <div className="grid items-stretch gap-6 lg:grid-cols-2">
       {/* 7-Day Booking Analytics Card */}
-      <Card className="p-5 flex flex-col justify-between">
+      <Card className="flex h-full flex-col justify-between p-5">
         <div>
           <div className="flex items-center justify-between border-b border-[var(--border)] pb-4">
             <div className="flex items-center gap-2">
@@ -102,7 +102,7 @@ export function AnalyticsSection({ bookingAnalytics = [], occupancyAnalytics = [
       </Card>
 
       {/* Route Occupancy Card */}
-      <Card className="p-5 flex flex-col justify-between">
+      <Card className="flex h-full flex-col justify-between p-5">
         <div>
           <div className="flex items-center justify-between border-b border-[var(--border)] pb-4">
             <div className="flex items-center gap-2">

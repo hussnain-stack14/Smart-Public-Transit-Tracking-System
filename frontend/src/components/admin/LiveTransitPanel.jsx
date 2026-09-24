@@ -15,7 +15,7 @@ const statusTones = {
 export function LiveTransitPanel({ buses = [], loading }) {
   if (loading) {
     return (
-      <Card className="p-5">
+      <Card className="flex h-full flex-col p-5 xl:min-h-[460px]">
         <div className="flex items-center justify-between border-b border-[var(--border)] pb-4">
           <div className="h-5 w-32 bg-[#e1ede8] rounded animate-pulse" />
           <div className="h-5 w-16 bg-[#e1ede8] rounded animate-pulse" />
@@ -52,14 +52,14 @@ export function LiveTransitPanel({ buses = [], loading }) {
       </div>
 
       {buses.length === 0 ? (
-        <div className="py-8">
+        <div className="grid flex-1 place-items-center py-8">
           <EmptyState
             title="No buses registered"
             description="No transit buses found in the fleet database."
           />
         </div>
       ) : (
-        <div className="mt-3 divide-y divide-[var(--border)] overflow-y-auto max-h-[440px] pr-1">
+        <div className="mt-3 max-h-[440px] flex-1 divide-y divide-[var(--border)] overflow-y-auto pr-1">
           {buses.map((bus) => {
             const busId = bus._id || bus.id;
             const routeName = bus.route?.routeName || bus.routeName || "Unassigned Route";
@@ -134,7 +134,7 @@ export function LiveTransitPanel({ buses = [], loading }) {
         </div>
       )}
 
-      <div className="mt-4 border-t border-[var(--border)] pt-3 text-center">
+      <div className="mt-auto border-t border-[var(--border)] pt-3 text-center">
         <Link
           href="/admin/buses"
           className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--primary)] hover:text-[var(--primary-dark)] hover:underline"

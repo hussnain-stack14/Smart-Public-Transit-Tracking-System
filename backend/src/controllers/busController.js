@@ -1,6 +1,6 @@
 const Bus = require('../models/Bus');
-const Stop = require('../models/Stop');
 const Shift = require('../models/Shift');
+const { getStopsForRoute } = require('../services/routeStopService');
 const { createFleetBus, updateFleetBus, deleteFleetBus } = require('../services/busAssignmentService');
 const { sendApiError } = require('../utils/apiError');
 const { haversineDistanceKm } = require('../utils/geo');
@@ -27,7 +27,7 @@ const sameId = (left, right) => left && right && left.toString() === right.toStr
 // - measures straight-line distance from the bus's current location
 // - divides by a 5-reading moving average of recent speeds
 const calculateNextStopAndETA = async (bus) => {
-  const storedStops = await Stop.find({ route: bus.route }).sort({ stopOrder: 1 });
+  const storedStops = await getStopsForRoute(bus.route);
   const direction = getBusDirection(bus);
   const stops = getStopsInDirection(storedStops, direction);
 
@@ -104,7 +104,7 @@ const startReturnTrip = async (req, res) => {
     }
     if (getBusDirection(bus) === 'return') return res.status(409).json({ message: 'Return trip has already started.' });
 
-    const stops = await Stop.find({ route: bus.route }).sort({ stopOrder: 1 });
+    const stops = await getStopsForRoute(bus.route);
     if (stops.length < 2) return res.status(400).json({ message: 'Return trip is not available for this route.' });
 
     const terminal = stops[stops.length - 1];

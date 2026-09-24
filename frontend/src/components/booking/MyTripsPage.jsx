@@ -120,7 +120,7 @@ export default function MyTripsPage() {
     }
   }
 
-  if (authLoading || (isAuthenticated && loading)) {
+  if (authLoading || (isAuthenticated && loading && !bookings.length)) {
     return (
       <PageShell>
         <div className="grid min-h-96 place-items-center">

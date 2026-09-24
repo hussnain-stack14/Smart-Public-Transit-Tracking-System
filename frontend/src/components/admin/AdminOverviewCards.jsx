@@ -6,9 +6,9 @@ import { Card } from "../common/Card";
 export function AdminOverviewCards({ overview, loading }) {
   if (loading) {
     return (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid auto-rows-fr gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {[1, 2, 3, 4].map((i) => (
-          <Card key={i} className="p-5 animate-pulse">
+          <Card key={i} className="h-full p-5 animate-pulse">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
                 <div className="h-3 w-20 bg-[#e1ede8] rounded" />
@@ -60,11 +60,11 @@ export function AdminOverviewCards({ overview, loading }) {
   ];
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid auto-rows-fr gap-6 sm:grid-cols-2 lg:grid-cols-4">
       {cards.map((card) => {
         const Icon = card.icon;
         return (
-          <Card key={card.label} className="p-5 transition hover:shadow-md">
+          <Card key={card.label} className="h-full p-5 transition hover:shadow-md">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
