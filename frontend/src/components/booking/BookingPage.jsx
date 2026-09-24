@@ -23,6 +23,7 @@ import { LoadingSpinner } from "../common/LoadingSpinner";
 import { busService } from "../../services/busService";
 import { routeService } from "../../services/routeService";
 import { useAuth } from "../../hooks/useAuth";
+import { getAccessToken } from "../../lib/auth/token";
 import { BookingProgress } from "./BookingProgress";
 
 const bookingSchema = z.object({
@@ -179,7 +180,7 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
       "&mode=" +
       (manualSelection ? "manual" : "route");
 
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !getAccessToken()) {
       router.push("/login?redirect=" + encodeURIComponent(target));
       return;
     }
@@ -375,7 +376,7 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
               <Button
                 type="submit"
                 className="mt-6 w-full gap-2"
-                disabled={routesLoading || !selectedRouteId || !travelDate || !bookingBus}
+                disabled={authLoading || !isAuthenticated || routesLoading || !selectedRouteId || !travelDate || !bookingBus}
               >
                 {isAuthenticated ? "Continue to Seat Selection" : "Log in to continue"}
                 <ArrowRight size={16} />

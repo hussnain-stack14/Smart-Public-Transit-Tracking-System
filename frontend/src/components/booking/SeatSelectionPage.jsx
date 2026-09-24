@@ -32,6 +32,7 @@ import { busService } from "../../services/busService";
 import { routeService } from "../../services/routeService";
 import { bookingService } from "../../services/bookingService";
 import { useAuth } from "../../hooks/useAuth";
+import { getAccessToken } from "../../lib/auth/token";
 import { useGeolocation } from "../../hooks/useGeolocation";
 
 function formatDate(value) {
@@ -161,7 +162,7 @@ export default function SeatSelectionPage({
 
   async function continueToConfirmation() {
     if (!selectedSeat || isFull) return;
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !getAccessToken()) {
       const target =
         `/booking/${busId}/seat?route=${encodeURIComponent(actualRouteId)}` +
         `&date=${encodeURIComponent(travelDate || "")}&mode=${bookingMode}`;
@@ -479,7 +480,7 @@ export default function SeatSelectionPage({
           <Button
             type="button"
             className="mt-6 w-full gap-2"
-            disabled={!selectedSeat || isFull || submitting}
+            disabled={authLoading || !isAuthenticated || !selectedSeat || isFull || submitting}
             onClick={continueToConfirmation}
           >
             {submitting

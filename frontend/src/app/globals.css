@@ -157,15 +157,20 @@ textarea {
 .driver-status-card { overflow-wrap: anywhere; }
 .driver-live-grid > * { min-width: 0; }
 
-/* A bus travels along a fixed road; the counter-rotation keeps it upright. */
-.safar-loader { display: inline-flex; max-width: 100%; min-width: 0; align-items: center; gap: 12px; padding: 4px; color: var(--muted); font-size: 14px; line-height: 1.5; }
-.safar-loader-scene { position: relative; display: block; flex: 0 0 80px; width: 80px; height: 80px; }
+/* One rotation carries the bus around the road and keeps its nose tangent.
+   Linear timing gives a continuous, constant-speed journey across the loop seam. */
+.safar-loader { display: inline-flex; max-width: 100%; min-width: 0; align-items: center; justify-content: center; gap: 14px; padding: 6px 10px; color: var(--muted); font-size: 14px; line-height: 1.5; vertical-align: middle; }
+.safar-loader-scene { display: block; flex: 0 0 auto; width: 88px; height: 88px; }
 .safar-loader-road { display: block; width: 100%; height: 100%; }
-.safar-loader-orbit { position: absolute; inset: 14px; animation: safar-route-orbit 3.6s linear infinite; }
-.safar-loader-bus { position: absolute; top: -13px; left: calc(50% - 13px); display: grid; width: 26px; height: 26px; place-items: center; border: 2px solid var(--card); border-radius: 8px; background: var(--primary); color: white; box-shadow: 0 2px 5px #17332d26; animation: safar-route-orbit 3.6s linear infinite reverse; }
-.safar-loader-label { min-width: 0; overflow-wrap: anywhere; }
-@keyframes safar-route-orbit { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .safar-loader-orbit, .safar-loader-bus { animation: none; } }
+.safar-loader-orbit { transform-box: view-box; transform-origin: 44px 44px; animation: safar-route-orbit 4s linear infinite; }
+.safar-loader-bus { overflow: visible; }
+.safar-loader-label { min-width: 0; max-width: 32ch; overflow-wrap: anywhere; }
+@keyframes safar-route-orbit { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@media (max-width: 639px) {
+  .safar-loader { width: 100%; flex-direction: column; gap: 6px; text-align: center; }
+  .safar-loader-label { max-width: 28ch; }
+}
+@media (prefers-reduced-motion: reduce) { .safar-loader-orbit { animation: none; } }
 
 @media (max-width: 767px) {
   .app-experience .mobile-map-filters { margin-top: 14px; }

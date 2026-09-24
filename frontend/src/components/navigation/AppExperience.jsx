@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Bell, BusFront, ChartNoAxesCombined, Flag, History, House, LogOut, MapPinned, Route, Ticket, UserRound, Users, X } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
-import { clearAccessToken } from "../../lib/auth/token";
+import { clearAccessToken, getAccessToken } from "../../lib/auth/token";
 import { getProfile, getRoleHome } from "../../services/authService";
 import { alertService } from "../../services/alertService";
 import { routeService } from "../../services/routeService";
@@ -80,6 +80,18 @@ export function AppExperience({ children }) {
   const user = token && profile.token === token ? profile.user : null;
   const error = token && profile.token === token ? profile.error : "";
   const authPage = pathname === "/login" || pathname === "/register";
+  const isBookingPage = pathname === "/booking" || pathname.startsWith("/booking/");
+
+  useEffect(() => {
+    if (!isBookingPage) return;
+    if (error === "auth" && getAccessToken() === token) clearAccessToken();
+    // Read storage here: the server snapshot is signed out until hydration finishes.
+    // Do not redirect a commuter whose saved session is still being restored.
+    if (!getAccessToken()) {
+      const requested = window.location.pathname + window.location.search + window.location.hash;
+      router.replace("/login?redirect=" + encodeURIComponent(requested));
+    }
+  }, [isBookingPage, pathname, token, error, router]);
 
   const loadNotifications = useCallback(async () => {
     setNotifications((current) => ({ ...current, status: "loading" }));
@@ -130,6 +142,8 @@ export function AppExperience({ children }) {
     return () => { document.removeEventListener("pointerdown", close); document.removeEventListener("keydown", escape); };
   }, [accountOpen, notificationsOpen]);
 
+  // Never mount booking forms or their data effects before authentication succeeds.
+  if (isBookingPage && (!token || error === "auth")) return <div className="app-auth-state"><p role="status">Please sign in to book a ticket.</p></div>;
   if (!token || pathname.startsWith("/safety/track/")) return children;
   if (error === "load") return <div className="app-auth-state"><p>Unable to verify your account. Check your connection and try again.</p><button type="button" onClick={() => setRetry(n => n + 1)}>Try again</button></div>;
   if (error === "auth") return <div className="app-auth-state"><p>Your session has expired.</p><Link href="/login">Sign in</Link></div>;
