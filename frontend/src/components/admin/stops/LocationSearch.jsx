@@ -91,9 +91,9 @@ export function LocationSearch({ idPrefix, disabled, onSelect }) {
             type="button"
             onClick={() => selectResult(result)}
             disabled={disabled}
-            className={`flex w-full min-w-0 gap-3 px-3 py-3 text-left transition hover:bg-[#f0f7f4] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#bce8d7] disabled:cursor-not-allowed disabled:opacity-50 ${selectedId === result.id ? "bg-[#e5f4ee]" : ""}`}
+            className={`flex w-full min-w-0 gap-3 px-3 py-3 text-left transition hover:bg-[var(--primary-soft)] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--primary-soft-strong)] disabled:cursor-not-allowed disabled:opacity-50 ${selectedId === result.id ? "bg-[var(--primary-soft)]" : ""}`}
           >
-            <MapPin size={18} aria-hidden="true" className="mt-0.5 shrink-0 text-[var(--primary)]" />
+            <MapPin size={18} aria-hidden="true" className="mt-0.5 shrink-0 text-[var(--primary-ink)]" />
             <span className="min-w-0">
               <span className="block break-words text-sm font-semibold text-[var(--foreground)]">{result.name}</span>
               {result.address && <span className="mt-0.5 block break-words text-xs leading-5 text-[var(--muted)]">{result.address}</span>}
@@ -102,6 +102,6 @@ export function LocationSearch({ idPrefix, disabled, onSelect }) {
         </li>)}
       </ul>
     </div>}
-    <p className="text-xs text-[var(--muted)]">Search data &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="font-semibold text-[var(--primary)] underline-offset-2 hover:underline">OpenStreetMap contributors</a></p>
+    <p className="text-xs text-[var(--muted)]">Search data &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="font-semibold text-[var(--primary-ink)] underline-offset-2 hover:underline">OpenStreetMap contributors</a></p>
   </div>;
 }

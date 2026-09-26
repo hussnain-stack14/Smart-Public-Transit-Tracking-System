@@ -232,7 +232,7 @@ export default function AdminDashboardPage() {
     return (
       <PageShell>
         <Card className="mx-auto max-w-lg p-8 text-center">
-          <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#e5f4ee] text-[var(--primary)]">
+          <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[var(--primary-soft)] text-[var(--primary-ink)]">
             <ShieldAlert size={26} />
           </div>
           <h1 className="mt-4 text-2xl font-bold text-[var(--foreground)]">Sign In Required</h1>
@@ -242,13 +242,13 @@ export default function AdminDashboardPage() {
           <div className="mt-6 flex flex-col gap-2.5 sm:flex-row sm:justify-center">
             <Link
               href="/login?redirect=/admin/dashboard"
-              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--primary-dark)]"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-contrast)] hover:bg-[var(--primary-dark)]"
             >
               Sign In as Admin
             </Link>
             <Link
               href="/"
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[var(--border)] px-5 text-sm font-semibold text-[var(--foreground)] hover:bg-[#f5f8f7]"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[var(--border)] px-5 text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--background)]"
             >
               Back to Home
             </Link>
@@ -273,7 +273,7 @@ export default function AdminDashboardPage() {
           <div className="mt-6 flex flex-col gap-2.5 sm:flex-row sm:justify-center">
             <Link
               href="/live-map"
-              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--primary-dark)]"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-contrast)] hover:bg-[var(--primary-dark)]"
             >
               View Live Map
             </Link>

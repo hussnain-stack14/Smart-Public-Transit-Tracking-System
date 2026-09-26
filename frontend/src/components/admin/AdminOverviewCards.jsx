@@ -11,11 +11,11 @@ export function AdminOverviewCards({ overview, loading }) {
           <Card key={i} className="h-full p-5 animate-pulse">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
-                <div className="h-3 w-20 bg-[#e1ede8] rounded" />
-                <div className="h-7 w-12 bg-[#d1e6de] rounded" />
-                <div className="h-3 w-28 bg-[#e1ede8] rounded" />
+                <div className="h-3 w-20 bg-[var(--skeleton)] rounded" />
+                <div className="h-7 w-12 bg-[var(--primary-border)] rounded" />
+                <div className="h-3 w-28 bg-[var(--skeleton)] rounded" />
               </div>
-              <div className="h-10 w-10 bg-[#e1ede8] rounded-xl" />
+              <div className="h-10 w-10 bg-[var(--skeleton)] rounded-xl" />
             </div>
           </Card>
         ))}
@@ -75,7 +75,7 @@ export function AdminOverviewCards({ overview, loading }) {
                 </p>
                 <p className="mt-1 text-xs text-[var(--muted)]">{card.detail}</p>
               </div>
-              <span className="rounded-xl bg-[#e5f4ee] p-2.5 text-[var(--primary)]">
+              <span className="rounded-xl bg-[var(--primary-soft)] p-2.5 text-[var(--primary-ink)]">
                 <Icon size={20} />
               </span>
             </div>

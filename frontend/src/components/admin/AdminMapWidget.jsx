@@ -16,10 +16,10 @@ export function AdminMapWidget({ buses = [], stops = [], stopsError = false, sto
   const mappedStops = useMemo(() => stops.filter((stop) => getStopPosition(stop)), [stops]);
   const allPositions = useMemo(() => [...busPositions.map((item) => item.position), ...mappedStops.map(getStopPosition)], [busPositions, mappedStops]);
 
-  return <section className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[#eaf3ef] shadow-sm xl:min-h-[460px]">
+  return <section className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-subtle)] shadow-sm xl:min-h-[460px]">
     <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] bg-white/95 px-5 py-3.5 backdrop-blur">
-      <div className="flex min-w-0 flex-wrap items-center gap-2"><MapIcon size={18} className="text-[var(--primary)]" /><h2 className="text-base font-bold">Transit overview</h2><span className="text-xs text-[var(--muted)]">({busPositions.length} operating buses, {mappedStops.length} stops on map)</span></div>
-      <Link href="/live-map" className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-white px-3 text-xs font-semibold text-[var(--primary)] shadow-sm hover:bg-[#f0f8f4]">Full Live Map <ExternalLink size={13} /></Link>
+      <div className="flex min-w-0 flex-wrap items-center gap-2"><MapIcon size={18} className="text-[var(--primary-ink)]" /><h2 className="text-base font-bold">Transit overview</h2><span className="text-xs text-[var(--muted)]">({busPositions.length} operating buses, {mappedStops.length} stops on map)</span></div>
+      <Link href="/live-map" className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-white px-3 text-xs font-semibold text-[var(--primary-ink)] shadow-sm hover:bg-[var(--primary-soft)]">Full Live Map <ExternalLink size={13} /></Link>
     </div>
     {stopsLoading && <p role="status" className="bg-white px-5 py-3 text-sm text-[var(--muted)]">Loading route stops...</p>}
     {!stopsLoading && stopsError && <p role="alert" className="bg-white px-5 py-3 text-sm text-[var(--danger)]">Some route stops could not be loaded. Refresh the dashboard to retry.</p>}

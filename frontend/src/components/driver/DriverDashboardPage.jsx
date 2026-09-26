@@ -388,7 +388,7 @@ function DriverOperations({ user }) {
             <section className="min-w-0" aria-labelledby="alerts-title">
               <h2 id="alerts-title" className="text-xl font-bold">Route alerts</h2>
               <div className="mt-4 grid gap-3">{errors.alerts ? <SectionError label="route alerts" /> : !bus.route ? <p className="text-sm text-[var(--muted)]">No route assigned.</p> : alerts.length ? alerts.map((alert) => <Card key={alert._id} className="break-words border-[#f0d7aa] bg-[#fff9ed] p-4 text-sm text-[#6f531d]">{alert.message}</Card>) : <p className="text-sm text-[var(--muted)]">No active alerts for this route.</p>}</div>
-              <div id="driver-passengers" className="mt-6 scroll-mt-20"><DriverPassengerPanel active={shiftActive} passengers={passengerLocations} loading={passengerLoading} error={passengerError} onRetry={loadPassengerLocations} /></div><Link href="/reports" className="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-[var(--primary)]">Report a safety or bus condition issue</Link>
+              <div id="driver-passengers" className="mt-6 scroll-mt-20"><DriverPassengerPanel active={shiftActive} passengers={passengerLocations} loading={passengerLoading} error={passengerError} onRetry={loadPassengerLocations} /></div><Link href="/reports" className="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-[var(--primary-ink)]">Report a safety or bus condition issue</Link>
             </section>
           </div>
         </>

@@ -88,7 +88,7 @@ function BusOperations() {
       <div className="mb-4">
         <Link
           href="/admin/dashboard"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--muted)] hover:text-[var(--primary)] transition"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--muted)] hover:text-[var(--primary-ink)] transition"
         >
           <ArrowLeft size={14} /> Back to Admin Dashboard
         </Link>
@@ -98,10 +98,10 @@ function BusOperations() {
       <header className="flex flex-col justify-between gap-4 border-b border-[var(--border)] pb-6 sm:flex-row sm:items-end">
         <div>
           <div className="flex items-center gap-2">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary)]">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary-ink)]">
               Fleet Operations
             </p>
-            <span className="rounded-md bg-[#e5f4ee] px-2 py-0.5 text-[11px] font-bold text-[var(--primary-dark)]">
+            <span className="rounded-md bg-[var(--primary-soft)] px-2 py-0.5 text-[11px] font-bold text-[var(--primary-ink)]">
               {totalCount} Total
             </span>
           </div>
@@ -132,7 +132,7 @@ function BusOperations() {
         </div>
       </header>
 
-      <div className="mt-4 flex flex-wrap gap-3"><Link href="/admin/users" className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--primary)]">Driver Management</Link></div>
+      <div className="mt-4 flex flex-wrap gap-3"><Link href="/admin/users" className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--primary-ink)]">Driver Management</Link></div>
       <Card className="mt-4 border-[#f0d7aa] bg-[#fff9ed] p-4"><p className="text-sm leading-6 text-[#6f531d]">Assignments update both the bus and the driver profile. Drivers assigned to another bus must be unassigned first. Shift controls remain unavailable.</p></Card>
       {message && <p role="status" className="mt-4 text-sm text-[var(--success)]">{message}</p>}
       {directory.status === "error" && !assignment && <p role="alert" className="mt-4 text-sm text-[var(--danger)]">The driver directory could not be refreshed. Open the assignment dialog and retry to confirm available drivers.</p>}
@@ -142,7 +142,7 @@ function BusOperations() {
         <div className="rounded-2xl border border-[var(--border)] bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-[var(--muted)]">Total Fleet</span>
-            <BusFront size={16} className="text-[var(--primary)]" />
+            <BusFront size={16} className="text-[var(--primary-ink)]" />
           </div>
           <p className="mt-2 text-2xl font-bold text-[var(--foreground)]">{totalCount}</p>
         </div>

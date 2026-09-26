@@ -200,7 +200,7 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
       <Navbar />
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
         <header>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary)]">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary-ink)]">
             Plan your journey
           </p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--foreground)] sm:text-4xl">
@@ -233,7 +233,7 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
           >
             <Card className="p-5 sm:p-6">
               <div className="flex items-start gap-3">
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#e4f5ed] text-[var(--primary)]">
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary-ink)]">
                   <RouteIcon size={19} />
                 </span>
                 <div>
@@ -261,10 +261,10 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
                 </Field>
 
                 {selectedRouteId && (
-                  <section className="rounded-2xl border border-[var(--border)] bg-[#f5f8f7] p-4">
+                  <section className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div>
-                        <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--primary)]">
+                        <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--primary-ink)]">
                           {manualSelection ? "Manual selection" : "Automatic assignment"}
                         </p>
                         <h3 className="mt-1 font-bold text-[var(--foreground)]">
@@ -300,7 +300,7 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
                     <button
                       type="button"
                       onClick={toggleManualSelection}
-                      className="mt-4 min-h-10 text-sm font-semibold text-[var(--primary)] hover:text-[var(--primary-dark)]"
+                      className="mt-4 min-h-10 text-sm font-semibold text-[var(--primary-ink)] hover:text-[var(--primary-ink)]"
                     >
                       {manualSelection ? "Use automatic assignment" : "Book manually / Change selection"}
                     </button>
@@ -319,7 +319,7 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
                   <div className="relative">
                     <CalendarDays
                       size={17}
-                      className="pointer-events-none absolute left-3 top-3 text-[var(--primary)]"
+                      className="pointer-events-none absolute left-3 top-3 text-[var(--primary-ink)]"
                     />
                     <input
                       {...register("travelDate")}
@@ -330,9 +330,9 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
                   </div>
                 </Field>
 
-                <div className="rounded-xl border border-[#dce9e4] bg-[#f5f8f7] p-4 text-sm text-[var(--muted)]">
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-4 text-sm text-[var(--muted)]">
                   <div className="flex items-start gap-3">
-                    <Clock3 size={17} className="mt-0.5 shrink-0 text-[var(--primary)]" />
+                    <Clock3 size={17} className="mt-0.5 shrink-0 text-[var(--primary-ink)]" />
                     <p>
                       Bus services operate continuously. The backend does not currently store a
                       scheduled travel time, so confirmation uses the booking creation timestamp.
@@ -344,7 +344,7 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
 
             <Card className="p-5 sm:p-6 lg:sticky lg:top-24">
               <div className="flex items-center gap-3">
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#e4f5ed] text-[var(--primary)]">
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary-ink)]">
                   <BusFront size={19} />
                 </span>
                 <div>
@@ -369,7 +369,7 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
                 <p className="mt-4 text-sm leading-6 text-[var(--danger)]">{submitError}</p>
               )}
               {!authLoading && !isAuthenticated && (
-                <div className="mt-5 rounded-xl border border-[var(--border)] bg-[#f5f8f7] p-3 text-sm text-[var(--muted)]">
+                <div className="mt-5 rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 text-sm text-[var(--muted)]">
                   You will be asked to sign in before seat selection.
                 </div>
               )}

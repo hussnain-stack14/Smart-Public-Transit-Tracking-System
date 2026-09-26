@@ -166,7 +166,7 @@ export default function StopManagementPage() {
     return (
       <PageShell>
         <Card className="mx-auto max-w-lg p-8 text-center">
-          <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#e5f4ee] text-[var(--primary)]">
+          <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[var(--primary-soft)] text-[var(--primary-ink)]">
             <ShieldAlert size={26} />
           </div>
           <h1 className="mt-4 text-2xl font-bold text-[var(--foreground)]">Sign In Required</h1>
@@ -174,10 +174,10 @@ export default function StopManagementPage() {
             You must be signed in as an administrator to manage stops.
           </p>
           <div className="mt-6 flex flex-col gap-2.5 sm:flex-row sm:justify-center">
-            <Link href="/login?redirect=/admin/stops" className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--primary-dark)]">
+            <Link href="/login?redirect=/admin/stops" className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-contrast)] hover:bg-[var(--primary-dark)]">
               Sign In as Admin
             </Link>
-            <Link href="/" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[var(--border)] px-5 text-sm font-semibold text-[var(--foreground)] hover:bg-[#f5f8f7]">
+            <Link href="/" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[var(--border)] px-5 text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--background)]">
               Back to Home
             </Link>
           </div>
@@ -226,7 +226,7 @@ export default function StopManagementPage() {
   return (
     <PageShell>
       <div className="mb-4">
-        <Link href="/admin/dashboard" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--muted)] hover:text-[var(--primary)] transition">
+        <Link href="/admin/dashboard" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--muted)] hover:text-[var(--primary-ink)] transition">
           <ArrowLeft size={14} /> Back to Admin Dashboard
         </Link>
       </div>
@@ -234,8 +234,8 @@ export default function StopManagementPage() {
       <header className="flex flex-col justify-between gap-4 border-b border-[var(--border)] pb-6 sm:flex-row sm:items-end">
         <div>
           <div className="flex items-center gap-2">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary)]">Transit Network</p>
-            <span className="rounded-md bg-[#e5f4ee] px-2 py-0.5 text-[11px] font-bold text-[var(--primary-dark)]">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary-ink)]">Transit Network</p>
+            <span className="rounded-md bg-[var(--primary-soft)] px-2 py-0.5 text-[11px] font-bold text-[var(--primary-ink)]">
               {stops.length} Stops
             </span>
           </div>
@@ -262,8 +262,8 @@ export default function StopManagementPage() {
       {/* Filters */}
       <Card className="mt-6 p-4">
         <div className="flex flex-col gap-3 sm:flex-row">
-          <label className="flex flex-1 min-h-11 items-center gap-3 rounded-xl border border-[var(--border)] bg-[#fbfdfc] px-4">
-            <Search size={17} className="shrink-0 text-[var(--primary)]" />
+          <label className="flex flex-1 min-h-11 items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--background)] px-4">
+            <Search size={17} className="shrink-0 text-[var(--primary-ink)]" />
             <span className="sr-only">Search stops</span>
             <input
               value={searchTerm}

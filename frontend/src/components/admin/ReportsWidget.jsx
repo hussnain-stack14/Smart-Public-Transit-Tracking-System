@@ -18,8 +18,8 @@ export function ReportsWidget({ reports = [], reportsSummary, loading }) {
   if (loading) {
     return (
       <Card className="h-full p-5 animate-pulse">
-        <div className="h-5 w-48 bg-[#e1ede8] rounded mb-4" />
-        <div className="h-40 bg-[#e1ede8] rounded" />
+        <div className="h-5 w-48 bg-[var(--skeleton)] rounded mb-4" />
+        <div className="h-40 bg-[var(--skeleton)] rounded" />
       </Card>
     );
   }
@@ -42,7 +42,7 @@ export function ReportsWidget({ reports = [], reportsSummary, loading }) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-[var(--border)] pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <ShieldAlert size={18} className="text-[var(--primary)]" />
+            <ShieldAlert size={18} className="text-[var(--primary-ink)]" />
             <h2 className="text-base font-bold text-[var(--foreground)]">
               Safety & Incident Reports
             </h2>
@@ -60,7 +60,7 @@ export function ReportsWidget({ reports = [], reportsSummary, loading }) {
           <span className="inline-flex items-center gap-1 rounded-md bg-[#fff2d9] px-2.5 py-1 text-xs font-semibold text-[var(--warning)]">
             <Clock size={13} /> {reviewedCount} Reviewed
           </span>
-          <span className="inline-flex items-center gap-1 rounded-md bg-[#e4f5ed] px-2.5 py-1 text-xs font-semibold text-[var(--success)]">
+          <span className="inline-flex items-center gap-1 rounded-md bg-[var(--success-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--success)]">
             <CheckCircle size={13} /> {resolvedCount} Resolved
           </span>
         </div>
@@ -75,8 +75,8 @@ export function ReportsWidget({ reports = [], reportsSummary, loading }) {
             onClick={() => setFilter(tab)}
             className={`rounded-lg px-3 py-1.5 font-semibold capitalize transition ${
               filter === tab
-                ? "bg-[var(--primary)] text-white"
-                : "text-[var(--muted)] hover:bg-[#eaf3ef] hover:text-[var(--foreground)]"
+                ? "bg-[var(--primary)] text-[var(--primary-contrast)]"
+                : "text-[var(--muted)] hover:bg-[var(--surface-subtle)] hover:text-[var(--foreground)]"
             }`}
           >
             {tab}
@@ -122,7 +122,7 @@ export function ReportsWidget({ reports = [], reportsSummary, loading }) {
                           {isSafety ? "Safety Issue" : "Vehicle Condition"}
                         </span>
                         {report.bus?.busNumber && (
-                          <span className="rounded bg-[#eaf3ef] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--primary-dark)]">
+                          <span className="rounded bg-[var(--surface-subtle)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--primary-ink)]">
                             Bus {report.bus.busNumber}
                           </span>
                         )}

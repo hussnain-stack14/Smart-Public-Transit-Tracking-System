@@ -50,7 +50,7 @@ export function DeleteRouteModal({ isOpen, onClose, onDeleted, route, busCount =
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-[var(--muted)] hover:bg-[#f0f8f4] hover:text-[var(--foreground)]"
+            className="rounded-lg p-1.5 text-[var(--muted)] hover:bg-[var(--primary-soft)] hover:text-[var(--foreground)]"
             aria-label="Close modal"
           >
             <X size={18} />

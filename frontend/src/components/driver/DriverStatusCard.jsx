@@ -9,11 +9,11 @@ export function DriverStatusCard({ bus, route, eta, errors, direction, direction
   return (
     <Card id="driver-shift" aria-label="Driver assignment and shift" className="driver-status-card mt-4 scroll-mt-20 p-4 sm:p-5">
       <div className="flex items-start gap-3">
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#e7f5ed] text-[var(--primary)]"><BusFront size={23} aria-hidden="true" /></span>
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary-ink)]"><BusFront size={23} aria-hidden="true" /></span>
         <div className="min-w-0 flex-1">
           <p className="text-xs text-[var(--muted)]">Assigned bus</p>
           <h2 className="break-words text-xl font-bold">{bus.busNumber}</h2>
-          <p className="mt-2 flex items-start gap-2 text-sm"><Route size={16} className="mt-0.5 shrink-0 text-[var(--primary)]" aria-hidden="true" /><span className="min-w-0 break-words">{errors.route ? "Unable to load route" : route?.routeName || bus.route?.routeName || (hasRouteAssignment ? "Route unavailable" : "No route assigned")}</span></p>
+          <p className="mt-2 flex items-start gap-2 text-sm"><Route size={16} className="mt-0.5 shrink-0 text-[var(--primary-ink)]" aria-hidden="true" /><span className="min-w-0 break-words">{errors.route ? "Unable to load route" : route?.routeName || bus.route?.routeName || (hasRouteAssignment ? "Route unavailable" : "No route assigned")}</span></p>
         </div>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
@@ -32,7 +32,7 @@ export function DriverStatusCard({ bus, route, eta, errors, direction, direction
         {shiftBusy === "starting" ? "Starting Shift…" : shiftBusy === "ending" ? "Ending Shift…" : shiftActive ? "End Shift" : "Start Shift"}
       </Button>
       {shiftError && <p role="alert" className="mt-3 text-sm text-[var(--danger)]">{shiftError}</p>}
-      {shiftActive && direction === "outbound" && eta?.terminalReached && <div className="mt-3 rounded-xl bg-[#eef7f3] p-3"><p className="text-sm font-semibold text-[var(--success)]">Terminal reached{eta.currentStop?.stopName ? ` · ${eta.currentStop.stopName}` : ""}</p><Button type="button" className="mt-2 min-h-12 w-full" onClick={onReturn} disabled={returnBusy}>{returnBusy ? "Starting return…" : "Start Return Trip"}</Button></div>}
+      {shiftActive && direction === "outbound" && eta?.terminalReached && <div className="mt-3 rounded-xl bg-[var(--success-soft)] p-3"><p className="text-sm font-semibold text-[var(--success)]">Terminal reached{eta.currentStop?.stopName ? ` · ${eta.currentStop.stopName}` : ""}</p><Button type="button" className="mt-2 min-h-12 w-full" onClick={onReturn} disabled={returnBusy}>{returnBusy ? "Starting return…" : "Start Return Trip"}</Button></div>}
       {returnError && <p role="alert" className="mt-3 text-sm text-[var(--danger)]">{returnError}</p>}
       {children}
     </Card>
@@ -40,5 +40,5 @@ export function DriverStatusCard({ bus, route, eta, errors, direction, direction
 }
 
 function StatusDetail({ icon: Icon, label, value, description }) {
-  return <div className="flex min-w-0 items-start gap-2.5 rounded-xl bg-[var(--background)] p-3"><Icon size={17} className="mt-0.5 shrink-0 text-[var(--primary)]" aria-hidden="true" /><div className="flex min-w-0 flex-1 items-start justify-between gap-3"><dt className="shrink-0 pt-0.5 text-xs text-[var(--muted)]">{label}</dt><dd className="min-w-0 break-words text-right text-sm font-semibold">{value}{description && <span className="mt-1 block text-xs font-normal text-[var(--muted)]">{description}</span>}</dd></div></div>;
+  return <div className="flex min-w-0 items-start gap-2.5 rounded-xl bg-[var(--background)] p-3"><Icon size={17} className="mt-0.5 shrink-0 text-[var(--primary-ink)]" aria-hidden="true" /><div className="flex min-w-0 flex-1 items-start justify-between gap-3"><dt className="shrink-0 pt-0.5 text-xs text-[var(--muted)]">{label}</dt><dd key={`${value}-${description || ""}`} className="live-transit-value min-w-0 break-words text-right text-sm font-semibold">{value}{description && <span className="mt-1 block text-xs font-normal text-[var(--muted)]">{description}</span>}</dd></div></div>;
 }

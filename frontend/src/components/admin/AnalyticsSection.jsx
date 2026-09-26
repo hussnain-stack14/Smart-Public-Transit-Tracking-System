@@ -9,12 +9,12 @@ export function AnalyticsSection({ bookingAnalytics = [], occupancyAnalytics = [
     return (
       <div className="grid items-stretch gap-6 lg:grid-cols-2">
         <Card className="h-full p-5 animate-pulse">
-          <div className="h-5 w-44 bg-[#e1ede8] rounded mb-4" />
-          <div className="h-48 bg-[#e1ede8] rounded" />
+          <div className="h-5 w-44 bg-[var(--skeleton)] rounded mb-4" />
+          <div className="h-48 bg-[var(--skeleton)] rounded" />
         </Card>
         <Card className="h-full p-5 animate-pulse">
-          <div className="h-5 w-44 bg-[#e1ede8] rounded mb-4" />
-          <div className="h-48 bg-[#e1ede8] rounded" />
+          <div className="h-5 w-44 bg-[var(--skeleton)] rounded mb-4" />
+          <div className="h-48 bg-[var(--skeleton)] rounded" />
         </Card>
       </div>
     );
@@ -33,7 +33,7 @@ export function AnalyticsSection({ bookingAnalytics = [], occupancyAnalytics = [
         <div>
           <div className="flex items-center justify-between border-b border-[var(--border)] pb-4">
             <div className="flex items-center gap-2">
-              <BarChart3 size={18} className="text-[var(--primary)]" />
+              <BarChart3 size={18} className="text-[var(--primary-ink)]" />
               <div>
                 <h2 className="text-base font-bold text-[var(--foreground)]">
                   7-Day Booking Activity
@@ -41,20 +41,20 @@ export function AnalyticsSection({ bookingAnalytics = [], occupancyAnalytics = [
                 <p className="text-xs text-[var(--muted)]">Daily reservations and ticket volume</p>
               </div>
             </div>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-[#e4f5ed] text-[var(--primary)]">
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-[var(--primary-soft)] text-[var(--primary-ink)]">
               Last 7 Days
             </span>
           </div>
 
           {/* Quick Metrics */}
-          <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-[#f5f8f7] p-3 text-center">
+          <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-[var(--background)] p-3 text-center">
             <div>
               <p className="text-[11px] text-[var(--muted)]">Total Bookings</p>
               <p className="mt-0.5 text-lg font-bold text-[var(--foreground)]">{totalBookings7d}</p>
             </div>
             <div>
               <p className="text-[11px] text-[var(--muted)]">Total Revenue</p>
-              <p className="mt-0.5 text-lg font-bold text-[var(--primary)]">
+              <p className="mt-0.5 text-lg font-bold text-[var(--primary-ink)]">
                 Rs. {totalRevenue7d.toLocaleString()}
               </p>
             </div>
@@ -85,7 +85,7 @@ export function AnalyticsSection({ bookingAnalytics = [], occupancyAnalytics = [
                     <span className="text-[10px] font-bold text-[var(--muted)] opacity-0 group-hover:opacity-100 transition-opacity">
                       {count}
                     </span>
-                    <div className="w-full max-w-[32px] rounded-t-lg bg-[#d0ece0] group-hover:bg-[var(--primary)] transition-all relative flex items-end justify-center overflow-hidden"
+                    <div className="w-full max-w-[32px] rounded-t-lg bg-[var(--primary-soft-strong)] group-hover:bg-[var(--primary)] transition-all relative flex items-end justify-center overflow-hidden"
                       style={{ height: `${heightPct}%` }}
                     >
                       <div className="w-full bg-[var(--primary)] rounded-t-lg" style={{ height: `${Math.min(100, heightPct)}%` }} />
@@ -106,7 +106,7 @@ export function AnalyticsSection({ bookingAnalytics = [], occupancyAnalytics = [
         <div>
           <div className="flex items-center justify-between border-b border-[var(--border)] pb-4">
             <div className="flex items-center gap-2">
-              <TrendingUp size={18} className="text-[var(--primary)]" />
+              <TrendingUp size={18} className="text-[var(--primary-ink)]" />
               <div>
                 <h2 className="text-base font-bold text-[var(--foreground)]">
                   Route Occupancy Rate
@@ -116,7 +116,7 @@ export function AnalyticsSection({ bookingAnalytics = [], occupancyAnalytics = [
                 </p>
               </div>
             </div>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-[#e4f5ed] text-[var(--primary)]">
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-[var(--primary-soft)] text-[var(--primary-ink)]">
               Fleet Average
             </span>
           </div>
@@ -144,7 +144,7 @@ export function AnalyticsSection({ bookingAnalytics = [], occupancyAnalytics = [
                     </div>
 
                     <div className="flex items-center gap-3">
-                      <div className="h-2 flex-1 rounded-full bg-[#e3ede8] overflow-hidden">
+                      <div className="h-2 flex-1 rounded-full bg-[var(--skeleton)] overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all duration-300 ${
                             occupancy > 80

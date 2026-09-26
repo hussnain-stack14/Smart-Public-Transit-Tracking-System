@@ -55,7 +55,7 @@ export function DeleteBusModal({ isOpen, onClose, onDeleted, bus }) {
           <button
             type="button"
             onClick={onClose}
-            className="min-h-11 min-w-11 rounded-lg p-1.5 text-[var(--muted)] hover:bg-[#f0f8f4] hover:text-[var(--foreground)]"
+            className="min-h-11 min-w-11 rounded-lg p-1.5 text-[var(--muted)] hover:bg-[var(--primary-soft)] hover:text-[var(--foreground)]"
             disabled={deleting}
             aria-label="Close modal"
           >

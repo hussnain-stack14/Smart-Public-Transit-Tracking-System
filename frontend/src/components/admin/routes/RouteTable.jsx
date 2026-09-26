@@ -11,8 +11,8 @@ export function RouteTable({ routes, loading, busesPerRoute, onEdit, onDelete, o
     return (
       <Card className="p-5">
         <div className="space-y-4 animate-pulse">
-          <div className="h-6 w-48 bg-[#e1ede8] rounded" />
-          {[1, 2, 3].map((i) => <div key={i} className="h-12 w-full bg-[#e1ede8] rounded-xl" />)}
+          <div className="h-6 w-48 bg-[var(--skeleton)] rounded" />
+          {[1, 2, 3].map((i) => <div key={i} className="h-12 w-full bg-[var(--skeleton)] rounded-xl" />)}
         </div>
       </Card>
     );
@@ -29,7 +29,7 @@ export function RouteTable({ routes, loading, busesPerRoute, onEdit, onDelete, o
               <button
                 type="button"
                 onClick={onAddClick}
-                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--primary-dark)]"
+                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-contrast)] hover:bg-[var(--primary-dark)]"
               >
                 Add First Route
               </button>
@@ -45,7 +45,7 @@ export function RouteTable({ routes, loading, busesPerRoute, onEdit, onDelete, o
       {/* Desktop Table */}
       <div className="hidden xl:block overflow-hidden rounded-2xl border border-[var(--border)] bg-white shadow-sm">
         <table className="min-w-full divide-y divide-[var(--border)] text-left">
-          <thead className="bg-[#f8faf9] text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+          <thead className="bg-[var(--background)] text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
             <tr>
               <th scope="col" className="px-5 py-3.5">Route</th>
               <th scope="col" className="px-4 py-3.5">Origin → Destination</th>
@@ -60,10 +60,10 @@ export function RouteTable({ routes, loading, busesPerRoute, onEdit, onDelete, o
               const routeId = route._id || route.id;
               const busCount = busesPerRoute[routeId] || 0;
               return (
-                <tr key={routeId} className="hover:bg-[#fafcfb] transition-colors">
+                <tr key={routeId} className="hover:bg-[var(--background)] transition-colors">
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#e5f4ee] text-[var(--primary)]">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary-ink)]">
                         <MapPin size={16} />
                       </span>
                       <span className="font-semibold text-[var(--foreground)]">{route.routeName}</span>
@@ -93,7 +93,7 @@ export function RouteTable({ routes, loading, busesPerRoute, onEdit, onDelete, o
                       <button
                         type="button"
                         onClick={() => onPreview(route)}
-                        className="rounded-lg p-2 text-[var(--muted)] hover:bg-[#e5f4ee] hover:text-[var(--primary)] transition"
+                        className="rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--primary-soft)] hover:text-[var(--primary-ink)] transition"
                         title="Preview stops and map"
                         aria-label={`Preview ${route.routeName}`}
                       >
@@ -101,7 +101,7 @@ export function RouteTable({ routes, loading, busesPerRoute, onEdit, onDelete, o
                       </button>
                       <Link
                         href={`/routes/${routeId}`}
-                        className="rounded-lg p-2 text-[var(--muted)] hover:bg-[#e5f4ee] hover:text-[var(--primary)] transition"
+                        className="rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--primary-soft)] hover:text-[var(--primary-ink)] transition"
                         title="View public route page"
                         aria-label={`View public page for ${route.routeName}`}
                       >
@@ -110,7 +110,7 @@ export function RouteTable({ routes, loading, busesPerRoute, onEdit, onDelete, o
                       <button
                         type="button"
                         onClick={() => onEdit(route)}
-                        className="rounded-lg p-2 text-[var(--muted)] hover:bg-[#e5f4ee] hover:text-[var(--primary)] transition"
+                        className="rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--primary-soft)] hover:text-[var(--primary-ink)] transition"
                         title="Edit route"
                         aria-label={`Edit ${route.routeName}`}
                       >
@@ -143,7 +143,7 @@ export function RouteTable({ routes, loading, busesPerRoute, onEdit, onDelete, o
             <Card key={routeId} className="p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#e5f4ee] text-[var(--primary)]">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary-ink)]">
                     <MapPin size={18} />
                   </span>
                   <div>
@@ -170,20 +170,20 @@ export function RouteTable({ routes, loading, busesPerRoute, onEdit, onDelete, o
                 <button
                   type="button"
                   onClick={() => onPreview(route)}
-                  className="flex-1 min-h-9 inline-flex items-center justify-center gap-1.5 rounded-xl border border-[var(--border)] text-xs font-semibold text-[var(--foreground)] hover:bg-[#f0f8f4] transition"
+                  className="flex-1 min-h-9 inline-flex items-center justify-center gap-1.5 rounded-xl border border-[var(--border)] text-xs font-semibold text-[var(--foreground)] hover:bg-[var(--primary-soft)] transition"
                 >
                   <Eye size={14} /> Preview
                 </button>
                 <Link
                   href={`/routes/${routeId}`}
-                  className="flex-1 min-h-9 inline-flex items-center justify-center gap-1.5 rounded-xl border border-[var(--border)] text-xs font-semibold text-[var(--foreground)] hover:bg-[#f0f8f4] transition"
+                  className="flex-1 min-h-9 inline-flex items-center justify-center gap-1.5 rounded-xl border border-[var(--border)] text-xs font-semibold text-[var(--foreground)] hover:bg-[var(--primary-soft)] transition"
                 >
                   <ArrowUpRight size={14} /> Public Page
                 </Link>
                 <button
                   type="button"
                   onClick={() => onEdit(route)}
-                  className="flex-1 min-h-9 inline-flex items-center justify-center gap-1.5 rounded-xl border border-[var(--border)] text-xs font-semibold text-[var(--primary)] hover:bg-[#e5f4ee] transition"
+                  className="flex-1 min-h-9 inline-flex items-center justify-center gap-1.5 rounded-xl border border-[var(--border)] text-xs font-semibold text-[var(--primary-ink)] hover:bg-[var(--primary-soft)] transition"
                 >
                   <Edit3 size={14} /> Edit
                 </button>

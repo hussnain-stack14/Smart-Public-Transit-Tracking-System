@@ -7,6 +7,8 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    ".booking-check-profile/**",
+    ".booking-debug-profile/**",
     "out/**",
     "build/**",
     "next-env.d.ts",

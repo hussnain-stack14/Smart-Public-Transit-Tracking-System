@@ -34,6 +34,33 @@ const admin = [
   { href: "/admin/reports", label: "Reports", icon: Flag },
 ];
 
+const SEEN_ALERTS_PREFIX = "smart-safar:seen-alerts:";
+
+function alertIdentity(alert) {
+  return String(alert._id || [alert.routeName, alert.message, alert.createdAt, alert.expiresAt].join("|"));
+}
+
+function readSeenAlertIds(userId) {
+  if (typeof window === "undefined" || !userId) return new Set();
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(`${SEEN_ALERTS_PREFIX}${userId}`) || "[]");
+    return new Set(Array.isArray(saved) ? saved : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function markAlertsSeen(userId, alerts) {
+  if (typeof window === "undefined" || !userId || !alerts.length) return;
+  try {
+    const seen = readSeenAlertIds(userId);
+    alerts.forEach((alert) => seen.add(alertIdentity(alert)));
+    window.localStorage.setItem(`${SEEN_ALERTS_PREFIX}${userId}`, JSON.stringify([...seen].slice(-300)));
+  } catch {
+    // Storage can be unavailable in privacy-restricted browsers; alerts still open normally.
+  }
+}
+
 function Navigation({ items, pathname, activeHash, onNavigate, mobile = false }) {
   return <nav aria-label={mobile ? "Mobile app navigation" : "Application navigation"} className={mobile ? "app-bottom-nav" : "app-desktop-nav"}>
     {items.map(({ href, label, shortLabel, icon: Icon }) => {
@@ -67,6 +94,8 @@ export function AppExperience({ children }) {
   const [notifications, setNotifications] = useState({ status: "idle", items: [] });
   const accountRef = useRef(null);
   const notificationsRef = useRef(null);
+  const notificationsOpenRef = useRef(false);
+  const notificationRequestRef = useRef(false);
 
   useEffect(() => {
     if (!token) return;
@@ -78,6 +107,7 @@ export function AppExperience({ children }) {
   }, [token, retry]);
 
   const user = token && profile.token === token ? profile.user : null;
+  const userId = user?._id || user?.id || user?.email;
   const error = token && profile.token === token ? profile.error : "";
   const authPage = pathname === "/login" || pathname === "/register";
   const isBookingPage = pathname === "/booking" || pathname.startsWith("/booking/");
@@ -94,6 +124,8 @@ export function AppExperience({ children }) {
   }, [isBookingPage, pathname, token, error, router]);
 
   const loadNotifications = useCallback(async () => {
+    if (notificationRequestRef.current) return;
+    notificationRequestRef.current = true;
     setNotifications((current) => ({ ...current, status: "loading" }));
     try {
       const result = await routeService.list();
@@ -103,11 +135,21 @@ export function AppExperience({ children }) {
         ? result.value.map((alert) => ({ ...alert, routeName: routes[index].routeName }))
         : []);
       items.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      if (notificationsOpenRef.current) markAlertsSeen(userId, items);
       setNotifications({ status: alertResults.some((result) => result.status === "rejected") && !items.length ? "error" : "ready", items });
     } catch {
       setNotifications({ status: "error", items: [] });
+    } finally {
+      notificationRequestRef.current = false;
     }
-  }, []);
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+    let active = true;
+    Promise.resolve().then(() => { if (active) loadNotifications(); });
+    return () => { active = false; };
+  }, [userId, loadNotifications]);
 
 
 
@@ -131,13 +173,23 @@ export function AppExperience({ children }) {
     if (!accountOpen && !notificationsOpen) return;
     const close = (event) => {
       if (!accountRef.current?.contains(event.target)) setAccountOpen(false);
-      if (!notificationsRef.current?.contains(event.target)) setNotificationsOpen(false);
+      if (!notificationsRef.current?.contains(event.target)) {
+        notificationsOpenRef.current = false;
+        setNotificationsOpen(false);
+      }
     };
-    const escape = (event) => { if (event.key === "Escape") { setAccountOpen(false); setNotificationsOpen(false); } };
+    const escape = (event) => { if (event.key === "Escape") { setAccountOpen(false); notificationsOpenRef.current = false; setNotificationsOpen(false); } };
     document.addEventListener("pointerdown", close);
     document.addEventListener("keydown", escape);
     return () => { document.removeEventListener("pointerdown", close); document.removeEventListener("keydown", escape); };
   }, [accountOpen, notificationsOpen]);
+
+  useEffect(() => {
+    notificationsOpenRef.current = notificationsOpen;
+    if (notificationsOpen && notifications.status === "ready") {
+      markAlertsSeen(userId, notifications.items);
+    }
+  }, [notificationsOpen, notifications.status, notifications.items, userId]);
 
   // Never mount booking forms or their data effects before authentication succeeds.
   if (isBookingPage && (!token || error === "auth")) return <div className="app-auth-state"><p role="status">Please sign in to book a ticket.</p></div>;
@@ -153,7 +205,20 @@ export function AppExperience({ children }) {
   const mobileItems = role === "admin" ? [admin[0], admin[1], admin[2], admin[4], admin[5]] : items;
   const title = role === "admin" ? "Admin Panel" : role === "driver" ? "Driver Dashboard" : "Smart Safar";
   const initials = user.name?.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "SS";
+  const seenAlertIds = readSeenAlertIds(userId);
+  const hasUnseenAlerts = notifications.status === "ready" && notifications.items.some((alert) => !seenAlertIds.has(alertIdentity(alert)));
   function logout() { clearAccessToken(); setConfirmLogout(false); setAccountOpen(false); router.replace("/"); }
+  function closeNotifications() {
+    notificationsOpenRef.current = false;
+    setNotificationsOpen(false);
+  }
+  function toggleNotifications() {
+    const next = !notificationsOpen;
+    notificationsOpenRef.current = next;
+    setNotificationsOpen(next);
+    setAccountOpen(false);
+    if (next && (notifications.status === "idle" || notifications.status === "error")) loadNotifications();
+  }
   function navigate(event, href) {
     const [path, hash] = href.split("#");
     if (!hash || path !== pathname) return;
@@ -167,7 +232,37 @@ export function AppExperience({ children }) {
   }
 
   return <div className={"app-experience app-experience--" + role}>
-    <header className="app-header"><div className="app-header-inner"><Link href={getRoleHome(role)} className="app-brand"><BrandMark size={34} /><span><strong>{title}</strong><small>{role === "commuter" ? "Faisalabad transit" : "Smart Safar"}</small></span></Link><div className="app-header-actions"><span className="app-role-label">{role === "admin" ? "Administrator" : role === "driver" ? "Driver mode" : "Commuter"}</span><div className="app-notifications" ref={notificationsRef}><button type="button" className="app-icon-button" aria-label="Open notifications" aria-expanded={notificationsOpen} onClick={() => { setNotificationsOpen((open) => { const next = !open; if (next && notifications.status === "idle") loadNotifications(); return next; }); setAccountOpen(false); }}><Bell size={19} />{notifications.items.length > 0 && <span>{notifications.items.length > 9 ? "9+" : notifications.items.length}</span>}</button>{notificationsOpen && <section className="app-notification-panel" role="dialog" aria-label="Notifications"><header><div><p>Notifications</p><span>Current route alerts</span></div><button type="button" onClick={() => setNotificationsOpen(false)} aria-label="Close notifications"><X size={17} /></button></header><div className="app-notification-list">{notifications.status === "loading" ? <p className="app-notification-state">Loading alerts…</p> : notifications.status === "error" ? <div className="app-notification-state"><p>Alerts are unavailable right now.</p><button type="button" onClick={loadNotifications}>Try again</button></div> : notifications.items.length ? notifications.items.map((alert) => <article key={alert._id}><span className="app-notification-icon"><Bell size={15} /></span><div><strong>{alert.routeName || "Route alert"}</strong><p>{alert.message}</p>{(alert.createdAt || alert.expiresAt) && <time>{alert.createdAt ? new Date(alert.createdAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : `Active until ${new Date(alert.expiresAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}`}</time>}</div></article>) : <p className="app-notification-state">No new alerts</p>}</div>{role === "admin" && <Link href="/admin/alerts" onClick={() => setNotificationsOpen(false)} className="app-notification-manage">Manage route alerts</Link>}</section>}</div><div className="app-account" ref={accountRef}><button type="button" className="app-avatar" aria-label="Open profile menu" aria-expanded={accountOpen} onClick={() => { setAccountOpen((open) => !open); setNotificationsOpen(false); }}>{initials}</button>{accountOpen && <div className="app-account-menu" role="menu"><div className="app-account-summary"><strong>{user.name}</strong><span>{user.email}</span></div><Link href="/profile" role="menuitem" onClick={() => setAccountOpen(false)}><UserRound size={17} /> Profile</Link><button type="button" role="menuitem" onClick={() => { setAccountOpen(false); setConfirmLogout(true); }}><LogOut size={17} /> Log out</button></div>}</div></div></div></header>
+    <header className="app-header">
+      <div className="app-header-inner">
+        <Link href={getRoleHome(role)} className="app-brand">
+          <BrandMark size={34} />
+          <span><strong>{title}</strong><small>{role === "commuter" ? "Faisalabad transit" : "Smart Safar"}</small></span>
+        </Link>
+        <div className="app-header-actions">
+          <span className="app-role-label">{role === "admin" ? "Administrator" : role === "driver" ? "Driver mode" : "Commuter"}</span>
+          <div className="app-notifications" ref={notificationsRef}>
+            <button type="button" className="app-icon-button" aria-label={hasUnseenAlerts ? "Open notifications, new alerts available" : "Open notifications"} aria-expanded={notificationsOpen} onClick={toggleNotifications}>
+              <Bell size={19} />
+              {hasUnseenAlerts && !notificationsOpen && <span className="app-notification-dot" aria-hidden="true" />}
+            </button>
+            {notificationsOpen && <section className="app-notification-panel" role="dialog" aria-label="Notifications">
+              <header>
+                <div><p>Notifications</p><span>Current route alerts</span></div>
+                <button type="button" onClick={closeNotifications} aria-label="Close notifications"><X size={17} /></button>
+              </header>
+              <div className="app-notification-list">
+                {notifications.status === "loading" ? <p className="app-notification-state">Loading alerts…</p> : notifications.status === "error" ? <div className="app-notification-state"><p>Alerts are unavailable right now.</p><button type="button" onClick={loadNotifications}>Try again</button></div> : notifications.items.length ? notifications.items.map((alert) => <article key={alert._id || alertIdentity(alert)}><span className="app-notification-icon"><Bell size={15} /></span><div><strong>{alert.routeName || "Route alert"}</strong><p>{alert.message}</p>{(alert.createdAt || alert.expiresAt) && <time>{alert.createdAt ? new Date(alert.createdAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : `Active until ${new Date(alert.expiresAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}`}</time>}</div></article>) : <p className="app-notification-state">No active alerts</p>}
+              </div>
+              {role === "admin" && <Link href="/admin/alerts" onClick={closeNotifications} className="app-notification-manage">Manage route alerts</Link>}
+            </section>}
+          </div>
+          <div className="app-account" ref={accountRef}>
+            <button type="button" className="app-avatar" aria-label="Open profile menu" aria-expanded={accountOpen} onClick={() => { setAccountOpen((open) => !open); closeNotifications(); }}>{initials}</button>
+            {accountOpen && <div className="app-account-menu" role="menu"><div className="app-account-summary"><strong>{user.name}</strong><span>{user.email}</span></div><Link href="/profile" role="menuitem" onClick={() => setAccountOpen(false)}><UserRound size={17} /> Profile</Link><button type="button" role="menuitem" onClick={() => { setAccountOpen(false); setConfirmLogout(true); }}><LogOut size={17} /> Log out</button></div>}
+          </div>
+        </div>
+      </div>
+    </header>
     <div className="app-frame"><aside className="app-sidebar"><Navigation items={items} pathname={pathname} activeHash={activeHash} onNavigate={navigate} /></aside><div className="app-content">{children}</div></div>
     <Navigation items={mobileItems} pathname={pathname} activeHash={activeHash} onNavigate={navigate} mobile />
     {confirmLogout && <div className="app-dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setConfirmLogout(false); }}><section className="app-logout-dialog" role="alertdialog" aria-modal="true" aria-labelledby="logout-title"><button type="button" className="app-dialog-close" aria-label="Close" onClick={() => setConfirmLogout(false)}><X size={18} /></button><span className="app-dialog-icon"><LogOut size={22} /></span><h2 id="logout-title">Log out?</h2><p>Are you sure you want to log out?</p><div><button type="button" onClick={() => setConfirmLogout(false)}>Cancel</button><button type="button" className="is-danger" onClick={logout}>Log out</button></div></section></div>}

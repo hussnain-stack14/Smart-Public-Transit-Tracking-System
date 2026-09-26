@@ -45,11 +45,11 @@ export function StopLocationPicker({ idPrefix, position, onChange, disabled }) {
     <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
       <div>
         <label htmlFor={idPrefix + "-lat"} className="mb-1 block text-xs font-semibold">Latitude</label>
-        <input id={idPrefix + "-lat"} type="text" readOnly value={position ? position[0].toFixed(6) : ""} className="field-input bg-[#f5f8f7] text-sm" placeholder="Select a point on the map" />
+        <input id={idPrefix + "-lat"} type="text" readOnly value={position ? position[0].toFixed(6) : ""} className="field-input bg-[var(--background)] text-sm" placeholder="Select a point on the map" />
       </div>
       <div>
         <label htmlFor={idPrefix + "-lng"} className="mb-1 block text-xs font-semibold">Longitude</label>
-        <input id={idPrefix + "-lng"} type="text" readOnly value={position ? position[1].toFixed(6) : ""} className="field-input bg-[#f5f8f7] text-sm" placeholder="Select a point on the map" />
+        <input id={idPrefix + "-lng"} type="text" readOnly value={position ? position[1].toFixed(6) : ""} className="field-input bg-[var(--background)] text-sm" placeholder="Select a point on the map" />
       </div>
     </div>
     <p role="status" className="break-words text-sm text-[var(--muted)]">{position ? "Selected Location: " + position.map((value) => value.toFixed(6)).join(", ") : "No stop location selected yet."}</p>
@@ -94,7 +94,7 @@ class LocationMapBoundary extends Component {
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
   render() {
-    if (this.state.failed) return <div role="alert" className="grid h-full content-center justify-items-center gap-3 bg-[#f5f8f7] p-4 text-center text-sm">
+    if (this.state.failed) return <div role="alert" className="grid h-full content-center justify-items-center gap-3 bg-[var(--background)] p-4 text-center text-sm">
       <p>Unable to load the location map. Check your connection and retry. If it still fails, refresh the page.</p>
       <Button type="button" variant="secondary" onClick={this.props.onRetry} disabled={this.props.disabled} className="min-h-11">Retry map</Button>
     </div>;

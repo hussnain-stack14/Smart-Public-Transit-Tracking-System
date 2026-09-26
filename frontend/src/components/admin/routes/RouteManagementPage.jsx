@@ -146,7 +146,7 @@ export default function RouteManagementPage() {
     return (
       <PageShell>
         <Card className="mx-auto max-w-lg p-8 text-center">
-          <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#e5f4ee] text-[var(--primary)]">
+          <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[var(--primary-soft)] text-[var(--primary-ink)]">
             <ShieldAlert size={26} />
           </div>
           <h1 className="mt-4 text-2xl font-bold text-[var(--foreground)]">Sign In Required</h1>
@@ -156,13 +156,13 @@ export default function RouteManagementPage() {
           <div className="mt-6 flex flex-col gap-2.5 sm:flex-row sm:justify-center">
             <Link
               href="/login?redirect=/admin/routes"
-              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--primary-dark)]"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-contrast)] hover:bg-[var(--primary-dark)]"
             >
               Sign In as Admin
             </Link>
             <Link
               href="/"
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[var(--border)] px-5 text-sm font-semibold text-[var(--foreground)] hover:bg-[#f5f8f7]"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[var(--border)] px-5 text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--background)]"
             >
               Back to Home
             </Link>
@@ -186,7 +186,7 @@ export default function RouteManagementPage() {
           <div className="mt-6 flex flex-col gap-2.5 sm:flex-row sm:justify-center">
             <Link
               href="/routes"
-              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--primary-dark)]"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-contrast)] hover:bg-[var(--primary-dark)]"
             >
               View Public Routes
             </Link>
@@ -229,7 +229,7 @@ export default function RouteManagementPage() {
       <div className="mb-4">
         <Link
           href="/admin/dashboard"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--muted)] hover:text-[var(--primary)] transition"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--muted)] hover:text-[var(--primary-ink)] transition"
         >
           <ArrowLeft size={14} /> Back to Admin Dashboard
         </Link>
@@ -239,10 +239,10 @@ export default function RouteManagementPage() {
       <header className="flex flex-col justify-between gap-4 border-b border-[var(--border)] pb-6 sm:flex-row sm:items-end">
         <div>
           <div className="flex items-center gap-2">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary)]">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary-ink)]">
               Transit Network
             </p>
-            <span className="rounded-md bg-[#e5f4ee] px-2 py-0.5 text-[11px] font-bold text-[var(--primary-dark)]">
+            <span className="rounded-md bg-[var(--primary-soft)] px-2 py-0.5 text-[11px] font-bold text-[var(--primary-ink)]">
               {routes.length} Routes
             </span>
           </div>
@@ -274,8 +274,8 @@ export default function RouteManagementPage() {
 
       {/* Search */}
       <Card className="mt-6 p-3 sm:p-4">
-        <label className="flex min-h-12 items-center gap-3 rounded-xl border border-[var(--border)] bg-[#fbfdfc] px-4">
-          <Search size={18} className="shrink-0 text-[var(--primary)]" />
+        <label className="flex min-h-12 items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--background)] px-4">
+          <Search size={18} className="shrink-0 text-[var(--primary-ink)]" />
           <span className="sr-only">Search routes</span>
           <input
             value={searchTerm}
@@ -298,7 +298,7 @@ export default function RouteManagementPage() {
             Showing <strong className="text-[var(--foreground)]">{filteredRoutes.length}</strong> of {routes.length} routes
           </span>
           {searchTerm && filteredRoutes.length !== routes.length && (
-            <button type="button" onClick={() => setSearchTerm("")} className="text-[var(--primary)] hover:underline">
+            <button type="button" onClick={() => setSearchTerm("")} className="text-[var(--primary-ink)] hover:underline">
               Clear filter
             </button>
           )}

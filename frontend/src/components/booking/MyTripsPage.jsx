@@ -160,7 +160,7 @@ export default function MyTripsPage() {
   return (
     <PageShell>
       <header>
-        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary)]">
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary-ink)]">
           Your travel
         </p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--foreground)] sm:text-4xl">
@@ -181,8 +181,8 @@ export default function MyTripsPage() {
             onClick={() => setFilter(value)}
             className={`min-h-10 rounded-xl px-4 text-sm font-semibold capitalize transition ${
               filter === value
-                ? "bg-[var(--primary)] text-white"
-                : "border border-[var(--border)] bg-white text-[var(--muted)] hover:text-[var(--primary)]"
+                ? "bg-[var(--primary)] text-[var(--primary-contrast)]"
+                : "border border-[var(--border)] bg-white text-[var(--muted)] hover:text-[var(--primary-ink)]"
             }`}
           >
             {value === "all" ? "All" : value}
@@ -204,7 +204,7 @@ export default function MyTripsPage() {
             action={
               <Link
                 href="/booking"
-                className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-white"
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-contrast)]"
               >
                 Book a Trip <ArrowRight size={16} />
               </Link>
@@ -242,7 +242,7 @@ function TripSection({ title, icon: Icon, bookings, cancellingId, onCancel }) {
   return (
     <section>
       <div className="flex items-center gap-3">
-        <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e4f5ed] text-[var(--primary)]">
+        <span className="grid h-9 w-9 place-items-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary-ink)]">
           <Icon size={17} />
         </span>
         <div>
@@ -277,7 +277,7 @@ function TripCard({ booking, cancelling, onCancel }) {
     <Card className="flex min-w-0 flex-col p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="break-words text-xs font-bold uppercase tracking-[0.14em] text-[var(--primary)]">
+          <p className="break-words text-xs font-bold uppercase tracking-[0.14em] text-[var(--primary-ink)]">
             {route.routeName || "Route unavailable"}
           </p>
           <h3 className="mt-1 break-words text-lg font-bold text-[var(--foreground)]">
@@ -320,7 +320,7 @@ function TripCard({ booking, cancelling, onCancel }) {
         )}
         <Link
           href={confirmationHref}
-          className="inline-flex min-h-10 items-center justify-center gap-1 rounded-xl border border-[var(--border)] px-4 text-sm font-semibold text-[var(--primary)] hover:border-[var(--primary)]"
+          className="inline-flex min-h-10 items-center justify-center gap-1 rounded-xl border border-[var(--border)] px-4 text-sm font-semibold text-[var(--primary-ink)] hover:border-[var(--primary)]"
         >
           View Details <ArrowRight size={15} />
         </Link>
@@ -356,7 +356,7 @@ function StateCard({ title, description, actionHref, actionLabel }) {
       <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{description}</p>
       <Link
         href={actionHref}
-        className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-white"
+        className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-contrast)]"
       >
         {actionLabel}
       </Link>

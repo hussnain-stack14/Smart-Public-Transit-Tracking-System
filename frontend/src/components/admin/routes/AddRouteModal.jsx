@@ -14,13 +14,17 @@ export function AddRouteModal({ isOpen, onClose, onCreated }) {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return;
+    let active = true;
+    Promise.resolve().then(() => {
+      if (!active) return;
       setRouteName("");
       setStartPoint("");
       setEndPoint("");
       setDescription("");
       setError("");
-    }
+    });
+    return () => { active = false; };
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -65,7 +69,7 @@ export function AddRouteModal({ isOpen, onClose, onCreated }) {
       <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
         <div className="flex items-center justify-between border-b border-[var(--border)] pb-4">
           <div className="flex items-center gap-2">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e5f4ee] text-[var(--primary)]">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary-ink)]">
               <MapPin size={18} />
             </span>
             <div>
@@ -78,7 +82,7 @@ export function AddRouteModal({ isOpen, onClose, onCreated }) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-[var(--muted)] hover:bg-[#f0f8f4] hover:text-[var(--foreground)]"
+            className="rounded-lg p-1.5 text-[var(--muted)] hover:bg-[var(--primary-soft)] hover:text-[var(--foreground)]"
             aria-label="Close modal"
           >
             <X size={18} />

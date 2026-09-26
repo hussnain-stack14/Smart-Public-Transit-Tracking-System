@@ -70,7 +70,7 @@ export function AddBusModal({ isOpen, onClose, onCreated, routes = [] }) {
       <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
         <div className="flex items-center justify-between border-b border-[var(--border)] pb-4">
           <div className="flex items-center gap-2">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e5f4ee] text-[var(--primary)]">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary-ink)]">
               <BusFront size={18} />
             </span>
             <div>
@@ -83,7 +83,7 @@ export function AddBusModal({ isOpen, onClose, onCreated, routes = [] }) {
           <button
             type="button"
             onClick={onClose}
-            className="min-h-11 min-w-11 rounded-lg p-1.5 text-[var(--muted)] hover:bg-[#f0f8f4] hover:text-[var(--foreground)]"
+            className="min-h-11 min-w-11 rounded-lg p-1.5 text-[var(--muted)] hover:bg-[var(--primary-soft)] hover:text-[var(--foreground)]"
             disabled={submitting}
             aria-label="Close modal"
           >

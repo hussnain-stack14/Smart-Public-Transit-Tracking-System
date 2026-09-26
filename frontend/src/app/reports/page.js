@@ -64,7 +64,7 @@ function ReportForm({ user }) {
 
   return (
     <>
-      <p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--primary)]">{user.role === "driver" ? "Driver operations" : "Passenger feedback"}</p>
+      <p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--primary-ink)]">{user.role === "driver" ? "Driver operations" : "Passenger feedback"}</p>
       <h1 className="mt-2 text-3xl font-bold">Report an issue</h1>
       <p className="mt-3 text-sm text-[var(--muted)]">Submit a bus condition or safety report for the transit team to review.</p>
       {loading ? <div className="mt-6"><LoadingSpinner label="Loading buses..." /></div> : loadError ? <div role="alert" className="mt-6"><p className="text-sm text-[var(--danger)]">Unable to load buses.</p><Button type="button" className="mt-3 min-h-11" onClick={() => { setLoading(true); setRetry((value) => value + 1); }}>Try again</Button></div> : !buses.length ? <p className="mt-6 text-sm text-[var(--muted)]">No buses are available to report.</p> : (

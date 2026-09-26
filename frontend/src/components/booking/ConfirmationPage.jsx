@@ -168,10 +168,10 @@ export default function ConfirmationPage({ bookingId }) {
       <div className="mx-auto max-w-4xl">
         <BookingProgress currentStep={3} />
         <section className="mt-8 text-center">
-          <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[#dff2e8] text-[var(--success)]">
+          <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[var(--success-soft)] text-[var(--success)]">
             <CheckCircle2 size={34} />
           </span>
-          <p className="mt-5 text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary)]">
+          <p className="mt-5 text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary-ink)]">
             Booking saved
           </p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--foreground)] sm:text-4xl">
@@ -183,13 +183,13 @@ export default function ConfirmationPage({ bookingId }) {
         </section>
 
         <Card className="mt-8 overflow-hidden">
-          <div className="flex flex-col justify-between gap-4 border-b border-[var(--border)] bg-[#f0f7f4] p-5 sm:flex-row sm:items-center sm:p-6">
+          <div className="flex flex-col justify-between gap-4 border-b border-[var(--border)] bg-[var(--primary-soft)] p-5 sm:flex-row sm:items-center sm:p-6">
             <div className="flex min-w-0 items-center gap-3">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-[var(--primary)]">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-[var(--primary-ink)]">
                 <Ticket size={19} />
               </span>
               <div className="min-w-0">
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--primary)]">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--primary-ink)]">
                   Booking ID
                 </p>
                 <p className="mt-1 break-all font-mono text-sm font-bold text-[var(--foreground)]">
@@ -250,13 +250,13 @@ export default function ConfirmationPage({ bookingId }) {
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
           <Link
             href="/booking"
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-white px-5 text-sm font-semibold text-[var(--foreground)] hover:border-[var(--primary)] hover:text-[var(--primary)]"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-white px-5 text-sm font-semibold text-[var(--foreground)] hover:border-[var(--primary)] hover:text-[var(--primary-ink)]"
           >
             <ArrowLeft size={16} /> New booking
           </Link>
           <Link
             href="/my-trips"
-            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--primary-dark)]"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-contrast)] hover:bg-[var(--primary-dark)]"
           >
             View My Trips
           </Link>
@@ -289,8 +289,8 @@ function DetailRow({ label, value }) {
 
 function InfoRow({ icon: Icon, label, value, badgeTone }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl bg-[#f5f8f7] p-3">
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#e4f5ed] text-[var(--primary)]">
+    <div className="flex items-center gap-3 rounded-xl bg-[var(--background)] p-3">
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[var(--primary-soft)] text-[var(--primary-ink)]">
         <Icon size={16} />
       </span>
       <div className="min-w-0 flex-1">
@@ -314,7 +314,7 @@ function StateCard({ title, description, actionHref, actionLabel }) {
       <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{description}</p>
       <Link
         href={actionHref}
-        className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-white"
+        className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-contrast)]"
       >
         {actionLabel}
       </Link>

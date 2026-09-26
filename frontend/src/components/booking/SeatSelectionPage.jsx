@@ -244,7 +244,7 @@ export default function SeatSelectionPage({
       <div className="flex items-center gap-2 text-sm text-[var(--muted)]">
         <Link
           href={actualRouteId ? `/booking?route=${actualRouteId}` : "/booking"}
-          className="font-semibold text-[var(--primary)] hover:text-[var(--primary-dark)]"
+          className="font-semibold text-[var(--primary-ink)] hover:text-[var(--primary-ink)]"
         >
           <ArrowLeft size={19} aria-hidden="true" /><span className="sr-only">Back to trip details</span>
         </Link>
@@ -253,7 +253,7 @@ export default function SeatSelectionPage({
       </div>
 
       <header className="mt-6">
-        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary)]">
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary-ink)]">
           Step 2 of 3
         </p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--foreground)] sm:text-4xl">
@@ -295,8 +295,8 @@ export default function SeatSelectionPage({
             </div>
 
             {seats.length ? (
-              <div className="mx-auto mt-6 max-w-sm rounded-[2rem] border-2 border-[#cfe5dc] bg-[#f5f8f7] p-4">
-                <div className="mb-5 rounded-xl bg-[#e3f3ec] px-4 py-3 text-center text-xs font-bold uppercase tracking-[0.14em] text-[var(--primary)]">
+              <div className="mx-auto mt-6 max-w-sm rounded-[2rem] border-2 border-[var(--primary-border)] bg-[var(--background)] p-4">
+                <div className="mb-5 rounded-xl bg-[var(--primary-soft)] px-4 py-3 text-center text-xs font-bold uppercase tracking-[0.14em] text-[var(--primary-ink)]">
                   Driver / front
                 </div>
                 <div className="grid gap-3">
@@ -323,9 +323,9 @@ export default function SeatSelectionPage({
             )}
 
             <div className="mt-6 flex flex-wrap gap-4 border-t border-[var(--border)] pt-4 text-xs text-[var(--muted)]">
-              <Legend color="bg-white border-[#b9d8cc]" label="Available" />
+              <Legend color="bg-white border-[#86efac]" label="Available" />
               <Legend color="bg-[var(--primary)] border-[var(--primary)]" label="Selected" />
-              <Legend color="bg-[#e5e9e7] border-[#cbd5d1]" label="Unavailable" />
+              <Legend color="bg-[var(--border)] border-[var(--border)]" label="Unavailable" />
             </div>
             {availableSeats != null && availableSeats < (bus.capacity || availableSeats) && (
               <p className="mt-4 text-xs leading-5 text-[var(--muted)]">
@@ -337,7 +337,7 @@ export default function SeatSelectionPage({
 
           <Card className="p-5 sm:p-6">
             <div className="flex items-start gap-3">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#e4f5ed] text-[var(--primary)]">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary-ink)]">
                 <MapPin size={19} />
               </span>
               <div>
@@ -350,7 +350,7 @@ export default function SeatSelectionPage({
             </div>
 
             {locationPosition ? (
-              <div className="mt-5 overflow-hidden rounded-2xl border border-[var(--border)] bg-[#eaf3ef] p-1">
+              <div className="mt-5 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-subtle)] p-1">
                 <ClientTransitMap center={locationPosition} zoom={15} className="h-64 rounded-xl">
                   <MapViewport
                     positions={[locationPosition]}
@@ -363,9 +363,9 @@ export default function SeatSelectionPage({
                 </ClientTransitMap>
               </div>
             ) : (
-              <div className="mt-5 grid min-h-32 place-items-center rounded-2xl border border-dashed border-[var(--border)] bg-[#f7faf9] p-5 text-center">
+              <div className="mt-5 grid min-h-32 place-items-center rounded-2xl border border-dashed border-[var(--border)] bg-[var(--background)] p-5 text-center">
                 <div>
-                  <LocateFixed className="mx-auto text-[var(--primary)]" size={24} />
+                  <LocateFixed className="mx-auto text-[var(--primary-ink)]" size={24} />
                   <p className="mt-2 text-sm font-semibold">No pickup location selected</p>
                   <p className="mt-1 text-xs text-[var(--muted)]">
                     Location permission is optional and never blocks booking.
@@ -427,7 +427,7 @@ export default function SeatSelectionPage({
 
         <Card className="p-5 sm:p-6 lg:sticky lg:top-24">
           <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#e4f5ed] text-[var(--primary)]">
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary-ink)]">
               <BusFront size={19} />
             </span>
             <div>
@@ -447,14 +447,14 @@ export default function SeatSelectionPage({
             />
           </div>
 
-          <div className="mt-5 flex items-start gap-2 rounded-xl bg-[#f5f8f7] p-3 text-sm text-[var(--muted)]">
-            <Users size={16} className="mt-0.5 shrink-0 text-[var(--primary)]" />
+          <div className="mt-5 flex items-start gap-2 rounded-xl bg-[var(--background)] p-3 text-sm text-[var(--muted)]">
+            <Users size={16} className="mt-0.5 shrink-0 text-[var(--primary-ink)]" />
             {availableSeats == null
               ? "Seat availability unavailable"
               : `${availableSeats} seats available`}
           </div>
           <div className="mt-3 flex items-start gap-2 rounded-xl border border-[var(--border)] p-3 text-sm text-[var(--muted)]">
-            <WalletCards size={16} className="mt-0.5 shrink-0 text-[var(--primary)]" />
+            <WalletCards size={16} className="mt-0.5 shrink-0 text-[var(--primary-ink)]" />
             <p>
               Payment will be <strong className="text-[var(--foreground)]">Pending</strong>. No
               customer payment gateway is currently integrated, so this screen never reports a fake
@@ -524,10 +524,10 @@ function SeatButton({ seat, selected, disabled, onSelect, className = "" }) {
       aria-pressed={selected}
       className={`grid min-h-11 min-w-0 place-items-center rounded-lg border text-xs font-bold transition ${
         selected
-          ? "border-[var(--primary)] bg-[var(--primary)] text-white"
+          ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--primary-contrast)]"
           : disabled
-            ? "cursor-not-allowed border-[#cbd5d1] bg-[#e5e9e7] text-[#82928b]"
-            : "border-[#b9d8cc] bg-white text-[var(--primary)] hover:border-[var(--primary)] hover:bg-[#e3f3ec]"
+            ? "cursor-not-allowed border-[var(--border)] bg-[var(--border)] text-[var(--muted)]"
+            : "border-[#86efac] bg-white text-[var(--success)] hover:border-[var(--success)] hover:bg-[var(--success-soft)]"
       } ${className}`}
       onClick={() => onSelect(seat)}
     >
@@ -551,7 +551,7 @@ function StateCard({ title, description }) {
       <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{description}</p>
       <Link
         href="/booking"
-        className="mt-6 inline-flex min-h-11 items-center rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-white"
+        className="mt-6 inline-flex min-h-11 items-center rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-contrast)]"
       >
         Back to booking
       </Link>

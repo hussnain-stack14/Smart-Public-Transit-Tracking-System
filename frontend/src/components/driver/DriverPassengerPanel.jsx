@@ -33,7 +33,7 @@ export function DriverPassengerPanel({ active, passengers, loading, error, onRet
       </div>
 
       {!active ? (
-        <div className="mt-4 rounded-xl bg-[#f5f8f7] p-4 text-sm leading-6 text-[var(--muted)]">
+        <div className="mt-4 rounded-xl bg-[var(--background)] p-4 text-sm leading-6 text-[var(--muted)]">
           Start your assigned shift to access opted-in passenger pickup locations. No passenger
           locations are retained on this dashboard after the shift ends.
         </div>
@@ -53,7 +53,7 @@ export function DriverPassengerPanel({ active, passengers, loading, error, onRet
           {passengers.map((item) => (
             <article
               key={item.bookingId}
-              className="rounded-xl border border-[var(--border)] bg-[#f8fbfa] p-3"
+              className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-3"
             >
               <div className="flex items-start gap-3">
                 <MapPin className="mt-0.5 shrink-0 text-[#b7791f]" size={17} />
@@ -75,8 +75,8 @@ export function DriverPassengerPanel({ active, passengers, loading, error, onRet
           ))}
         </div>
       ) : (
-        <div className="mt-4 rounded-xl bg-[#f5f8f7] p-4 text-center">
-          <LocateFixed className="mx-auto text-[var(--primary)]" size={22} />
+        <div className="mt-4 rounded-xl bg-[var(--background)] p-4 text-center">
+          <LocateFixed className="mx-auto text-[var(--primary-ink)]" size={22} />
           <p className="mt-2 text-sm font-semibold">No shared pickups</p>
           <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
             No relevant active booking is currently sharing a passenger location.
