@@ -35,6 +35,18 @@ body {
   font-family: var(--font-geist-sans), sans-serif;
 }
 
+.pwa-offline { position: fixed; inset: 0; z-index: 2200; display: grid; align-content: center; justify-items: center; padding: max(28px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); background: var(--background); text-align: center; }
+.pwa-offline img { border-radius: 18px; }
+.pwa-offline h1 { margin-top: 24px; font-size: clamp(26px, 7vw, 34px); font-weight: 800; letter-spacing: -.03em; }
+.pwa-offline p { max-width: 31rem; margin-top: 8px; color: var(--muted); font-size: 15px; line-height: 1.55; }
+.pwa-offline .pwa-offline-note { color: #94a3b8; font-size: 13px; }
+.pwa-ios-install { position: fixed; right: max(12px, env(safe-area-inset-right)); bottom: calc(82px + env(safe-area-inset-bottom)); left: max(12px, env(safe-area-inset-left)); z-index: 1100; display: flex; max-width: 420px; align-items: center; gap: 12px; margin: auto; border: 1px solid var(--primary-border); border-radius: 14px; background: #fff; padding: 12px 14px; box-shadow: 0 14px 34px #0F172A26; }
+.pwa-ios-install div { display: grid; min-width: 0; flex: 1; gap: 2px; }
+.pwa-ios-install strong { font-size: 13px; }
+.pwa-ios-install span { color: var(--muted); font-size: 12px; line-height: 1.4; }
+.pwa-ios-install button { flex: none; border-radius: 9px; padding: 8px; color: var(--primary-ink); font-size: 12px; font-weight: 700; }
+@media (min-width: 768px) { .pwa-ios-install { right: 20px; bottom: 20px; left: auto; width: 390px; } }
+
 button,
 input,
 select,

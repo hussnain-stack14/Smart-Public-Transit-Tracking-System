@@ -43,6 +43,12 @@ const nextConfig = {
     return [{
       source: "/(.*)",
       headers: [{ key: "Content-Security-Policy", value: contentSecurityPolicy }],
+    }, {
+      source: "/service-worker.js",
+      headers: [
+        { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+        { key: "Service-Worker-Allowed", value: "/" },
+      ],
     }];
   },
 };
