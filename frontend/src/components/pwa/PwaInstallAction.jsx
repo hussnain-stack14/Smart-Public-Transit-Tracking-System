@@ -26,10 +26,11 @@ export function PwaInstallAction({ className = "" }) {
       setAvailable(false);
       setFeedback("");
     };
-    setInstalled(isStandalone());
+    const standaloneCheck = window.requestAnimationFrame(() => setInstalled(isStandalone()));
     window.addEventListener("smart-safar:install-availability", sync);
     window.addEventListener("appinstalled", markInstalled);
     return () => {
+      window.cancelAnimationFrame(standaloneCheck);
       window.removeEventListener("smart-safar:install-availability", sync);
       window.removeEventListener("appinstalled", markInstalled);
     };

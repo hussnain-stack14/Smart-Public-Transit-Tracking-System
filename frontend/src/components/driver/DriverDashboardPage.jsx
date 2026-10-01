@@ -375,7 +375,7 @@ function DriverOperations({ user, view }) {
 
   return (
     <>
-      <header className="flex flex-wrap items-center justify-between gap-3">
+      <header className="premium-driver-header flex flex-wrap items-center justify-between gap-3 px-5 py-5 sm:px-6">
         <div className="min-w-0"><p className="text-xs font-bold uppercase tracking-[.14em] text-[var(--primary-ink)]">Driver operations</p><h1 className="mt-1 text-2xl font-bold">{viewTitle}</h1><p className="mt-1 break-words text-sm text-[var(--muted)]">{profile.name}</p></div>
         {retry}
       </header>

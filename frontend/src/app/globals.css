@@ -2,24 +2,32 @@
 @import "leaflet/dist/leaflet.css";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #111827;
-  --primary: #e97824;
-  --primary-dark: #c95d12;
-  --primary-ink: #a6470b;
+  --background: #f7f5f1;
+  --foreground: #172033;
+  --primary: #c4510d;
+  --primary-dark: #b94b0b;
+  --primary-ink: #91400d;
   --primary-contrast: #ffffff;
-  --primary-soft: #fff6ed;
-  --primary-soft-strong: #ffe4cc;
-  --primary-border: #f7c89d;
+  --primary-soft: #fff4e9;
+  --primary-soft-strong: #ffe2c5;
+  --primary-border: #f1bf91;
   --card: #ffffff;
-  --border: #e2e8f0;
-  --muted: #64748b;
-  --surface-subtle: #f1f5f9;
-  --skeleton: #e2e8f0;
-  --success: #16845b;
-  --success-soft: #ecfdf5;
-  --warning: #b97812;
-  --danger: #c94747;
+  --border: #dfe3e8;
+  --muted: #5f6b7c;
+  --surface-subtle: #edf0f4;
+  --skeleton: #e4e7eb;
+  --success: #147554;
+  --success-soft: #e9f8f1;
+  --warning: #9b6615;
+  --danger: #b94343;
+  --navy: #172238;
+  --navy-soft: #253149;
+  --cream: #fbf7f1;
+  --glass: rgba(255, 255, 255, .82);
+  --glass-strong: rgba(255, 255, 255, .94);
+  --glass-border: rgba(255, 255, 255, .72);
+  --shadow-card: 0 14px 36px rgba(23, 34, 56, .08), 0 2px 8px rgba(23, 34, 56, .04);
+  --shadow-float: 0 24px 64px rgba(23, 34, 56, .16), 0 8px 22px rgba(23, 34, 56, .08);
 }
 
 @theme inline {
@@ -277,7 +285,7 @@ textarea {
 }
 
 /* Public mobile app shell */
-.public-bottom-nav { position: fixed; right: 0; bottom: 0; left: 0; z-index: 900; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); min-height: 66px; padding: 4px max(6px, env(safe-area-inset-right)) calc(4px + env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left)); border-top: 1px solid var(--border); background: rgba(255, 255, 255, .97); box-shadow: 0 -5px 22px rgba(15,23,42, .08); backdrop-filter: blur(14px); }
+.public-bottom-nav { box-sizing: border-box; position: fixed; right: 0; bottom: 0; left: 0; z-index: 900; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); min-height: 66px; padding: 4px max(6px, env(safe-area-inset-right)) calc(4px + env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left)); border-top: 1px solid var(--border); background: rgba(255, 255, 255, .97); box-shadow: 0 -5px 22px rgba(15,23,42, .08); backdrop-filter: blur(14px); }
 .public-bottom-nav a { display: flex; min-width: 0; min-height: 54px; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border-radius: 12px; color: var(--muted); font-size: 10px; font-weight: 700; }
 .public-bottom-nav a.is-active { background: var(--primary-soft); color: var(--primary-ink); }
 .public-quick-action { display: flex; min-width: 0; min-height: 82px; flex-direction: column; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--border); border-radius: 16px; background: white; padding: 8px 4px; color: var(--foreground); font-size: 11px; font-weight: 800; text-align: center; box-shadow: 0 4px 14px rgba(15,23,42, .04); }
@@ -838,3 +846,262 @@ body {
 }
 .pwa-ios-install .pwa-ios-install-close:hover,
 .pwa-ios-install .pwa-ios-install-close:focus-visible { background: var(--primary-soft); color: var(--primary-ink); outline: none; }
+/* Premium transit experience */
+html { overflow-x: clip; background: var(--background); scroll-behavior: smooth; }
+body {
+  min-width: 320px;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(255, 222, 190, .45), transparent 32rem),
+    radial-gradient(circle at 100% 18%, rgba(213, 224, 236, .48), transparent 34rem),
+    linear-gradient(145deg, #fbf8f3 0%, var(--background) 46%, #f1f4f6 100%);
+  color: var(--foreground);
+}
+button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+a, button { transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease, opacity 180ms ease; }
+button:active:not(:disabled), .ui-button:active:not(:disabled) { transform: translateY(1px) scale(.985); }
+:focus-visible { outline: 3px solid rgba(216, 103, 31, .24); outline-offset: 3px; }
+
+.app-experience, .public-shell, .profile-page { background: transparent !important; }
+.app-header, .public-header { border-color: rgba(223, 227, 232, .82) !important; background: rgba(251, 249, 246, .78) !important; box-shadow: 0 8px 28px rgba(23, 34, 56, .06); backdrop-filter: saturate(145%) blur(20px); }
+.app-header-inner { min-height: 66px; }
+.app-brand { border-radius: 14px; padding: 4px 6px; }
+.app-brand:hover { background: rgba(255, 255, 255, .66); }
+.app-brand strong { letter-spacing: -.01em; }
+.app-role-label { border: 1px solid rgba(241, 191, 145, .7); background: rgba(255, 244, 233, .78); }
+.app-frame { position: relative; }
+.app-sidebar { border-color: rgba(223, 227, 232, .78) !important; background: rgba(255, 255, 255, .38); box-shadow: inset -1px 0 rgba(255, 255, 255, .55); backdrop-filter: blur(18px); }
+.app-nav-link { position: relative; overflow: hidden; }
+.app-nav-link:hover { background: rgba(255, 255, 255, .76); color: var(--foreground); transform: translateX(2px); }
+.app-nav-link.is-active { border: 1px solid rgba(241, 191, 145, .72); background: linear-gradient(135deg, rgba(255, 244, 233, .96), rgba(255, 255, 255, .84)); color: var(--primary-ink); box-shadow: 0 8px 20px rgba(145, 64, 13, .08); }
+.app-nav-link.is-active svg { filter: drop-shadow(0 2px 3px rgba(145, 64, 13, .16)); transform: translateY(-1px); }
+.app-bottom-nav { border-color: rgba(223, 227, 232, .82); background: rgba(255, 255, 255, .84); box-shadow: 0 -10px 34px rgba(23, 34, 56, .1); backdrop-filter: saturate(150%) blur(22px); }
+.app-bottom-nav .app-nav-link:hover { transform: none; }
+.app-bottom-nav .app-nav-link.is-active { border-color: transparent; box-shadow: none; }
+.app-icon-button, .app-avatar { border-color: rgba(223, 227, 232, .9); background: rgba(255, 255, 255, .76); box-shadow: 0 5px 16px rgba(23, 34, 56, .06); backdrop-filter: blur(14px); }
+.app-icon-button:hover, .app-avatar:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(23, 34, 56, .1); }
+.app-account-menu, .app-notification-panel { border-color: var(--glass-border); background: rgba(255, 255, 255, .92); box-shadow: var(--shadow-float); backdrop-filter: saturate(145%) blur(24px); animation: premium-pop 180ms ease-out both; }
+.app-notification-list article { transition: background-color 180ms ease; }
+.app-notification-list article:hover { background: rgba(255, 244, 233, .65); }
+
+.ui-card { border-color: rgba(223, 227, 232, .86) !important; background: rgba(255, 255, 255, .84) !important; box-shadow: var(--shadow-card) !important; backdrop-filter: saturate(125%) blur(18px); transition: border-color 220ms ease, box-shadow 220ms ease, transform 220ms ease, background-color 220ms ease; }
+.ui-button { box-shadow: 0 8px 18px rgba(185, 75, 11, .13); transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease; }
+.ui-button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 12px 24px rgba(185, 75, 11, .18); }
+.ui-button[class*="bg-white"] { box-shadow: 0 5px 16px rgba(23, 34, 56, .06); }
+.ui-empty-state { position: relative; overflow: hidden; background: linear-gradient(120deg, rgba(255, 255, 255, .96), rgba(255, 248, 241, .9)), url('/faisalabad-clocktower.jpg') center 45% / cover; box-shadow: inset 0 1px rgba(255, 255, 255, .8); }
+.ui-empty-state::after { content: ""; position: absolute; right: -30px; bottom: -32px; width: 110px; height: 110px; border-radius: 999px; background: rgba(216, 103, 31, .08); }
+.ui-empty-state > div { position: relative; z-index: 1; }
+.ui-error-state { box-shadow: 0 12px 28px rgba(185, 67, 67, .07); }
+
+.field-input, .profile-input, input:not([type="file"]), select, textarea { border-color: #d9dee5; background-color: rgba(255, 255, 255, .9); color: var(--foreground); transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease; }
+.field-input:hover:not(:disabled), .profile-input:hover:not(:disabled), input:hover:not(:disabled), select:hover:not(:disabled), textarea:hover:not(:disabled) { border-color: #c8ced7; }
+.field-input:focus, .profile-input:focus, input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(196, 81, 13, .14); background-color: #fff; }
+.field-input:disabled, input:disabled, select:disabled, textarea:disabled { background-color: #eef0f2; color: #7b8492; }
+
+.app-content > div > main, .public-shell > main, .profile-page main { animation: premium-page-in 360ms cubic-bezier(.22,.8,.26,1) both; }
+.app-content main > header:not(.premium-dashboard-header):not(.premium-driver-header) { padding-top: 2px; }
+.premium-dashboard-header, .premium-driver-header { position: relative; isolation: isolate; overflow: hidden; border-radius: 24px; background: linear-gradient(105deg, rgba(255, 255, 255, .96) 0%, rgba(255, 247, 238, .88) 56%, rgba(235, 240, 246, .86) 100%); box-shadow: var(--shadow-card); }
+.premium-dashboard-header::after, .premium-driver-header::after { content: ""; position: absolute; z-index: -1; inset: 0 0 0 auto; width: min(42%, 420px); background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .18)), url('/faisalabad-clocktower.jpg') center / cover; opacity: .13; mask-image: linear-gradient(90deg, transparent, #000 42%); }
+.premium-driver-header::after { background-image: linear-gradient(90deg, transparent, rgba(255,255,255,.12)), url('/smart-safar-transit-hero.webp'); background-position: 65% center; }
+
+.home-page {
+  background: linear-gradient(180deg, #fbf8f3 0%, #f7f5f1 38%, #f3f5f7 100%);
+}
+.home-premium-hero {
+  position: relative;
+  isolation: isolate;
+  background: #f8f5f0;
+  border-color: rgba(196, 81, 13, .14);
+}
+.home-premium-hero::before {
+  content: "";
+  position: absolute;
+  z-index: -2;
+  inset: -2%;
+  background:
+    linear-gradient(90deg, rgba(251, 248, 243, .98) 0%, rgba(251, 248, 243, .93) 45%, rgba(247, 243, 237, .68) 100%),
+    linear-gradient(180deg, rgba(23, 34, 56, .02), rgba(23, 34, 56, .14)),
+    url('/smart-safar-transit-hero.webp') 58% center / cover no-repeat;
+  transform: scale(1.035);
+  animation: home-background-drift 20s ease-in-out infinite alternate;
+}
+.home-premium-hero::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background:
+    radial-gradient(circle at 10% 12%, rgba(255, 255, 255, .9), transparent 29rem),
+    radial-gradient(circle at 88% 8%, rgba(196, 81, 13, .12), transparent 23rem);
+  pointer-events: none;
+}
+.home-premium-hero h1 { text-wrap: balance; }
+.home-hero-content { animation: home-hero-enter 620ms cubic-bezier(.2,.75,.25,1) both; }
+.home-hero-tagline { color: #28364d; font-weight: 750; letter-spacing: -.018em; }
+.home-hero-support { color: #536176; }
+.home-hero-actions a { box-shadow: 0 9px 22px rgba(23, 34, 56, .08); }
+.home-hero-primary { box-shadow: 0 12px 26px rgba(145, 64, 13, .2) !important; }
+.home-hero-secondary { border-color: rgba(199, 204, 212, .95) !important; background: rgba(255, 255, 255, .9) !important; backdrop-filter: blur(12px); }
+.home-hero-media { animation: home-media-enter 720ms 80ms cubic-bezier(.2,.75,.25,1) both; }
+.home-hero-media > div { border-color: rgba(255, 255, 255, .6) !important; box-shadow: 0 28px 70px rgba(23, 34, 56, .2) !important; }
+.home-hero-overlay { background: linear-gradient(to top, rgba(15, 25, 43, .86), rgba(23, 34, 56, .12) 62%, rgba(255, 255, 255, .04)); }
+.home-hero-status { background: rgba(15, 25, 43, .84); color: white; }
+.home-search-card { border-color: rgba(255, 255, 255, .86) !important; background: rgba(255, 255, 255, .94) !important; box-shadow: 0 20px 48px rgba(23, 34, 56, .14) !important; }
+.home-search-card label { background: #fff; }
+.home-quick-actions { position: relative; z-index: 2; }
+.home-content-section { position: relative; }
+.home-live-section { background: linear-gradient(145deg, rgba(255, 255, 255, .76), rgba(255, 248, 240, .72)); }
+.home-map-section { background: linear-gradient(180deg, rgba(255, 255, 255, .98), rgba(246, 248, 250, .98)); }
+.home-routes-section { background: radial-gradient(circle at 94% 8%, rgba(255, 225, 197, .24), transparent 25rem); }
+.home-map-section .public-home-map { border-color: #cfd6df; background: #e9edf1; box-shadow: 0 18px 46px rgba(23, 34, 56, .11) !important; }
+.home-benefits-section {
+  border-color: rgba(255, 255, 255, .1) !important;
+  background:
+    radial-gradient(circle at 90% 20%, rgba(196, 81, 13, .2), transparent 28rem),
+    linear-gradient(135deg, #172238 0%, #1d2b45 58%, #25344f 100%);
+}
+.home-benefits-kicker { color: #ffc18a; }
+.home-benefits-title { color: #fff; }
+.home-benefits-copy { color: rgba(240, 244, 249, .76); }
+.home-benefits-section .feature-card {
+  min-height: 176px;
+  border-color: rgba(214, 220, 228, .95) !important;
+  background: linear-gradient(145deg, rgba(255, 255, 255, .99), rgba(247, 249, 251, .97)) !important;
+  box-shadow: 0 14px 34px rgba(4, 10, 22, .18) !important;
+  backdrop-filter: none;
+}
+.home-benefits-section .feature-card::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), #e39a60);
+}
+.home-benefits-section .feature-card::after { opacity: .55; }
+.home-benefits-section .feature-card--live { border-color: rgba(82, 166, 128, .7) !important; background: linear-gradient(145deg, #fff, #f2fbf7) !important; }
+.home-benefits-section .feature-card--live::before { background: linear-gradient(90deg, var(--success), #61ad8b); }
+.home-benefits-section .feature-card h3 { color: #172033 !important; }
+.home-benefits-section .feature-card p { color: #536176 !important; }
+.feature-icon { background: #fff0e2; color: var(--primary-ink); box-shadow: inset 0 0 0 1px rgba(196, 81, 13, .12); }
+.feature-icon--live { background: var(--success-soft); color: var(--success); box-shadow: inset 0 0 0 1px rgba(20, 117, 84, .14); }
+.home-safety-section { background: transparent; }
+.home-safety-card {
+  border-color: rgba(255, 255, 255, .12) !important;
+  background:
+    radial-gradient(circle at 88% 12%, rgba(196, 81, 13, .24), transparent 22rem),
+    linear-gradient(125deg, #172238, #22314c) !important;
+  box-shadow: 0 22px 54px rgba(23, 34, 56, .18) !important;
+}
+.home-safety-card p { color: rgba(240, 244, 249, .78) !important; }
+.home-safety-card > span { background: rgba(196, 81, 13, .9) !important; color: #fff3e7 !important; box-shadow: 0 12px 28px rgba(8, 15, 28, .24); }
+.home-final-cta { background: linear-gradient(110deg, #fff 0%, #fff8ef 58%, #f3f6f8 100%); }
+.home-final-cta-inner { min-height: 142px; }
+.home-final-primary { box-shadow: 0 10px 24px rgba(145, 64, 13, .2); }
+.home-final-secondary { border-color: #cfd5dd !important; }
+.public-quick-action, .mobile-bus-card, .mobile-route-card { box-shadow: var(--shadow-card) !important; transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease; }
+.public-quick-action:hover, .mobile-bus-card:hover, .mobile-route-card:hover { border-color: var(--primary-border); transform: translateY(-2px); box-shadow: 0 18px 34px rgba(23, 34, 56, .12) !important; }
+.mobile-route-live { display: inline-flex; align-items: center; gap: 5px; }
+.mobile-route-live::before { content: ""; width: 6px; height: 6px; border-radius: 99px; background: var(--success); box-shadow: 0 0 0 3px rgba(20, 117, 84, .12); }
+.home-map-summary a { background: rgba(255, 255, 255, .9); border-color: #d8dde4; backdrop-filter: blur(12px); }
+@media (hover: hover) {
+  .home-hero-actions a:hover, .home-final-cta a:hover { transform: translateY(-2px); }
+  .home-benefits-section .feature-card:hover { border-color: #f0b27f !important; transform: translateY(-4px); box-shadow: 0 22px 44px rgba(4, 10, 22, .22) !important; }
+  .home-benefits-section .feature-card--live:hover { border-color: #52a680 !important; }
+}
+@media (min-width: 768px) {
+  .home-live-section { width: calc(100% - 48px); margin-top: 28px; margin-bottom: 28px; border: 1px solid rgba(223, 227, 232, .9); border-radius: 28px; box-shadow: 0 14px 40px rgba(23, 34, 56, .06); }
+}
+@media (max-width: 767px) {
+  .home-premium-hero::before {
+    background:
+      linear-gradient(90deg, rgba(251, 248, 243, .97), rgba(251, 248, 243, .86)),
+      linear-gradient(180deg, rgba(23, 34, 56, .02), rgba(23, 34, 56, .12)),
+      url('/smart-safar-transit-hero.webp') 63% center / cover no-repeat;
+  }
+  .home-premium-hero::after { background: radial-gradient(circle at 8% 8%, rgba(255,255,255,.82), transparent 20rem); }
+  .home-hero-tagline { max-width: 19rem; }
+  .home-hero-support { max-width: 21rem; }
+  .home-hero-actions a { min-width: 0; padding-right: 10px; padding-left: 10px; font-size: 12px; }
+  .home-live-section { border-top: 1px solid rgba(223, 227, 232, .9); border-bottom: 1px solid rgba(223, 227, 232, .9); }
+  .home-benefits-section .feature-card { min-height: 158px; }
+  .home-benefits-section .feature-card p { font-size: 12px; line-height: 1.55; }
+  .home-safety-card h2 { font-size: 24px; line-height: 1.2; }
+  .home-safety-card > span { width: 52px; height: 52px; }
+  .home-final-cta-inner { min-height: 0; }
+}
+@keyframes home-hero-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes home-media-enter { from { opacity: 0; transform: translateY(12px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes home-background-drift { from { transform: scale(1.035) translate3d(0, 0, 0); } to { transform: scale(1.055) translate3d(-.6%, -.4%, 0); } }
+
+.bus-card, .route-card, .admin-overview-card { transform: translateZ(0); }
+.bus-card:hover, .route-card:hover, .admin-overview-card:hover { border-color: rgba(241, 191, 145, .95) !important; transform: translateY(-3px); box-shadow: 0 20px 40px rgba(23, 34, 56, .12) !important; }
+.leaflet-container { background: #e8ecef; }
+.map-control-button { border-color: rgba(223,227,232,.86) !important; background: rgba(255,255,255,.88) !important; box-shadow: 0 8px 20px rgba(23,34,56,.1) !important; backdrop-filter: blur(12px); }
+.map-control-button:first-child { background: var(--primary) !important; border-color: var(--primary) !important; color: white !important; }
+
+.app-experience table { background: rgba(255, 255, 255, .8); }
+.app-experience thead { background: rgba(255, 244, 233, .84) !important; }
+.app-experience tbody tr { transition: background-color 160ms ease; }
+.app-experience tbody tr:hover { background: rgba(255, 247, 239, .72); }
+.app-experience [class*="bg-white"]:not(input):not(select):not(textarea):not(.leaflet-container) { border-color: rgba(223, 227, 232, .86); }
+
+.ui-dialog, .profile-modal { animation: premium-modal-in 200ms cubic-bezier(.2,.8,.2,1) both; }
+.ui-dialog::backdrop { background: rgba(23, 34, 56, .5); backdrop-filter: blur(5px); animation: premium-fade-in 160ms ease-out both; }
+.app-dialog-backdrop { background: rgba(23, 34, 56, .5); backdrop-filter: blur(5px); animation: premium-fade-in 160ms ease-out both; }
+
+.profile-page { position: relative; }
+.profile-page::before { content: ""; position: fixed; inset: 66px 0 0; z-index: -1; background: radial-gradient(circle at 14% 12%, rgba(255, 220, 186, .4), transparent 28rem), radial-gradient(circle at 92% 18%, rgba(210, 224, 236, .52), transparent 32rem); }
+.profile-card { background: rgba(255, 255, 255, .8); box-shadow: var(--shadow-float); backdrop-filter: saturate(125%) blur(20px); }
+.profile-hero { min-height: 230px; background: linear-gradient(115deg, rgba(255, 250, 245, .97), rgba(255, 236, 217, .9) 58%, rgba(232, 238, 244, .9)); }
+.profile-hero-pattern { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(255,255,255,.96) 0%, rgba(255,255,255,.78) 48%, rgba(23,34,56,.08)), url('/faisalabad-clocktower.jpg') 75% 45% / cover; opacity: .3; }
+.profile-hero::after { content: ""; position: absolute; right: 10%; bottom: -84px; width: 210px; height: 210px; border-radius: 999px; background: rgba(216,103,31,.16); }
+.profile-avatar { border: 4px solid rgba(255,255,255,.92); background: linear-gradient(145deg, var(--primary-soft-strong), white); color: var(--primary-ink); box-shadow: 0 12px 30px rgba(23,34,56,.16), 0 0 0 1px var(--primary-border); }
+.profile-detail { background: rgba(250, 251, 252, .8); transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease; }
+.profile-detail > span { background: var(--primary-soft); color: var(--primary-ink); }
+.profile-detail:hover { border-color: var(--primary-border); background: rgba(255,255,255,.96); transform: translateY(-1px); }
+.profile-security-card { background: linear-gradient(145deg, rgba(245,248,251,.92), rgba(255,255,255,.88)); box-shadow: inset 0 1px rgba(255,255,255,.9); }
+.profile-security-icon { background: var(--navy); color: #ffd4ad; box-shadow: 0 10px 24px rgba(23,34,56,.16); }
+.profile-security-action:hover, .profile-photo-action:hover { border-color: var(--primary-border); background: var(--primary-soft); }
+.profile-notice { border: 1px solid #bfe6d5; background: var(--success-soft); color: var(--success); }
+.profile-logout { border-color: #e8c7c7; background: rgba(255,255,255,.72); color: var(--danger); }
+.profile-logout:hover { border-color: var(--danger); background: #fff4f4; }
+
+.driver-overview-actions a, .driver-section-note { border-color: rgba(223,227,232,.9) !important; background: rgba(255,255,255,.82) !important; box-shadow: var(--shadow-card); backdrop-filter: blur(16px); }
+.driver-overview-actions a:hover { border-color: var(--primary-border) !important; transform: translateY(-2px); box-shadow: 0 18px 34px rgba(23,34,56,.12); }
+
+@keyframes premium-page-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes premium-pop { from { opacity: 0; transform: translateY(-6px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes premium-modal-in { from { opacity: 0; transform: translateY(12px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes premium-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+@media (hover: hover) {
+  .ui-card:hover { border-color: rgba(241, 191, 145, .72) !important; box-shadow: 0 18px 42px rgba(23,34,56,.11) !important; }
+}
+@media (max-width: 767px) {
+  body { background-attachment: scroll; }
+  .app-header-inner { padding-right: 12px; padding-left: 12px; }
+  .app-header-actions { gap: 7px; }
+  .app-icon-button, .app-avatar { width: 40px; height: 40px; }
+  .app-bottom-nav { min-height: 66px; }
+  .app-content > div > main { padding-top: 18px; padding-bottom: 22px; }
+  .premium-dashboard-header, .premium-driver-header { border-radius: 20px; }
+  .premium-dashboard-header::after, .premium-driver-header::after { width: 62%; opacity: .09; }
+  .profile-card { border-radius: 24px; }
+  .profile-hero { min-height: 0; }
+  .profile-hero-pattern { background-position: 65% center; opacity: .2; }
+  .profile-avatar.h-24 { width: 82px; height: 82px; }
+  .ui-card { backdrop-filter: blur(12px); }
+}
+@media (max-width: 380px) {
+  .app-brand small { display: none; }
+  .app-header-actions { gap: 5px; }
+  .app-bottom-nav { padding-right: 3px; padding-left: 3px; }
+  .app-bottom-nav .app-nav-link { font-size: 9px; }
+  .profile-hero { padding-right: 16px; padding-left: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+  .ui-card:hover, .bus-card:hover, .route-card:hover, .admin-overview-card:hover, .driver-overview-actions a:hover { transform: none !important; }
+}
