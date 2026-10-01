@@ -1,0 +1,87 @@
+"use client";
+
+import { BusFront, AlertCircle, CalendarCheck, CheckCircle2, Route as RouteIcon } from "lucide-react";
+import { Card } from "../common/Card";
+
+export function AdminOverviewCards({ overview, loading }) {
+  if (loading) {
+    return (
+      <div className="admin-overview-grid grid auto-rows-fr grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Card key={i} className="admin-overview-card h-full p-4 sm:p-5 animate-pulse">
+            <div className="flex items-start justify-between">
+              <div className="space-y-2">
+                <div className="h-3 w-20 bg-[var(--skeleton)] rounded" />
+                <div className="h-7 w-12 bg-[var(--primary-border)] rounded" />
+                <div className="h-3 w-28 bg-[var(--skeleton)] rounded" />
+              </div>
+              <div className="h-10 w-10 bg-[var(--skeleton)] rounded-xl" />
+            </div>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  const buses = overview?.buses || { total: 0, active: 0, idle: 0, maintenance: 0 };
+  const routesTotal = overview?.routes?.total ?? 0;
+  const bookingsToday = overview?.bookingsToday ?? 0;
+  const openReports = overview?.openReports ?? 0;
+
+  const cards = [
+    {
+      label: "Fleet Size",
+      value: buses.total,
+      detail: `${buses.active} active · ${buses.idle} idle · ${buses.maintenance} maint`,
+      icon: BusFront,
+      tone: "primary",
+    },
+    {
+      label: "Active Routes",
+      value: routesTotal,
+      detail: "Operational transit corridors",
+      icon: RouteIcon,
+      tone: "success",
+    },
+    {
+      label: "Bookings Today",
+      value: bookingsToday,
+      detail: "Reserved commuter seats",
+      icon: CalendarCheck,
+      tone: "info",
+    },
+    {
+      label: "Open Reports",
+      value: openReports,
+      detail: openReports === 0 ? "All incidents resolved" : "Safety & vehicle alerts",
+      icon: AlertCircle,
+      tone: openReports > 0 ? "warning" : "neutral",
+    },
+  ];
+
+  return (
+    <div className="admin-overview-grid grid auto-rows-fr grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
+      {cards.map((card) => {
+        const Icon = card.icon;
+        return (
+          <Card key={card.label} className="admin-overview-card h-full p-4 sm:p-5 transition hover:shadow-md">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+                  {card.label}
+                </p>
+                <p className="mt-1 text-2xl font-bold sm:mt-2 sm:text-3xl tracking-tight text-[var(--foreground)]">
+                  {card.value}
+                </p>
+                <p className="mt-1 hidden text-xs text-[var(--muted)] sm:block">{card.detail}</p>
+              </div>
+              <span className="rounded-xl bg-[var(--primary-soft)] p-2.5 text-[var(--primary-ink)]">
+                <Icon size={20} />
+              </span>
+            </div>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
