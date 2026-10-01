@@ -1,0 +1,22 @@
+import SeatSelectionPage from "../../../../components/booking/SeatSelectionPage";
+
+export async function generateMetadata({ params }) {
+  const { id } = await params;
+  return {
+    title: "Seat Selection | Smart Safar Faisalabad",
+    description: `Choose a seat for bus ${id}.`,
+  };
+}
+
+export default async function SeatSelectionRoute({ params, searchParams }) {
+  const { id } = await params;
+  const query = await searchParams;
+  return (
+    <SeatSelectionPage
+      busId={id}
+      routeId={query?.route || ""}
+      travelDate={query?.date || ""}
+      bookingMode={query?.mode === "manual" ? "manual" : "route"}
+    />
+  );
+}

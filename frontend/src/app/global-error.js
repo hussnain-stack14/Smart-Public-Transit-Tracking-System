@@ -1,0 +1,3 @@
+"use client";
+/* eslint-disable @next/next/no-html-link-for-pages */
+export default function GlobalError({ reset }) { return <html lang="en"><body><main style={{ minHeight: "100vh", display: "grid", placeItems: "center", textAlign: "center", fontFamily: "Arial, sans-serif" }}><div><h1>Something went wrong</h1><p>Please try again or return home.</p><button type="button" onClick={reset}>Try again</button><a href="/" style={{ marginLeft: 16 }}>Back home</a></div></main></body></html>; }
