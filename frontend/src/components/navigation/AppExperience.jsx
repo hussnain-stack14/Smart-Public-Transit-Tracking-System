@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { BusFront, Bell, ChartNoAxesCombined, History, House, LogOut, MapPinned, Route, Settings, Ticket, UserRound, Users, X } from "lucide-react";
+import { BusFront, Bell, ChartNoAxesCombined, History, House, LogOut, MapPinned, MoreHorizontal, Route, Settings, Ticket, UserRound, Users, X } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { clearAccessToken, getAccessToken } from "../../lib/auth/token";
 import { getProfile, getRoleHome } from "../../services/authService";
@@ -26,6 +26,7 @@ const driver = [
   { href: "/driver/route", label: "Route", icon: MapPinned },
   { href: "/driver/tracking", label: "Track", icon: BusFront },
   { href: "/driver/seats", label: "Seats", icon: Ticket },
+  { href: "/reports", label: "Reports", icon: ChartNoAxesCombined },
 ];
 const admin = [
   { href: "/admin/dashboard", label: "Dashboard", icon: ChartNoAxesCombined },
@@ -33,6 +34,8 @@ const admin = [
   { href: "/admin/routes", label: "Routes", icon: Route },
   { href: "/admin/users", label: "Driver Management", shortLabel: "Drivers", icon: Users },
   { href: "/admin/stops", label: "Stops", icon: MapPinned },
+  { href: "/admin/alerts", label: "Alerts", icon: Bell },
+  { href: "/admin/reports", label: "Reports", icon: ChartNoAxesCombined },
 
 ];
 
@@ -74,19 +77,19 @@ function markAlertsSeen(userId, alerts) {
   }
 }
 
-function Navigation({ items, pathname, activeHash, onNavigate, mobile = false }) {
+function Navigation({ items, pathname, activeHash, onNavigate, onMore, moreOpen = false, mobile = false }) {
   return <nav aria-label={mobile ? "Mobile app navigation" : "Application navigation"} className={mobile ? "app-bottom-nav" : "app-desktop-nav"}>
-    {items.map(({ href, label, shortLabel, icon: Icon }) => {
+    {items.map(({ href, label, shortLabel, icon: Icon, action }) => {
+      if (action === "more") return <button key={action} type="button" onClick={onMore} aria-expanded={moreOpen} className={moreOpen ? "app-nav-link is-active" : "app-nav-link"}><Icon size={mobile ? 20 : 18} /><span>{label}</span></button>;
       const [path, fragment] = href.split("#");
-      const sameSection = items.some((item) => item.href.startsWith(path + "#"));
+      const sameSection = items.some((item) => item.href?.startsWith(path + "#"));
       const active = fragment
         ? pathname === path && activeHash === `#${fragment}`
         : (!activeHash || !sameSection) && (path === "/" ? pathname === "/" : pathname === path || pathname.startsWith(path + "/"));
       return <Link key={href} href={href} onClick={(event) => onNavigate?.(event, href)} aria-current={active ? "page" : undefined} className={active ? "app-nav-link is-active" : "app-nav-link"}><Icon size={mobile ? 20 : 18} /><span>{mobile && shortLabel ? shortLabel : label}</span></Link>;
     })}
   </nav>;
-}
-function allowed(path, role) {
+}function allowed(path, role) {
   if (path.startsWith("/admin")) return role === "admin";
   if (path.startsWith("/driver")) return role === "driver";
   if (path.startsWith("/booking") || path.startsWith("/my-trips") || path === "/safety") return role === "commuter";
@@ -102,6 +105,7 @@ export function AppExperience({ children }) {
   const [retry, setRetry] = useState(0);
   const [accountOpen, setAccountOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [driverMoreOpen, setDriverMoreOpen] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [activeHash, setActiveHash] = useState("");
   const [notifications, setNotifications] = useState({ status: "idle", items: [] });
@@ -110,11 +114,12 @@ export function AppExperience({ children }) {
   const notificationsRef = useRef(null);
   const notificationsOpenRef = useRef(false);
   const notificationRequestRef = useRef(false);
+  const notificationOwnerRef = useRef("");
 
   useEffect(() => {
     if (!token) return;
     let active = true;
-    getProfile().then(user => { if (active) setProfile({ token, user, error: "" }); }).catch(error => {
+    getProfile().then(user => { if (active) { const nextOwner = user?._id || user?.id || user?.email || ""; if (notificationOwnerRef.current !== nextOwner) { notificationOwnerRef.current = nextOwner; setNotifications({ status: "idle", items: [] }); } setProfile({ token, user, error: "" }); } }).catch(error => {
       if (active) setProfile({ token, user: null, error: [401, 403].includes(error.response?.status) ? "auth" : "load" });
     });
     return () => { active = false; };
@@ -123,6 +128,7 @@ export function AppExperience({ children }) {
   const user = token && profile.token === token ? profile.user : null;
   const userId = user?._id || user?.id || user?.email;
   const error = token && profile.token === token ? profile.error : "";
+
   const authPage = pathname === "/login" || pathname === "/register";
   const isBookingPage = pathname === "/booking" || pathname.startsWith("/booking/");
 
@@ -162,12 +168,6 @@ export function AppExperience({ children }) {
     }
   }, [persistSeenAlerts]);
 
-  useEffect(() => {
-    if (!userId) return;
-    let active = true;
-    Promise.resolve().then(() => { if (active) loadNotifications(); });
-    return () => { active = false; };
-  }, [userId, loadNotifications]);
 
 
 
@@ -214,7 +214,7 @@ export function AppExperience({ children }) {
 
   const role = user.role;
   const items = role === "admin" ? admin : role === "driver" ? driver : commuter;
-  const mobileItems = role === "admin" ? [admin[0], admin[1], admin[2], admin[3], admin[4]] : items;
+  const mobileItems = role === "admin" ? [admin[0], admin[1], admin[2], admin[3], admin[4]] : role === "driver" ? [driver[0], driver[1], driver[3], driver[4], { action: "more", label: "More", icon: MoreHorizontal }] : items;
   const title = role === "admin" ? "Admin Panel" : role === "driver" ? "Driver Dashboard" : "Smart Safar";
   const initials = user.name?.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "SS";
   const seenAlertIds = readSeenAlertIds(userId, seenVersion);
@@ -263,7 +263,7 @@ export function AppExperience({ children }) {
           <div className="app-notifications" ref={notificationsRef}>
             <button type="button" className="app-icon-button" aria-label={hasUnseenAlerts ? "Open notifications, new alerts available" : "Open notifications"} aria-expanded={notificationsOpen} onClick={toggleNotifications}>
               <Bell size={19} />
-              {hasUnseenAlerts && !notificationsOpen && <span className="app-notification-count" aria-hidden="true">{unreadAlerts.length > 99 ? "99+" : unreadAlerts.length}</span>}
+              {hasUnseenAlerts && !notificationsOpen && <span className="app-notification-dot" aria-hidden="true" />}
             </button>
             {notificationsOpen && <section className="app-notification-panel" role="dialog" aria-label="Notifications">
               <header>
@@ -284,7 +284,8 @@ export function AppExperience({ children }) {
       </div>
     </header>
     <div className="app-frame"><aside className="app-sidebar"><Navigation items={items} pathname={pathname} activeHash={activeHash} onNavigate={navigate} /></aside><div className="app-content">{children}</div></div>
-    <Navigation items={mobileItems} pathname={pathname} activeHash={activeHash} onNavigate={navigate} mobile />
+    <Navigation items={mobileItems} pathname={pathname} activeHash={activeHash} onNavigate={navigate} onMore={() => setDriverMoreOpen((open) => !open)} moreOpen={driverMoreOpen} mobile />
+    {role === "driver" && driverMoreOpen && <section className="app-driver-more-menu" aria-label="More driver tools"><Link href="/driver/route" onClick={() => setDriverMoreOpen(false)}><MapPinned size={18} /> Route</Link><Link href="/reports" onClick={() => setDriverMoreOpen(false)}><ChartNoAxesCombined size={18} /> Report an issue</Link><Link href="/profile" onClick={() => setDriverMoreOpen(false)}><UserRound size={18} /> Profile</Link></section>}
     {confirmLogout && <div className="app-dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setConfirmLogout(false); }}><section className="app-logout-dialog" role="alertdialog" aria-modal="true" aria-labelledby="logout-title"><button type="button" className="app-dialog-close" aria-label="Close" onClick={() => setConfirmLogout(false)}><X size={18} /></button><span className="app-dialog-icon"><LogOut size={22} /></span><h2 id="logout-title">Log out?</h2><p>Are you sure you want to log out?</p><div><button type="button" onClick={() => setConfirmLogout(false)}>Cancel</button><button type="button" className="is-danger" onClick={logout}>Log out</button></div></section></div>}
   </div>;
 }

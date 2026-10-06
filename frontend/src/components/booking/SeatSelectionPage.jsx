@@ -34,15 +34,6 @@ import { getAccessToken } from "../../lib/auth/token";
 import { useGeolocation } from "../../hooks/useGeolocation";
 import { useSocket } from "../../hooks/useSocket";
 
-function formatDate(value) {
-  if (!value) return "Not selected";
-  return new Date(`${value}T00:00:00`).toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
 function getId(value) {
   return value?._id || value || "";
 }
@@ -61,7 +52,6 @@ function getLocationMessage(error) {
 export default function SeatSelectionPage({
   busId,
   routeId,
-  travelDate,
   bookingMode = "route",
 }) {
   const router = useRouter();
@@ -202,7 +192,7 @@ export default function SeatSelectionPage({
     if (!isAuthenticated || !getAccessToken()) {
       const target =
         `/booking/${busId}/seat?route=${encodeURIComponent(actualRouteId)}` +
-        `&date=${encodeURIComponent(travelDate || "")}&mode=${bookingMode}`;
+        `&mode=${bookingMode}`;
       router.push(`/login?redirect=${encodeURIComponent(target)}`);
       return;
     }
@@ -308,11 +298,10 @@ export default function SeatSelectionPage({
           <SummaryItem label="Route" value={route?.routeName || bus.route?.routeName || "Not available"} />
           <SummaryItem label="Bus preview" value={bus.busNumber} />
           <SummaryItem label="Assigned driver" value={driver?.name || "Not assigned"} />
-          <SummaryItem label="Date" value={formatDate(travelDate)} />
         </div>
         {bookingMode === "route" && (
           <p className="mt-4 border-t border-[var(--border)] pt-3 text-xs leading-5 text-[var(--muted)]">
-            Your chosen seat belongs to this bus. The backend validates its active driver and shift again when you book.
+            Your chosen seat belongs to this bus. We&apos;ll confirm the current driver, shift, and seat availability when you book.
           </p>
         )}
       </Card>
@@ -470,7 +459,6 @@ export default function SeatSelectionPage({
             <SummaryItem label="Route" value={route?.routeName || bus.route?.routeName || "Not available"} />
             <SummaryItem label="Bus preview" value={bus.busNumber} />
             <SummaryItem label="Driver" value={driver?.name || "Not assigned"} />
-            <SummaryItem label="Date" value={formatDate(travelDate)} />
             <SummaryItem label="Selected seat" value={selectedSeat || (configured ? "Select a seat" : "Seat assigned on boarding")} />
             <SummaryItem
               label="Pickup"
@@ -487,15 +475,12 @@ export default function SeatSelectionPage({
           <div className="mt-3 flex items-start gap-2 rounded-xl border border-[var(--border)] p-3 text-sm text-[var(--muted)]">
             <WalletCards size={16} className="mt-0.5 shrink-0 text-[var(--primary-ink)]" />
             <p>
-              Payment will be <strong className="text-[var(--foreground)]">Pending</strong>. No
-              customer payment gateway is currently integrated, so this screen never reports a fake
-              successful payment.
+              Payment status will be <strong className="text-[var(--foreground)]">Pending</strong>. Online payment is not available in Smart Safar yet.
             </p>
           </div>
           <div className="mt-3 flex items-start gap-2 text-xs leading-5 text-[var(--muted)]">
             <ShieldCheck size={15} className="mt-0.5 shrink-0 text-[var(--success)]" />
-            The backend validates the route, bus, driver, active shift, and seat before creating the
-            booking.
+            We&apos;ll confirm the route, bus, driver, active shift, and seat before creating your booking.
           </div>
 
           {submitError && (

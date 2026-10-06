@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { ArrowLeft, RefreshCw } from "lucide-react";
 import { Navbar } from "../../navigation/Navbar";
 import { Footer } from "../../navigation/Footer";
 import { ProtectedPage } from "../../common/ProtectedPage";
@@ -60,7 +60,7 @@ function DriverOperations() {
     <Button type="button" variant="secondary" className="min-h-11 px-3 text-xs text-[var(--danger)]" aria-label={"Delete driver " + driver.email} onClick={() => setDeleting(driver)}>Delete</Button>
   </div>;
   return <>
-    <Link href="/admin/dashboard" className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--primary-ink)]">Back to Admin Dashboard</Link>
+    <Link href="/admin/dashboard" className="inline-grid h-10 w-10 place-items-center rounded-xl border border-[var(--border)] bg-white text-[var(--primary-ink)] hover:border-[var(--primary)]" aria-label="Back to Admin Dashboard" title="Back to Admin Dashboard"><ArrowLeft size={16} /></Link>
     <header className="mt-3 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary-ink)]">Fleet operations</p><h1 className="mt-2 text-3xl font-bold sm:text-4xl">Driver Management</h1><p className="mt-2 text-sm text-[var(--muted)]">Manage driver accounts and their bus assignments.</p></div><div className="flex flex-wrap gap-3"><CompactPageSearch label="Search drivers" placeholder="Name, email, phone, or bus" value={search} onChange={setSearch} /><Button type="button" variant="secondary" className="min-h-12 gap-2" onClick={refresh} disabled={loading || busLoading}><RefreshCw size={16} aria-hidden="true" />{loading || busLoading ? "Refreshing..." : "Refresh drivers"}</Button><Button type="button" className="min-h-12" onClick={() => setEditor({ driver: null })}>Add Driver</Button></div></header>
     <div className="mt-4 flex flex-wrap gap-3"><Link href="/admin/buses" className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--primary-ink)]">Manage buses</Link><p className="self-center text-sm text-[var(--muted)]">Drivers sign in using their email and password.</p></div>
     {message && <p role="status" className="mt-4 text-sm text-[var(--success)]">{message}</p>}

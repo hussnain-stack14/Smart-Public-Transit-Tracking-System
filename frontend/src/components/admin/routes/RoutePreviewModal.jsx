@@ -58,7 +58,7 @@ export function RoutePreviewModal({ route, onClose }) {
       {current.status === "loading" ? <div className="grid min-h-48 place-items-center"><LoadingSpinner label="Loading route details..." /></div> : <>
         {current.status === "error" ? <ErrorState title="Unable to load route stops" description="The saved stop list could not be confirmed. Check your connection and retry." action={<Button type="button" onClick={reload} className="min-h-12">Retry</Button>} /> : <>
           {positions.length ? <>
-            <p role="status" className="text-sm text-[var(--muted)]">Map shows {mappedStops.length} of {stops.length} saved stops. Route geometry is not provided by the backend.</p>
+            <p role="status" className="text-sm text-[var(--muted)]">Map shows {mappedStops.length} of {stops.length} saved stops. A route line is not available for this route.</p>
             <div className="h-[280px] overflow-hidden rounded-2xl border border-[var(--border)]">
               <ClientTransitMap key={routeId} center={positions[0]} zoom={13} className="h-full w-full !min-h-0">
                 <MapViewport positions={positions} focusKey={routeId} />

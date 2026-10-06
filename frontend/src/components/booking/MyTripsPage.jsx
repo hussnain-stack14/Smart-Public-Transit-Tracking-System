@@ -293,8 +293,8 @@ function TripCard({ booking, cancelling, onCancel }) {
         <Detail label="Booking ID" value={booking._id} />
         <Detail label="Driver" value={driver.name || "Not provided"} />
         <Detail label="Seat" value={booking.seatNumber || "Not assigned"} />
-        <Detail label="Date" value={created.date} />
-        <Detail label="Time" value={created.time} />
+        <Detail label="Booked on" value={created.date} />
+        <Detail label="Booked at" value={created.time} />
         <Detail label="Pickup location" value={pickupStatus(booking)} />
       </dl>
 

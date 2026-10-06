@@ -2,8 +2,8 @@ import { cn } from "../../lib/utils/cn";
 
 const tones = {
   success: "bg-[var(--success-soft)] text-[var(--success)]",
-  warning: "bg-[#fff2d9] text-[var(--warning)]",
-  danger: "bg-[#fde8e8] text-[var(--danger)]",
+  warning: "bg-[var(--warning-soft)] text-[var(--warning)]",
+  danger: "bg-[var(--danger-soft)] text-[var(--danger)]",
   neutral: "bg-[var(--surface-subtle)] text-[var(--muted)]",
 };
 

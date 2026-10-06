@@ -17,7 +17,7 @@ export function DriverPassengerPanel({ active, passengers, loading, error, onRet
     <Card className="p-5" aria-labelledby="passenger-pickups-title">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#fff2d9] text-[#9b6a19]">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[var(--warning-soft)] text-[var(--warning)]">
             <Users size={18} />
           </span>
           <div>
@@ -56,7 +56,7 @@ export function DriverPassengerPanel({ active, passengers, loading, error, onRet
               className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-3"
             >
               <div className="flex items-start gap-3">
-                <MapPin className="mt-0.5 shrink-0 text-[#b7791f]" size={17} />
+                <MapPin className="mt-0.5 shrink-0 text-[var(--warning)]" size={17} />
                 <div className="min-w-0">
                   <p className="break-words text-sm font-semibold text-[var(--foreground)]">
                     {item.passenger?.name || "Booked passenger"}
@@ -86,8 +86,7 @@ export function DriverPassengerPanel({ active, passengers, loading, error, onRet
 
       <div className="mt-4 flex items-start gap-2 border-t border-[var(--border)] pt-4 text-xs leading-5 text-[var(--muted)]">
         <ShieldCheck size={15} className="mt-0.5 shrink-0 text-[var(--success)]" />
-        The backend restricts this list to your authenticated driver account, assigned bus, active
-        shift, route, and confirmed opted-in bookings.
+        Only you can view these opted-in pickup locations while your assigned shift and route are active.
       </div>
     </Card>
   );

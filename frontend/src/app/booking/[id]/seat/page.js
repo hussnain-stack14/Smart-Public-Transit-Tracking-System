@@ -15,7 +15,6 @@ export default async function SeatSelectionRoute({ params, searchParams }) {
     <SeatSelectionPage
       busId={id}
       routeId={query?.route || ""}
-      travelDate={query?.date || ""}
       bookingMode={query?.mode === "manual" ? "manual" : "route"}
     />
   );

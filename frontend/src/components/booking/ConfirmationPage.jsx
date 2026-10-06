@@ -178,7 +178,7 @@ export default function ConfirmationPage({ bookingId }) {
             {isConfirmed ? "Booking Confirmed" : `Booking ${capitalize(booking.status)}`}
           </h1>
           <p className="mt-2 text-sm text-[var(--muted)]">
-            These details come from your authenticated backend booking record.
+            These are the saved details for this booking.
           </p>
         </section>
 

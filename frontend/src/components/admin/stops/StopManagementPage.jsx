@@ -227,9 +227,7 @@ export default function StopManagementPage() {
   return (
     <PageShell>
       <div className="mb-4">
-        <Link href="/admin/dashboard" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--muted)] hover:text-[var(--primary-ink)] transition">
-          <ArrowLeft size={14} /> Back to Admin Dashboard
-        </Link>
+        <Link href="/admin/dashboard" className="inline-grid h-10 w-10 place-items-center rounded-xl border border-[var(--border)] bg-white text-[var(--primary-ink)] hover:border-[var(--primary)] transition" aria-label="Back to Admin Dashboard" title="Back to Admin Dashboard"><ArrowLeft size={16} /></Link>
       </div>
 
       <header className="premium-dashboard-header premium-card premium-card--primary premium-card--imagery flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-end sm:p-6">

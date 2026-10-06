@@ -7,9 +7,7 @@ import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { BusFront, ArrowRight,
-  CalendarDays,
   CheckCircle2,
-  Clock3,
   Route as RouteIcon, } from "lucide-react";
 import { Navbar } from "../navigation/Navbar";
 import { Footer } from "../navigation/Footer";
@@ -28,12 +26,8 @@ import { BookingProgress } from "./BookingProgress";
 const bookingSchema = z.object({
   route: z.string().min(1, "Select a route."),
   bus: z.string().optional(),
-  travelDate: z.string().min(1, "Select a travel date."),
 });
 
-function todayString() {
-  return new Date().toISOString().split("T")[0];
-}
 
 function busStatusLabel(status) {
   if (status === "active") return "Active";
@@ -83,13 +77,11 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
     defaultValues: {
       route: initialRouteId || "",
       bus: initialBusId || "",
-      travelDate: todayString(),
     },
   });
 
   const selectedRouteId = useWatch({ control, name: "route" });
   const selectedBusId = useWatch({ control, name: "bus" });
-  const travelDate = useWatch({ control, name: "travelDate" });
   const selectedRoute = routes.find((route) => route._id === selectedRouteId);
 
   const eligibleBuses = useMemo(
@@ -174,8 +166,6 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
       bookingBus._id +
       "/seat?route=" +
       encodeURIComponent(values.route) +
-      "&date=" +
-      encodeURIComponent(values.travelDate) +
       "&mode=" +
       (manualSelection ? "manual" : "route");
 
@@ -185,14 +175,6 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
     }
     router.push(target);
   }
-
-  const summaryDate = travelDate
-    ? new Date(travelDate + "T00:00:00").toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
-    : "Not selected";
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-[var(--background)]">
@@ -208,7 +190,7 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
             Start with a route. Smart Safar selects the current valid bus and assigned driver,
-            while manual mode is limited to relationships returned by the backend.
+            while manual mode lets you choose from the currently available assignments.
           </p>
         </header>
 
@@ -276,7 +258,7 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
                               " · " +
                               bookingBus.availableSeats +
                               " seats available"
-                            : "The backend has not returned an active bus/driver option for this route."}
+                            : "No active bus with an assigned driver is available for this route yet."}
                         </p>
                       </div>
                       {bookingBus && <Badge tone="success">{busStatusLabel(bookingBus.status)}</Badge>}
@@ -308,37 +290,12 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
                     {!manualSelection && bookingBus && (
                       <div className="mt-3 flex items-start gap-2 rounded-xl bg-white p-3 text-xs leading-5 text-[var(--muted)]">
                         <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-[var(--success)]" />
-                        The final bus and driver relationship is validated and resolved again by the
-                        backend when the booking is created.
+                        We&apos;ll confirm the bus, driver, and seat availability when you book.
                       </div>
                     )}
                   </section>
                 )}
 
-                <Field label="Travel date" error={errors.travelDate?.message}>
-                  <div className="relative">
-                    <CalendarDays
-                      size={17}
-                      className="pointer-events-none absolute left-3 top-3 text-[var(--primary-ink)]"
-                    />
-                    <input
-                      {...register("travelDate")}
-                      type="date"
-                      min={todayString()}
-                      className="field-input pl-10"
-                    />
-                  </div>
-                </Field>
-
-                <div className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-4 text-sm text-[var(--muted)]">
-                  <div className="flex items-start gap-3">
-                    <Clock3 size={17} className="mt-0.5 shrink-0 text-[var(--primary-ink)]" />
-                    <p>
-                      Bus services operate continuously. The backend does not currently store a
-                      scheduled travel time, so confirmation uses the booking creation timestamp.
-                    </p>
-                  </div>
-                </div>
               </div>
             </Card>
 
@@ -356,7 +313,6 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
                 <SummaryRow label="Route" value={selectedRoute?.routeName || "Not selected"} />
                 <SummaryRow label="Bus" value={bookingBus?.busNumber || "Awaiting route"} />
                 <SummaryRow label="Driver" value={bookingBus ? getDriverName(bookingBus) : "Awaiting route"} />
-                <SummaryRow label="Date" value={summaryDate} />
                 <SummaryRow label="Seat" value="To be selected" />
               </dl>
 
@@ -376,7 +332,7 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
               <Button
                 type="submit"
                 className="mt-6 w-full gap-2"
-                disabled={authLoading || !isAuthenticated || routesLoading || !selectedRouteId || !travelDate || !bookingBus}
+                disabled={authLoading || !isAuthenticated || routesLoading || !selectedRouteId || !bookingBus}
               >
                 {isAuthenticated ? "Continue to Seat Selection" : "Log in to continue"}
                 <ArrowRight size={16} />
