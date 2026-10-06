@@ -16,6 +16,7 @@ import { Navbar } from "../../navigation/Navbar";
 import { Footer } from "../../navigation/Footer";
 import { Button } from "../../common/Button";
 import { Card } from "../../common/Card";
+import { CardBackdrop } from "../../common/CardBackdrop";
 import { CompactPageSearch } from "../CompactPageSearch";
 import { LoadingSpinner } from "../../common/LoadingSpinner";
 import { useAuth } from "../../../hooks/useAuth";
@@ -145,7 +146,7 @@ export default function RouteManagementPage() {
   if (!isAuthenticated || error === "auth") {
     return (
       <PageShell>
-        <Card className="mx-auto max-w-lg p-8 text-center">
+        <Card treatment="operational" className="mx-auto max-w-lg p-8 text-center">
           <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[var(--primary-soft)] text-[var(--primary-ink)]">
             <ShieldAlert size={26} />
           </div>
@@ -175,7 +176,7 @@ export default function RouteManagementPage() {
   if (error === "unauthorized") {
     return (
       <PageShell>
-        <Card className="mx-auto max-w-lg p-8 text-center">
+        <Card treatment="operational" className="mx-auto max-w-lg p-8 text-center">
           <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#fde8e8] text-[var(--danger)]">
             <AlertTriangle size={26} />
           </div>
@@ -206,7 +207,7 @@ export default function RouteManagementPage() {
   if (error === "load") {
     return (
       <PageShell>
-        <Card className="mx-auto max-w-lg p-8 text-center">
+        <Card treatment="operational" className="mx-auto max-w-lg p-8 text-center">
           <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#fde8e8] text-[var(--danger)]">
             <AlertTriangle size={26} />
           </div>
@@ -236,8 +237,9 @@ export default function RouteManagementPage() {
       </div>
 
       {/* Page Header */}
-      <header className="flex flex-col justify-between gap-4 border-b border-[var(--border)] pb-6 sm:flex-row sm:items-end">
-        <div>
+      <header className="premium-dashboard-header premium-card premium-card--primary premium-card--imagery flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-end sm:p-6">
+        <CardBackdrop visual="routes" priority />
+        <div className="relative z-10 min-w-0">
           <div className="flex items-center gap-2">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary-ink)]">
               Transit Network
@@ -254,7 +256,7 @@ export default function RouteManagementPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="relative z-10 flex flex-wrap items-center gap-3">
           <CompactPageSearch label="Search routes" placeholder="Route, origin, or destination" value={searchTerm} onChange={setSearchTerm} />
           <Button
             type="button"

@@ -15,6 +15,7 @@ import { Footer } from "../navigation/Footer";
 import { Badge } from "../common/Badge";
 import { Button } from "../common/Button";
 import { Card } from "../common/Card";
+import { CardBackdrop } from "../common/CardBackdrop";
 import { EmptyState } from "../common/EmptyState";
 import { ErrorState } from "../common/ErrorState";
 import { LoadingSpinner } from "../common/LoadingSpinner";
@@ -159,7 +160,8 @@ export default function MyTripsPage() {
 
   return (
     <PageShell>
-      <header>
+      <header className="premium-card premium-card--primary premium-card--imagery p-5 sm:p-7">
+        <CardBackdrop visual="journey" priority />
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary-ink)]">
           Your travel
         </p>
@@ -274,7 +276,7 @@ function TripCard({ booking, cancelling, onCancel }) {
   const confirmationHref = `/booking/${booking._id}/confirmation`;
 
   return (
-    <Card className="flex min-w-0 flex-col p-5">
+    <Card treatment="operational" className="flex min-w-0 flex-col p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="break-words text-xs font-bold uppercase tracking-[0.14em] text-[var(--primary-ink)]">
@@ -350,7 +352,7 @@ function PageShell({ children }) {
 
 function StateCard({ title, description, actionHref, actionLabel }) {
   return (
-    <Card className="mx-auto max-w-lg p-8 text-center">
+    <Card treatment="operational" className="mx-auto max-w-lg p-8 text-center">
       <XCircle className="mx-auto text-[var(--muted)]" size={30} />
       <h1 className="mt-3 text-2xl font-bold text-[var(--foreground)]">{title}</h1>
       <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{description}</p>

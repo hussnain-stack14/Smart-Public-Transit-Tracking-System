@@ -16,6 +16,7 @@ import { Footer } from "../navigation/Footer";
 import { Badge } from "../common/Badge";
 import { Button } from "../common/Button";
 import { Card } from "../common/Card";
+import { CardBackdrop } from "../common/CardBackdrop";
 import { ErrorState } from "../common/ErrorState";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { busService } from "../../services/busService";
@@ -197,7 +198,8 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
     <div className="min-h-screen overflow-x-hidden bg-[var(--background)]">
       <Navbar />
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-        <header>
+        <header className="premium-card premium-card--primary premium-card--imagery p-5 sm:p-7">
+          <CardBackdrop visual="booking" priority />
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary-ink)]">
             Plan your journey
           </p>
@@ -229,7 +231,7 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
             onSubmit={handleSubmit(continueToSeatSelection)}
             className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.85fr)] lg:items-start"
           >
-            <Card className="p-5 sm:p-6">
+            <Card treatment="operational" className="p-5 sm:p-6">
               <div className="flex items-start gap-3">
                 <span className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary-ink)]">
                   <RouteIcon size={19} />
@@ -340,7 +342,7 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
               </div>
             </Card>
 
-            <Card className="p-5 sm:p-6 lg:sticky lg:top-24">
+            <Card treatment="operational" className="p-5 sm:p-6 lg:sticky lg:top-24">
               <div className="flex items-center gap-3">
                 <span className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary-ink)]">
                   <BusFront size={19} />

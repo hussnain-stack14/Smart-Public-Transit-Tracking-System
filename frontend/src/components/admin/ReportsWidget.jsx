@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AlertOctagon, AlertTriangle, CheckCircle, Clock, ShieldAlert, Wrench } from "lucide-react";
 import { Badge } from "../common/Badge";
 import { Card } from "../common/Card";
+import { CardBackdrop } from "../common/CardBackdrop";
 import { EmptyState } from "../common/EmptyState";
 
 const statusTones = {
@@ -17,7 +18,7 @@ export function ReportsWidget({ reports = [], reportsSummary, loading }) {
 
   if (loading) {
     return (
-      <Card className="h-full p-5 animate-pulse">
+      <Card treatment="operational" className="h-full p-5 animate-pulse">
         <div className="h-5 w-48 bg-[var(--skeleton)] rounded mb-4" />
         <div className="h-40 bg-[var(--skeleton)] rounded" />
       </Card>
@@ -37,10 +38,11 @@ export function ReportsWidget({ reports = [], reportsSummary, loading }) {
   });
 
   return (
-    <Card className="h-full p-5">
+    <Card treatment="operational" className="h-full p-5">
       {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-[var(--border)] pb-4">
-        <div>
+      <div className="premium-card premium-card--primary premium-card--imagery flex flex-col gap-3 rounded-2xl p-4 sm:flex-row sm:items-center sm:justify-between">
+        <CardBackdrop visual="reports" />
+        <div className="relative z-10 min-w-0">
           <div className="flex items-center gap-2">
             <ShieldAlert size={18} className="text-[var(--primary-ink)]" />
             <h2 className="text-base font-bold text-[var(--foreground)]">
@@ -53,11 +55,11 @@ export function ReportsWidget({ reports = [], reportsSummary, loading }) {
         </div>
 
         {/* Summary Badges */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1 rounded-md bg-[#fde8e8] px-2.5 py-1 text-xs font-semibold text-[var(--danger)]">
+        <div className="relative z-10 flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1 rounded-md bg-[var(--danger-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--danger)]">
             <AlertOctagon size={13} /> {openCount} Open
           </span>
-          <span className="inline-flex items-center gap-1 rounded-md bg-[#fff2d9] px-2.5 py-1 text-xs font-semibold text-[var(--warning)]">
+          <span className="inline-flex items-center gap-1 rounded-md bg-[var(--warning-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--warning)]">
             <Clock size={13} /> {reviewedCount} Reviewed
           </span>
           <span className="inline-flex items-center gap-1 rounded-md bg-[var(--success-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--success)]">
@@ -67,13 +69,13 @@ export function ReportsWidget({ reports = [], reportsSummary, loading }) {
       </div>
 
       {/* Filter Tabs */}
-      <div className="mt-4 flex gap-2 border-b border-[var(--border)] pb-2 text-xs">
+      <div className="mt-4 flex flex-wrap gap-2 border-b border-[var(--border)] pb-2 text-xs">
         {["all", "open", "reviewed", "resolved"].map((tab) => (
           <button
             key={tab}
             type="button"
             onClick={() => setFilter(tab)}
-            className={`rounded-lg px-3 py-1.5 font-semibold capitalize transition ${
+            className={`min-h-11 rounded-lg px-3 py-1.5 font-semibold capitalize transition ${
               filter === tab
                 ? "bg-[var(--primary)] text-[var(--primary-contrast)]"
                 : "text-[var(--muted)] hover:bg-[var(--surface-subtle)] hover:text-[var(--foreground)]"
@@ -108,10 +110,10 @@ export function ReportsWidget({ reports = [], reportsSummary, loading }) {
             return (
               <div key={report._id} className="py-3.5 first:pt-2 last:pb-1">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-2.5">
+                  <div className="flex min-w-0 items-start gap-2.5">
                     <span
                       className={`mt-0.5 rounded-lg p-1.5 ${
-                        isSafety ? "bg-[#fde8e8] text-[var(--danger)]" : "bg-[#fff2d9] text-[var(--warning)]"
+                        isSafety ? "bg-[var(--danger-soft)] text-[var(--danger)]" : "bg-[var(--warning-soft)] text-[var(--warning)]"
                       }`}
                     >
                       {isSafety ? <AlertTriangle size={15} /> : <Wrench size={15} />}
@@ -127,7 +129,7 @@ export function ReportsWidget({ reports = [], reportsSummary, loading }) {
                           </span>
                         )}
                       </div>
-                      <p className="mt-1 text-sm text-[var(--foreground)]">{report.description}</p>
+                      <p className="mt-1 break-words text-sm text-[var(--foreground)]">{report.description}</p>
                       <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-[var(--muted)]">
                         <span>Reported by: <strong>{report.user?.name || "Commuter"}</strong></span>
                         <span>•</span>

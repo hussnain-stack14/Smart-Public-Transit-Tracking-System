@@ -5,6 +5,7 @@ import Link from "next/link";
 import { BusFront, ArrowUpRight, Gauge, MapPin, User, Users } from "lucide-react";
 import { Badge } from "../common/Badge";
 import { Card } from "../common/Card";
+import { CardBackdrop } from "../common/CardBackdrop";
 import { EmptyState } from "../common/EmptyState";
 
 const statusTones = {
@@ -16,7 +17,7 @@ const statusTones = {
 export function LiveTransitPanel({ buses = [], loading }) {
   if (loading) {
     return (
-      <Card className="flex h-full flex-col p-5 xl:min-h-[460px]">
+      <Card treatment="operational" className="flex h-full flex-col p-5 xl:min-h-[460px]">
         <div className="flex items-center justify-between border-b border-[var(--border)] pb-4">
           <div className="h-5 w-32 bg-[var(--skeleton)] rounded animate-pulse" />
           <div className="h-5 w-16 bg-[var(--skeleton)] rounded animate-pulse" />
@@ -36,9 +37,10 @@ export function LiveTransitPanel({ buses = [], loading }) {
   const activeCount = buses.filter((b) => b.status === "active").length;
 
   return (
-    <Card className="p-5 flex flex-col h-full">
-      <div className="flex items-center justify-between border-b border-[var(--border)] pb-4">
-        <div>
+    <Card treatment="operational" className="flex h-full flex-col p-4 sm:p-5">
+      <div className="premium-card premium-card--primary premium-card--imagery flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
+        <CardBackdrop visual="fleet" />
+        <div className="relative z-10 min-w-0">
           <div className="flex items-center gap-2">
             <BusFront size={18} className="text-[var(--primary-ink)]" />
             <h2 className="text-base font-bold text-[var(--foreground)]">Live Fleet Status</h2>
@@ -47,7 +49,7 @@ export function LiveTransitPanel({ buses = [], loading }) {
             Real-time telemetry and capacity metrics
           </p>
         </div>
-        <Badge tone={activeCount > 0 ? "success" : "neutral"}>
+        <Badge tone={activeCount > 0 ? "success" : "neutral"} className="relative z-10 shrink-0">
           {activeCount} active
         </Badge>
       </div>

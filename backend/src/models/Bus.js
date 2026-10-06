@@ -26,6 +26,14 @@ const busSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    // Configured physical positions. Empty means a legacy aggregate-only bus.
+    seatMap: [{
+      label: { type: String, required: true, trim: true },
+      row: { type: Number, required: true, min: 0 },
+      column: { type: Number, required: true, min: 0 },
+      status: { type: String, enum: ['available', 'booked', 'occupied'], default: 'available' },
+      booking: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking', default: null },
+    }],
     currentLocation: {
       latitude: { type: Number, default: null },
       longitude: { type: Number, default: null },
@@ -69,3 +77,4 @@ const busSchema = new mongoose.Schema(
 busSchema.index({ route: 1 });
 
 module.exports = mongoose.model("Bus", busSchema);
+

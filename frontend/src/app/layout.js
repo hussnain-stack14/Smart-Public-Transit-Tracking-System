@@ -2,6 +2,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppExperience } from "../components/navigation/AppExperience";
 import { PwaSupport } from "../components/pwa/PwaSupport";
+import { ThemeOnboarding } from "../components/common/ThemePicker";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,16 +28,19 @@ export const metadata = {
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Smart Safar" },
 };
 
-export const viewport = { themeColor: "#e97824", colorScheme: "light", viewportFit: "cover" };
+export const viewport = { themeColor: "#0F5797", colorScheme: "light", viewportFit: "cover" };
 
 export default function RootLayout({ children }) {
   return (
     <html
       lang="en"
+      data-theme="blue"
+      suppressHydrationWarning
       data-scroll-behavior="smooth"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col"><AppExperience>{children}</AppExperience><PwaSupport /></body>
+      <head><script dangerouslySetInnerHTML={{ __html: '(function(){try{if(localStorage.getItem("smart-safar-theme-v1")==="orange")document.documentElement.dataset.theme="orange"}catch(e){}})()' }} /></head>
+      <body className="min-h-full flex flex-col"><AppExperience>{children}</AppExperience><PwaSupport /><ThemeOnboarding /></body>
     </html>
   );
 }

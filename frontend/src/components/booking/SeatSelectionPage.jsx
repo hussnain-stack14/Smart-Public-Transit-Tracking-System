@@ -32,6 +32,7 @@ import { bookingService } from "../../services/bookingService";
 import { useAuth } from "../../hooks/useAuth";
 import { getAccessToken } from "../../lib/auth/token";
 import { useGeolocation } from "../../hooks/useGeolocation";
+import { useSocket } from "../../hooks/useSocket";
 
 function formatDate(value) {
   if (!value) return "Not selected";
@@ -39,13 +40,6 @@ function formatDate(value) {
     day: "2-digit",
     month: "short",
     year: "numeric",
-  });
-}
-
-function buildSeats(capacity) {
-  return Array.from({ length: capacity }, (_, index) => {
-    const row = String.fromCharCode(65 + Math.floor(index / 4));
-    return `${row}${(index % 4) + 1}`;
   });
 }
 
@@ -71,6 +65,7 @@ export default function SeatSelectionPage({
   bookingMode = "route",
 }) {
   const router = useRouter();
+  const socket = useSocket();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [bus, setBus] = useState(null);
   const [route, setRoute] = useState(null);
@@ -82,6 +77,7 @@ export default function SeatSelectionPage({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [submitError, setSubmitError] = useState("");
+  const [seatNotice, setSeatNotice] = useState("");
 
   const geolocationOptions = useMemo(
     () => ({ enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 }),
@@ -99,8 +95,8 @@ export default function SeatSelectionPage({
     try {
       const busData = await busService.get(busId);
       const selectedRouteId = routeId || getId(busData.route);
-      const routeData = selectedRouteId ? await routeService.get(selectedRouteId) : null;
       setBus(busData);
+      const routeData = selectedRouteId ? await routeService.get(selectedRouteId) : null;
       setRoute(routeData);
     } catch (requestError) {
       if (requestError.response?.status === 404) setError("not-found");
@@ -137,12 +133,55 @@ export default function SeatSelectionPage({
     queueMicrotask(() => setLocationNotice(getLocationMessage(geolocation.error)));
   }, [geolocation.error, locationRequest]);
 
-  const seats = useMemo(() => buildSeats(bus?.capacity || 0), [bus?.capacity]);
+  const seats = useMemo(() => bus?.seatMap || [], [bus?.seatMap]);
+  const rows = useMemo(() => [...new Set(seats.map((seat) => seat.row))].sort((a, b) => a - b), [seats]);
+  const columns = Math.max(1, ...seats.map((seat) => seat.column + 1));
+  const configured = seats.length > 0;
   const availableSeats = bus?.availableSeats ?? null;
   const isFull = availableSeats === 0;
   const seatAvailability = isFull ? "Full" : availableSeats == null ? "Unavailable" : "Available";
   const actualRouteId = routeId || getId(bus?.route);
   const driver = bus?.driver;
+  const selectedSeatAvailable = seats.some((seat) => seat.label === selectedSeat && seat.status === "available");
+  useEffect(() => {
+    if (!selectedSeat || selectedSeatAvailable) return;
+    queueMicrotask(() => {
+      setSelectedSeat((current) => current === selectedSeat ? "" : current);
+      setSeatNotice(`Seat ${selectedSeat} is no longer available. Please choose another seat.`);
+    });
+  }, [selectedSeat, selectedSeatAvailable]);
+
+  useEffect(() => {
+    if (!busId) return;
+    let active = true;
+    let seatRevision = 0;
+    const watch = () => socket.emit("watchBus", busId);
+    const refresh = async () => {
+      const revision = seatRevision;
+      try {
+        const updated = await busService.get(busId);
+        if (active && revision === seatRevision) setBus((current) => current ? { ...current, seatMap: updated.seatMap, availableSeats: updated.availableSeats, capacity: updated.capacity } : updated);
+      } catch {
+        if (active) setSeatNotice("Seat availability could not be refreshed. Check your connection and use Retry to get the latest seats.");
+      }
+    };
+    const connected = () => { watch(); refresh(); };
+    const changed = (payload) => {
+      if (String(payload.busId) !== String(busId)) return;
+      seatRevision += 1;
+      setBus((current) => current ? { ...current, seatMap: payload.seatMap, availableSeats: payload.availableSeats, capacity: payload.capacity ?? current.capacity } : current);
+    };
+    socket.on("connect", connected);
+    socket.on("seatMapUpdate", changed);
+    if (socket.connected) watch();
+    return () => { active = false; socket.off("connect", connected); socket.off("seatMapUpdate", changed); };
+  }, [socket, busId]);
+
+  function selectSeat(label) {
+    setSelectedSeat(label);
+    setSeatNotice("");
+    setSubmitError("");
+  }
   const locationPosition = pickupLocation
     ? [pickupLocation.latitude, pickupLocation.longitude]
     : null;
@@ -159,7 +198,7 @@ export default function SeatSelectionPage({
   }
 
   async function continueToConfirmation() {
-    if (!selectedSeat || isFull) return;
+    if (isFull || (configured && (!selectedSeat || seats.find((seat) => seat.label === selectedSeat)?.status !== "available"))) return;
     if (!isAuthenticated || !getAccessToken()) {
       const target =
         `/booking/${busId}/seat?route=${encodeURIComponent(actualRouteId)}` +
@@ -173,14 +212,14 @@ export default function SeatSelectionPage({
     try {
       const payload = {
         routeId: actualRouteId,
-        seatNumber: selectedSeat,
+        ...(configured ? { seatNumber: selectedSeat } : {}),
+        bus: busId,
         paymentMethod: "cash",
         shareLocation: Boolean(pickupLocation),
         ...(pickupLocation ? { pickupLocation } : {}),
       };
 
       if (bookingMode === "manual") {
-        payload.bus = busId;
         payload.driverId = getId(driver);
       }
 
@@ -255,7 +294,7 @@ export default function SeatSelectionPage({
           Step 2 of 3
         </p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--foreground)] sm:text-4xl">
-          Select your seat.
+          Choose your seat.
         </h1>
         <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
           Choose a seat and optionally share a pickup location with the assigned driver.
@@ -273,8 +312,7 @@ export default function SeatSelectionPage({
         </div>
         {bookingMode === "route" && (
           <p className="mt-4 border-t border-[var(--border)] pt-3 text-xs leading-5 text-[var(--muted)]">
-            This is the current route assignment preview. The backend resolves and validates the active
-            bus and driver again when you book; the confirmation is authoritative.
+            Your chosen seat belongs to this bus. The backend validates its active driver and shift again when you book.
           </p>
         )}
       </Card>
@@ -292,45 +330,40 @@ export default function SeatSelectionPage({
               </Badge>
             </div>
 
+            {configured && <label className="mt-5 grid gap-2 text-sm font-semibold text-[var(--foreground)] sm:hidden" htmlFor="booking-seat-choice">Select a seat
+              <select id="booking-seat-choice" className="field-input min-h-12 w-full min-w-0" value={selectedSeatAvailable ? selectedSeat : ""} disabled={submitting || isFull} onChange={(event) => selectSeat(event.target.value)}>
+                <option value="">Choose an available seat</option>
+                {seats.map((seat) => <option key={seat.label} value={seat.label} disabled={seat.status !== "available"}>Seat {seat.label} - {seat.status === "booked" ? "booked online" : seat.status === "occupied" ? "walk-in occupied" : "available"}</option>)}
+              </select>
+            </label>}
+            {seatNotice && <p role="status" className="mt-4 text-sm text-[var(--warning)]">{seatNotice} <button type="button" className="min-h-11 underline underline-offset-4" onClick={() => { setSeatNotice(""); loadBus(); }}>Retry</button></p>}
             {seats.length ? (
               <div className="mx-auto mt-6 max-w-sm rounded-[2rem] border-2 border-[var(--primary-border)] bg-[var(--background)] p-4">
                 <div className="mb-5 rounded-xl bg-[var(--primary-soft)] px-4 py-3 text-center text-xs font-bold uppercase tracking-[0.14em] text-[var(--primary-ink)]">
                   Driver / front
                 </div>
-                <div className="grid gap-3">
-                  {Array.from({ length: Math.ceil(seats.length / 4) }, (_, rowIndex) => (
-                    <div key={rowIndex} className="grid grid-cols-5 gap-2">
-                      {seats.slice(rowIndex * 4, rowIndex * 4 + 4).map((seat, index) => (
-                        <SeatButton
-                          key={seat}
-                          seat={seat}
-                          selected={selectedSeat === seat}
-                          disabled={isFull}
-                          onSelect={setSelectedSeat}
-                          className={index === 2 ? "col-start-4" : ""}
-                        />
-                      ))}
-                    </div>
-                  ))}
+                <div className="grid gap-2">
+                  {rows.map((row) => <div key={row} className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
+                    {Array.from({ length: columns }, (_, column) => {
+                      const seat = seats.find((item) => item.row === row && item.column === column);
+                      return seat ? <SeatButton key={seat.label} seat={seat} selected={selectedSeat === seat.label && seat.status === "available"} disabled={submitting || isFull || seat.status !== "available"} onSelect={selectSeat} /> : <span key={column} aria-hidden="true" />;
+                    })}
+                  </div>)}
                 </div>
               </div>
             ) : (
               <p className="mt-6 text-sm text-[var(--muted)]">
-                No seat layout is available for this bus.
+                This bus has no configured physical seat map. You can still book one available seat, but an exact seat number cannot be selected yet.
               </p>
             )}
 
             <div className="mt-6 flex flex-wrap gap-4 border-t border-[var(--border)] pt-4 text-xs text-[var(--muted)]">
               <Legend color="bg-white border-[#86efac]" label="Available" />
               <Legend color="bg-[var(--primary)] border-[var(--primary)]" label="Selected" />
-              <Legend color="bg-[var(--border)] border-[var(--border)]" label="Unavailable" />
+              <Legend color="bg-[var(--primary-soft)] border-[var(--primary-border)]" label="Booked online" />
+              <Legend color="bg-amber-100 border-amber-300" label="Walk-in occupied" />
             </div>
-            {availableSeats != null && availableSeats < (bus.capacity || availableSeats) && (
-              <p className="mt-4 text-xs leading-5 text-[var(--muted)]">
-                The backend provides a total available-seat count, but not individual reserved-seat
-                positions. The final seat reservation is validated by the backend.
-              </p>
-            )}
+
           </Card>
 
           <Card className="p-5 sm:p-6">
@@ -415,7 +448,7 @@ export default function SeatSelectionPage({
             )}
             {pickupLocation && (
               <p className="mt-3 text-xs text-[var(--muted)]">
-                Accuracy: about {Math.round(pickupLocation.accuracy)} m · Captured {new Date(
+                Accuracy: about {Math.round(pickupLocation.accuracy)} m - Captured {new Date(
                   pickupLocation.timestamp,
                 ).toLocaleString()}
               </p>
@@ -438,7 +471,7 @@ export default function SeatSelectionPage({
             <SummaryItem label="Bus preview" value={bus.busNumber} />
             <SummaryItem label="Driver" value={driver?.name || "Not assigned"} />
             <SummaryItem label="Date" value={formatDate(travelDate)} />
-            <SummaryItem label="Selected seat" value={selectedSeat || "Select a seat"} />
+            <SummaryItem label="Selected seat" value={selectedSeat || (configured ? "Select a seat" : "Seat assigned on boarding")} />
             <SummaryItem
               label="Pickup"
               value={pickupLocation ? "Location will be shared" : "Not shared"}
@@ -478,7 +511,7 @@ export default function SeatSelectionPage({
           <Button
             type="button"
             className="mt-6 w-full gap-2"
-            disabled={authLoading || !isAuthenticated || !selectedSeat || isFull || submitting}
+            disabled={authLoading || !isAuthenticated || (configured && (!selectedSeat || seats.find((seat) => seat.label === selectedSeat)?.status !== "available")) || isFull || submitting}
             onClick={continueToConfirmation}
           >
             {submitting
@@ -513,27 +546,9 @@ function SummaryItem({ label, value }) {
   );
 }
 
-function SeatButton({ seat, selected, disabled, onSelect, className = "" }) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      aria-label={`Seat ${seat}, ${disabled ? "unavailable" : selected ? "selected" : "available"}`}
-      aria-pressed={selected}
-      className={`grid min-h-11 min-w-0 place-items-center rounded-lg border text-xs font-bold transition ${
-        selected
-          ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--primary-contrast)]"
-          : disabled
-            ? "cursor-not-allowed border-[var(--border)] bg-[var(--border)] text-[var(--muted)]"
-            : "border-[#86efac] bg-white text-[var(--success)] hover:border-[var(--success)] hover:bg-[var(--success-soft)]"
-      } ${className}`}
-      onClick={() => onSelect(seat)}
-    >
-      {selected ? <Check size={15} /> : seat}
-    </button>
-  );
+function SeatButton({ seat, selected, disabled, onSelect }) {
+  return <button type="button" disabled={disabled} aria-label={`Seat ${seat.label}, ${selected ? "selected" : seat.status === "booked" ? "booked online" : seat.status === "occupied" ? "occupied by walk-in passenger" : "available"}`} aria-pressed={selected} title={`Seat ${seat.label}`} className={`seat-position overflow-hidden seat-position--${seat.status} ${selected ? "!bg-[var(--primary)] !text-white" : ""}`} onClick={() => onSelect(seat.label)}>{selected ? <Check size={15} /> : <span className="block max-w-full truncate px-1">{seat.label}</span>}</button>;
 }
-
 function Legend({ color, label }) {
   return (
     <span className="inline-flex items-center gap-2">

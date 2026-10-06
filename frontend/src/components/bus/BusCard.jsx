@@ -14,9 +14,9 @@ export function BusCard({ bus }) {
   ].filter(Boolean);
 
   return <Link href={`/buses/${bus.id}`} className="block">
-    <Card className="bus-card group overflow-hidden p-0 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_30px_rgba(15,23,42,0.1)]">
+    <Card treatment="operational" className="bus-card group overflow-hidden p-0 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_30px_rgba(15,23,42,0.1)]">
       <div className="flex min-w-0">
-        <div className="grid h-[104px] w-[96px] shrink-0 place-items-center border-r border-[var(--border)] bg-white p-3 sm:w-[108px]" aria-hidden="true">
+        <div className="grid h-[104px] w-[96px] shrink-0 place-items-center border-r border-[var(--border)] bg-[var(--primary-soft)] p-3 sm:w-[108px]" aria-hidden="true">
           <BusFront size={42} strokeWidth={2.25} className="text-[var(--primary-ink)]" />
         </div>
         <div className="min-w-0 flex-1 p-3">

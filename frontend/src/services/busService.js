@@ -12,5 +12,6 @@ export const busService = {
   endShift: (config) => api.post(`${API_PATHS.buses}/assigned/end-shift`, undefined, config).then(({ data }) => data),
   updateLocation: (id, payload, config) => api.patch(`${API_PATHS.buses}/${id}/location`, payload, config).then(({ data }) => data),
   startReturnTrip: (config) => api.post(`${API_PATHS.buses}/assigned/return-trip`, undefined, config).then(({ data }) => data),
+  updateIndividualSeat: (id, label, action) => api.patch(`${API_PATHS.buses}/${id}/seats/${encodeURIComponent(label)}`, { action }).then(({ data }) => data),
   updateSeats: (id, availableSeats) => api.patch(`${API_PATHS.buses}/${id}/seats`, { availableSeats }).then(({ data }) => data),
 };

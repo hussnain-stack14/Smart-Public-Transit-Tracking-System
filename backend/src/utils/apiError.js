@@ -11,6 +11,9 @@ function sendApiError(res, error, fallback, duplicateMessage = 'A record with th
   if (error.name === 'ValidationError' || error.name === 'CastError') {
     return res.status(400).json({ message: 'Invalid request data. Check the supplied fields.' });
   }
+  if (error.code === 112 || error.hasErrorLabel?.('TransientTransactionError')) {
+    return res.status(409).json({ message: 'This record changed at the same time. Refresh and try again.' });
+  }
   if (error.code === 20) {
     return res.status(503).json({ message: 'Assignment changes require a transaction-capable MongoDB deployment.' });
   }

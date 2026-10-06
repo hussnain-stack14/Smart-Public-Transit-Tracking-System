@@ -5,6 +5,7 @@ import { Navbar } from "../../components/navigation/Navbar";
 import { Footer } from "../../components/navigation/Footer";
 import { ProtectedPage } from "../../components/common/ProtectedPage";
 import { Button } from "../../components/common/Button";
+import { Card } from "../../components/common/Card";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
 import { busService } from "../../services/busService";
 import { reportService } from "../../services/reportService";
@@ -64,11 +65,11 @@ function ReportForm({ user }) {
 
   return (
     <>
-      <p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--primary-ink)]">{user.role === "driver" ? "Driver operations" : "Passenger feedback"}</p>
+      <Card visual="reports" treatment="primary" className="p-5 sm:p-6"><p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--primary-ink)]">{user.role === "driver" ? "Driver operations" : "Passenger feedback"}</p>
       <h1 className="mt-2 text-3xl font-bold">Report an issue</h1>
-      <p className="mt-3 text-sm text-[var(--muted)]">Submit a bus condition or safety report for the transit team to review.</p>
+      <p className="mt-3 text-sm text-[var(--muted)]">Submit a bus condition or safety report for the transit team to review.</p></Card>
       {loading ? <div className="mt-6"><LoadingSpinner label="Loading buses..." /></div> : loadError ? <div role="alert" className="mt-6"><p className="text-sm text-[var(--danger)]">Unable to load buses.</p><Button type="button" className="mt-3 min-h-11" onClick={() => { setLoading(true); setRetry((value) => value + 1); }}>Try again</Button></div> : !buses.length ? <p className="mt-6 text-sm text-[var(--muted)]">No buses are available to report.</p> : (
-        <form onSubmit={submit} className="mt-6 grid gap-4 rounded-2xl border border-[var(--border)] bg-white p-5">
+        <form onSubmit={submit} className="premium-card premium-card--operational mt-5 grid gap-4 p-5 sm:p-6">
           <label htmlFor="report-bus" className="grid gap-2 text-sm font-semibold">Bus
             <select id="report-bus" className="field-input" value={form.bus} onChange={(event) => setForm({ ...form, bus: event.target.value })} required disabled={busy}>
               <option value="">Select a bus</option>

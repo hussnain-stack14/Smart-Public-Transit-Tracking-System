@@ -8,6 +8,7 @@ const {
   updateBusLocation,
   startReturnTrip,
   updateSeatAvailability,
+  updateIndividualSeat,
   updateBus,
   deleteBus,
 } = require('../controllers/busController');
@@ -23,7 +24,10 @@ router.post('/assigned/end-shift', protect, authorize('driver'), endShift);
 router.post('/assigned/return-trip', protect, authorize('driver'), startReturnTrip);
 router.patch('/:id/location', protect, authorize('driver'), updateBusLocation);
 router.patch('/:id/seats', protect, authorize('driver', 'admin'), updateSeatAvailability);
+router.patch('/:id/seats/:label', protect, authorize('driver'), updateIndividualSeat);
 router.put('/:id', protect, authorize('admin'), updateBus);
 router.delete('/:id', protect, authorize('admin'), deleteBus);
 
 module.exports = router;
+
+

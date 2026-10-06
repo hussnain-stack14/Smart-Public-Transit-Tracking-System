@@ -8,6 +8,7 @@ const { assertObjectId, requireObjectBody } = require('../utils/accountValidatio
 const { runInTransaction } = require('./transactionService');
 const { getBookingPrice } = require('./paymentService');
 const { routeHasStops } = require('./routeStopService');
+const { seatCount } = require('./seatService');
 
 function sameId(left, right) {
   return Boolean(left && right && left.toString() === right.toString());
@@ -235,7 +236,7 @@ async function createBookingFromRequest(userId, body) {
       .session(session);
     if (duplicate) throw new ApiError(409, 'You already have an active booking on this bus.');
 
-    if (values.seatNumber) {
+    if (values.seatNumber && !bus.seatMap?.length) {
       const occupiedSeat = await Booking.findOne({
         bus: bus._id,
         seatNumber: values.seatNumber,
@@ -246,6 +247,13 @@ async function createBookingFromRequest(userId, body) {
       if (occupiedSeat) throw new ApiError(409, 'The selected seat is already booked.');
     }
 
+    const configuredSeat = bus.seatMap?.length
+      ? (values.seatNumber ? bus.seatMap.find((seat) => seat.label === values.seatNumber) : bus.seatMap.find((seat) => seat.status === 'available'))
+      : null;
+    if (bus.seatMap?.length && (!configuredSeat || configuredSeat.status !== 'available')) {
+      throw new ApiError(409, 'The selected seat is unavailable or does not exist on this bus.');
+    }
+
     const [booking] = await Booking.create(
       [
         {
@@ -253,7 +261,7 @@ async function createBookingFromRequest(userId, body) {
           bus: bus._id,
           route: route._id,
           driver: driver._id,
-          seatNumber: values.seatNumber,
+          seatNumber: configuredSeat?.label || values.seatNumber,
           paymentMethod: values.paymentMethod,
           paymentStatus: 'pending',
           fare: price.fare,
@@ -265,7 +273,13 @@ async function createBookingFromRequest(userId, body) {
       { session }
     );
 
-    bus.availableSeats -= 1;
+    if (configuredSeat) {
+      configuredSeat.status = 'booked';
+      configuredSeat.booking = booking._id;
+      bus.availableSeats = seatCount(bus);
+    } else {
+      bus.availableSeats -= 1;
+    }
     await bus.save({ session });
     return booking._id;
   });
@@ -275,12 +289,19 @@ async function createBookingFromRequest(userId, body) {
 
 async function releaseSeat(booking, session) {
   const bus = await Bus.findById(booking.bus).session(session);
-  if (bus && bus.availableSeats < bus.capacity) {
+  if (!bus) return;
+  if (bus.seatMap?.length) {
+    const seat = bus.seatMap.find((item) => item.label === booking.seatNumber && item.status === 'booked' && sameId(item.booking, booking._id));
+    if (!seat) throw new ApiError(409, 'The booked seat state no longer matches this booking. Contact support.');
+    seat.status = 'available';
+    seat.booking = null;
+    bus.availableSeats = seatCount(bus);
+    await bus.save({ session });
+  } else if (bus.availableSeats < bus.capacity) {
     bus.availableSeats += 1;
     await bus.save({ session });
   }
 }
-
 async function cancelUserBooking(bookingId, userId) {
   assertObjectId(bookingId, 'Booking ID');
 
@@ -503,3 +524,5 @@ module.exports = {
   getPassengerLocationsForDriver,
   updatePassengerLocation,
 };
+
+

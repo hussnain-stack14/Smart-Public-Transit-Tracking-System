@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BusFront, ArrowRight, House, Route, UserRound } from "lucide-react";
+import { BusFront, ArrowRight, House, Route, Settings, UserRound } from "lucide-react";
 import { BrandMark } from "../common/BrandMark";
 import { PwaInstallAction } from "../pwa/PwaInstallAction";
 import { useAuth } from "../../hooks/useAuth";
@@ -12,13 +12,15 @@ const links = [
   { href: "/", label: "Home" },
   { href: "/live-map", label: "Live Buses" },
   { href: "/routes", label: "Routes" },
+  { href: "/settings", label: "Settings" },
 ];
 
 const mobileLinks = [
   { href: "/", label: "Home", icon: House },
-  { href: "/live-map", label: "Live Buses", icon: BusFront },
+  { href: "/live-map", label: "Buses", icon: BusFront },
   { href: "/routes", label: "Routes", icon: Route },
   { href: "/login", label: "Profile", icon: UserRound },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function Navbar() {

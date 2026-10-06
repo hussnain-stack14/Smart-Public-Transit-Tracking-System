@@ -1,4 +1,5 @@
 const Booking = require('../models/Booking');
+const { emitSeatUpdateById } = require('../services/seatService');
 const { sendApiError } = require('../utils/apiError');
 const {
   applyVerifiedPayment,
@@ -16,6 +17,7 @@ const { verifyPaymentNotification } = require('../services/paymentService');
 const createBooking = async (req, res) => {
   try {
     const booking = await createBookingFromRequest(req.user._id, req.body);
+    await emitSeatUpdateById(req.app.get('io'), booking.bus?._id || booking.bus);
     if (booking.locationSharingActive) {
       await emitPassengerLocation(req.app.get('io'), booking, true);
     }
@@ -47,6 +49,7 @@ const getMyBookings = async (req, res) => {
 const cancelBooking = async (req, res) => {
   try {
     const result = await cancelUserBooking(req.params.id, req.user._id);
+    await emitSeatUpdateById(req.app.get('io'), result.booking.bus?._id || result.booking.bus);
     if (result.locationStopped) {
       await emitPassengerLocation(req.app.get('io'), result.booking, false);
     }
@@ -95,6 +98,7 @@ const paymentWebhook = async (req, res) => {
       req.headers['x-payment-signature']
     );
     const result = await applyVerifiedPayment(notification);
+    await emitSeatUpdateById(req.app.get('io'), result.booking.bus?._id || result.booking.bus);
     if (result.locationStopped) {
       await emitPassengerLocation(req.app.get('io'), result.booking, false);
     }
@@ -120,3 +124,4 @@ module.exports = {
   paymentWebhook,
   updateBookingLocation,
 };
+

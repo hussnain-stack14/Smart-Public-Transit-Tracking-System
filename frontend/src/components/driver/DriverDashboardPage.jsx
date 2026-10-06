@@ -7,6 +7,7 @@ import { Navbar } from "../navigation/Navbar";
 import { Footer } from "../navigation/Footer";
 import { Button } from "../common/Button";
 import { Card } from "../common/Card";
+import { CardBackdrop } from "../common/CardBackdrop";
 import { EmptyState } from "../common/EmptyState";
 import { ErrorState } from "../common/ErrorState";
 import { LoadingSpinner } from "../common/LoadingSpinner";
@@ -59,6 +60,7 @@ function DriverOperations({ user, view }) {
   const [passengerLocations, setPassengerLocations] = useState([]);
   const [passengerLoading, setPassengerLoading] = useState(false);
   const [passengerError, setPassengerError] = useState("");
+  const [seatSyncError, setSeatSyncError] = useState("");
 
   const load = useCallback(async () => {
     const id = ++requestId.current;
@@ -219,10 +221,24 @@ function DriverOperations({ user, view }) {
   }, [socket, busId, shiftActive, trackingView, loadPassengerLocations]);
 
   useEffect(() => {
+    let active = true;
+    let seatRevision = 0;
     const watch = () => {
       if (busId) socket.emit("watchBus", busId);
     };
-    const connected = () => { setConnection("Connected"); watch(); };
+    const refreshSeats = async () => {
+      if (!busId) return;
+      const revision = seatRevision;
+      try {
+        const updated = await busService.get(busId);
+        if (!active || revision !== seatRevision) return;
+        setSeatSyncError("");
+        setData((current) => String(current.bus?._id) === String(busId) ? { ...current, bus: { ...current.bus, availableSeats: updated.availableSeats, capacity: updated.capacity, seatMap: updated.seatMap } } : current);
+      } catch {
+        if (active) setSeatSyncError("Seat availability could not be refreshed. Use Refresh dashboard to get the latest seats.");
+      }
+    };
+    const connected = () => { setConnection("Connected"); watch(); refreshSeats(); };
     const disconnected = () => setConnection("Disconnected");
     const failed = () => setConnection("Reconnecting");
     const update = (location) => {
@@ -255,12 +271,21 @@ function DriverOperations({ user, view }) {
     socket.on("disconnect", disconnected);
     socket.on("connect_error", failed);
     socket.on("locationUpdate", update);
+    const seatsChanged = (payload) => {
+      if (String(payload.busId) !== String(busId)) return;
+      seatRevision += 1;
+      setSeatSyncError("");
+      setData((current) => String(current.bus?._id) === String(busId) ? { ...current, bus: { ...current.bus, availableSeats: payload.availableSeats, seatMap: payload.seatMap, capacity: payload.capacity ?? current.bus.capacity } } : current);
+    };
+    socket.on("seatMapUpdate", seatsChanged);
     if (socket.connected) watch();
     return () => {
+      active = false;
       socket.off("connect", connected);
       socket.off("disconnect", disconnected);
       socket.off("connect_error", failed);
       socket.off("locationUpdate", update);
+      socket.off("seatMapUpdate", seatsChanged);
     };
   }, [socket, busId]);
 
@@ -353,7 +378,7 @@ function DriverOperations({ user, view }) {
   const seatsUpdated = useCallback((updated) => {
     setData((current) => {
       if (current.bus?._id !== updated._id) return current;
-      return { ...current, bus: { ...current.bus, availableSeats: updated.availableSeats } };
+      return { ...current, bus: { ...current.bus, availableSeats: updated.availableSeats, seatMap: updated.seatMap } };
     });
   }, []);
 
@@ -375,9 +400,9 @@ function DriverOperations({ user, view }) {
 
   return (
     <>
-      <header className="premium-driver-header flex flex-wrap items-center justify-between gap-3 px-5 py-5 sm:px-6">
-        <div className="min-w-0"><p className="text-xs font-bold uppercase tracking-[.14em] text-[var(--primary-ink)]">Driver operations</p><h1 className="mt-1 text-2xl font-bold">{viewTitle}</h1><p className="mt-1 break-words text-sm text-[var(--muted)]">{profile.name}</p></div>
-        {retry}
+      <header className={`premium-driver-header premium-card premium-card--primary ${view === "seats" ? "" : "premium-card--imagery"} flex flex-wrap items-center justify-between gap-3 px-5 py-5 sm:px-6`}>{view !== "seats" && <CardBackdrop visual={view === "shift" ? "shift" : "driver"} priority />}
+        <div className="relative z-10 min-w-0"><p className="text-xs font-bold uppercase tracking-[.14em] text-[var(--primary-ink)]">Driver operations</p><h1 className="mt-1 text-2xl font-bold">{viewTitle}</h1><p className="mt-1 break-words text-sm text-[var(--muted)]">{profile.name}</p></div>
+        <div className="relative z-10">{retry}</div>
       </header>
       {bus && !error && <DriverStatusCard bus={bus} route={route} eta={eta} errors={errors} direction={direction} directionLabel={directionLabel} shiftActive={shiftActive} shiftCompleted={shiftCompleted} shiftBusy={shiftBusy} shiftError={shiftError} hasRouteAssignment={hasRouteAssignment} gpsStatus={gpsStatus} onShift={shiftActive ? endShift : startShift} returnBusy={returnBusy} returnError={returnError} onReturn={startReturnTrip}>
         {trackingView && <DriverLocationControl key={`location-${bus._id}-${activeShift?._id || "inactive"}`} bus={bus} enabled={shiftActive} onUpdate={locationUpdated} onStatusChange={locationStatusChanged} />}
@@ -388,12 +413,12 @@ function DriverOperations({ user, view }) {
             <Link href="/driver/shift"><strong>Shift</strong><span>Start or end your shift</span></Link>
             <Link href="/driver/route"><strong>Route</strong><span>View assigned stops</span></Link>
             <Link href="/driver/tracking"><strong>Live tracking</strong><span>Share location and view map</span></Link>
-            <Link href="/driver/seats"><strong>Seats</strong><span>Update availability</span></Link>
+            <Link href="/driver/seats"><strong>Seats</strong><span>Manage individual seats</span></Link>
           </section>}
           {view === "shift" && <section className="driver-section-note mt-4"><p>Shift controls use your existing assigned bus and active-shift state. Start location sharing from Live Tracking after the shift begins.</p><Link href="/driver/tracking">Open live tracking</Link></section>}
           {view === "route" && <div className="driver-detail-grid mt-4"><DriverRouteCard route={route} stops={directionalStops} nextStopId={nextStopId} errors={errors} /></div>}
           {view === "tracking" && <div className="driver-main-grid mt-4 grid items-start gap-4 md:grid-cols-2"><DriverMap bus={bus} stops={directionalStops} nextStopId={nextStopId} connection={connection} passengers={passengerLocations} /><DriverPassengerPanel active={shiftActive} passengers={passengerLocations} loading={passengerLoading} error={passengerError} onRetry={loadPassengerLocations} /></div>}
-          {view === "seats" && <Card className="mt-4 min-w-0 p-5"><h2 className="font-bold">Bus controls</h2><DriverSeatControl key={`seats-${bus._id}`} bus={bus} onUpdate={seatsUpdated} /></Card>}
+          {view === "seats" && <Card treatment="operational" className="mt-4 min-w-0 p-5"><h2 className="font-bold">Bus controls</h2>{seatSyncError && <p role="status" className="mt-3 text-sm text-[var(--warning)]">{seatSyncError}</p>}<DriverSeatControl key={`seats-${bus._id}`} bus={bus} onUpdate={seatsUpdated} shiftActive={shiftActive} /></Card>}
         </>
       )}
     </>

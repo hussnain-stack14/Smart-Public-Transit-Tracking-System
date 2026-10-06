@@ -8,6 +8,7 @@ import { Navbar } from "../../navigation/Navbar";
 import { Footer } from "../../navigation/Footer";
 import { Button } from "../../common/Button";
 import { Card } from "../../common/Card";
+import { CardBackdrop } from "../../common/CardBackdrop";
 import { CompactPageSearch } from "../CompactPageSearch";
 import { ErrorState } from "../../common/ErrorState";
 import { ProtectedPage } from "../../common/ProtectedPage";
@@ -97,8 +98,9 @@ function BusOperations() {
       </div>
 
       {/* Page Header */}
-      <header className="flex flex-col justify-between gap-4 border-b border-[var(--border)] pb-6 sm:flex-row sm:items-end">
-        <div>
+      <header className="premium-dashboard-header premium-card premium-card--primary premium-card--imagery flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-end sm:p-6">
+        <CardBackdrop visual="fleet" priority />
+        <div className="relative z-10 min-w-0">
           <div className="flex items-center gap-2">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary-ink)]">
               Fleet Operations
@@ -115,7 +117,7 @@ function BusOperations() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="relative z-10 flex flex-wrap items-center gap-3">
           <CompactPageSearch label="Search buses" placeholder="Bus number, route, or driver" value={searchTerm} onChange={setSearchTerm} />
           <Button
             type="button"
@@ -142,41 +144,41 @@ function BusOperations() {
       {routeError && <p role="alert" className="mt-4 text-sm text-[var(--danger)]">Routes could not be loaded. Refresh the fleet before adding or editing a bus.</p>}
       {/* Status KPI Summary Strip */}
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-2xl border border-[var(--border)] bg-white p-4 shadow-sm">
+        <Card treatment="stat" className="p-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-[var(--muted)]">Total Fleet</span>
             <BusFront size={16} className="text-[var(--primary-ink)]" />
           </div>
           <p className="mt-2 text-2xl font-bold text-[var(--foreground)]">{totalCount}</p>
-        </div>
+        </Card>
 
-        <div className="rounded-2xl border border-[var(--border)] bg-white p-4 shadow-sm">
+        <Card treatment="stat" className="p-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-[var(--success)]">Active Buses</span>
             <CheckCircle2 size={16} className="text-[var(--success)]" />
           </div>
           <p className="mt-2 text-2xl font-bold text-[var(--foreground)]">{activeCount}</p>
-        </div>
+        </Card>
 
-        <div className="rounded-2xl border border-[var(--border)] bg-white p-4 shadow-sm">
+        <Card treatment="stat" className="p-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-[var(--warning)]">Idle Buses</span>
             <Clock size={16} className="text-[var(--warning)]" />
           </div>
           <p className="mt-2 text-2xl font-bold text-[var(--foreground)]">{idleCount}</p>
-        </div>
+        </Card>
 
-        <div className="rounded-2xl border border-[var(--border)] bg-white p-4 shadow-sm">
+        <Card treatment="stat" className="p-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-[var(--danger)]">Maintenance</span>
             <Wrench size={16} className="text-[var(--danger)]" />
           </div>
           <p className="mt-2 text-2xl font-bold text-[var(--foreground)]">{maintCount}</p>
-        </div>
+        </Card>
       </div>
 
       {/* Search & Filter Toolbar */}
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-[var(--border)] bg-white p-4 shadow-sm">
+      <div className="premium-card premium-card--operational mt-6 flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2.5">
           <select aria-label="Filter fleet assignment" value={assignmentFilter} onChange={(event) => setAssignmentFilter(event.target.value)} className="min-h-11 max-w-full rounded-xl border border-[var(--border)] bg-white px-3 text-xs font-semibold"><option value="all">All assignments</option><option value="assigned">Assigned</option><option value="unassigned">Unassigned</option></select>
           {/* Status Filter */}

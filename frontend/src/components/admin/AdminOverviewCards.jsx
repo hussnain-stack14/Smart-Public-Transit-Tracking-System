@@ -8,7 +8,7 @@ export function AdminOverviewCards({ overview, loading }) {
     return (
       <div className="admin-overview-grid grid auto-rows-fr grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
         {[1, 2, 3, 4].map((i) => (
-          <Card key={i} className="admin-overview-card h-full p-4 sm:p-5 animate-pulse">
+          <Card key={i} treatment="stat" className="admin-overview-card h-full p-4 sm:p-5 animate-pulse">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
                 <div className="h-3 w-20 bg-[var(--skeleton)] rounded" />
@@ -64,7 +64,7 @@ export function AdminOverviewCards({ overview, loading }) {
       {cards.map((card) => {
         const Icon = card.icon;
         return (
-          <Card key={card.label} className="admin-overview-card h-full p-4 sm:p-5 transition hover:shadow-md">
+          <Card key={card.label} treatment="stat" className="admin-overview-card h-full p-4 sm:p-5 transition hover:shadow-md">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">

@@ -9,8 +9,8 @@ export default function manifest() {
     display: "standalone",
     display_override: ["standalone", "minimal-ui"],
     orientation: "portrait",
-    background_color: "#f8fafc",
-    theme_color: "#e97824",
+    background_color: "#F5FAFE",
+    theme_color: "#0F5797",
     categories: ["travel", "navigation"],
     prefer_related_applications: false,
     icons: [

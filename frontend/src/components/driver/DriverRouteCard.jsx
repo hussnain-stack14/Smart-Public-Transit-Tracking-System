@@ -5,7 +5,7 @@ export function DriverRouteCard({ route, stops, nextStopId, errors }) {
   const nextIndex = stops.findIndex((stop) => stop._id === nextStopId);
 
   return (
-    <Card className="min-w-0 p-5">
+    <Card treatment="operational" className="min-w-0 p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-bold">Route progress</h2>
         {route && <Link href={`/routes/${route._id}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--primary-ink)]">View route</Link>}

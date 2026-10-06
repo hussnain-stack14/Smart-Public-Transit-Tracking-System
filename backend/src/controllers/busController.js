@@ -1,6 +1,8 @@
 const Bus = require('../models/Bus');
 const Shift = require('../models/Shift');
 const { getStopsForRoute } = require('../services/routeStopService');
+const { publicBus, emitSeatUpdate, changeManualSeat } = require('../services/seatService');
+const { sendApiError: sendSeatError, ApiError } = require('../utils/apiError');
 const { createFleetBus, updateFleetBus, deleteFleetBus } = require('../services/busAssignmentService');
 const { sendApiError } = require('../utils/apiError');
 const { haversineDistanceKm } = require('../utils/geo');
@@ -141,7 +143,7 @@ const startReturnTrip = async (req, res) => {
 const createBus = async (req, res) => {
   try {
     const bus = await createFleetBus(req.body);
-    res.status(201).json(bus);
+    res.status(201).json(publicBus(bus));
   } catch (error) {
     sendApiError(res, error, 'Server error creating bus', 'A bus with this bus number already exists.');
   }
@@ -157,7 +159,7 @@ const getBuses = async (req, res) => {
       .populate('route', 'routeName')
       .populate('driver', 'name phone');
 
-    res.status(200).json(buses);
+    res.status(200).json(buses.map(publicBus));
   } catch (err) {
     res.status(500).json({ message: 'Server error fetching buses', error: err.message });
   }
@@ -173,7 +175,7 @@ const getBusById = async (req, res) => {
     if (!bus) {
       return res.status(404).json({ message: 'Bus not found' });
     }
-    res.status(200).json(bus);
+    res.status(200).json(publicBus(bus));
   } catch (err) {
     res.status(500).json({ message: 'Server error fetching bus', error: err.message });
   }
@@ -257,33 +259,37 @@ const updateBusLocation = async (req, res) => {
 // @route   PATCH /api/buses/:id/seats
 const updateSeatAvailability = async (req, res) => {
   try {
-    const { availableSeats } = req.body;
-
-    if (availableSeats == null) {
-      return res.status(400).json({ message: 'availableSeats is required' });
+    const { availableSeats } = req.body || {};
+    if (!Number.isInteger(availableSeats)) throw new ApiError(400, 'availableSeats must be a whole number.');
+    const bus = await Bus.findById(req.params.id);
+    if (!bus) throw new ApiError(404, 'Bus not found.');
+    if (bus.seatMap?.length) throw new ApiError(409, 'Configured buses must be managed seat by seat.');
+    if (req.user.role === 'driver') {
+      if (!sameId(req.user.assignedBus, bus._id) || !sameId(bus.driver, req.user._id)) throw new ApiError(403, 'This bus is not assigned to you.');
+      if (!await Shift.exists({ driver: req.user._id, bus: bus._id, route: bus.route, status: 'active' })) throw new ApiError(409, 'Start an active shift before updating seats.');
     }
-
-    const bus = await Bus.findByIdAndUpdate(
-      req.params.id,
-      { availableSeats },
-      { new: true, runValidators: true }
-    );
-
-    if (!bus) {
-      return res.status(404).json({ message: 'Bus not found' });
-    }
-
-    res.status(200).json(bus);
-  } catch (err) {
-    res.status(500).json({ message: 'Server error updating seat availability', error: err.message });
-  }
+    if (availableSeats < 0 || availableSeats > bus.capacity) throw new ApiError(400, 'Available seats must be within capacity.');
+    bus.availableSeats = availableSeats;
+    await bus.save();
+    emitSeatUpdate(req.app.get('io'), bus);
+    res.status(200).json(publicBus(bus));
+  } catch (error) { sendSeatError(res, error, 'Server error updating seat availability'); }
 };
 
+const updateIndividualSeat = async (req, res) => {
+  try {
+    if (Object.keys(req.body || {}).some((key) => key !== 'action')) throw new ApiError(400, 'Only action can be provided.');
+    const bus = await changeManualSeat(req.params.id, req.user._id, req.params.label, req.body?.action);
+    emitSeatUpdate(req.app.get('io'), bus);
+    res.status(200).json(publicBus(bus));
+  } catch (error) { sendSeatError(res, error, 'Server error updating seat'); }
+};
 // @route   PUT /api/buses/:id
 const updateBus = async (req, res) => {
   try {
     const bus = await updateFleetBus(req.params.id, req.body);
-    res.status(200).json(bus);
+    emitSeatUpdate(req.app.get('io'), bus);
+    res.status(200).json(publicBus(bus));
   } catch (error) {
     sendApiError(res, error, 'Server error updating bus', 'A bus with this bus number already exists.');
   }
@@ -307,6 +313,9 @@ module.exports = {
   updateBusLocation,
   startReturnTrip,
   updateSeatAvailability,
+  updateIndividualSeat,
   updateBus,
   deleteBus,
 };
+
+

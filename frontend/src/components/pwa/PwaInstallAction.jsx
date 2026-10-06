@@ -1,11 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Download } from "lucide-react";
 
 function isStandalone() {
   return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
 }
+
+function subscribeDisplayMode(callback) {
+  const displayMode = window.matchMedia("(display-mode: standalone)");
+  displayMode.addEventListener("change", callback);
+  return () => displayMode.removeEventListener("change", callback);
+}
+
+function subscribeHydration() { return () => {}; }
+function clientReady() { return true; }
+function serverReady() { return false; }
 
 function isIOSSafari() {
   const userAgent = window.navigator.userAgent;
@@ -15,7 +25,9 @@ function isIOSSafari() {
 }
 
 export function PwaInstallAction({ className = "" }) {
-  const [available, setAvailable] = useState(() => typeof window !== "undefined" && Boolean(window.__smartSafarInstallAvailable));
+  const hydrated = useSyncExternalStore(subscribeHydration, clientReady, serverReady);
+  const standalone = useSyncExternalStore(subscribeDisplayMode, isStandalone, serverReady);
+  const [available, setAvailable] = useState(false);
   const [installed, setInstalled] = useState(false);
   const [feedback, setFeedback] = useState("");
 
@@ -26,11 +38,11 @@ export function PwaInstallAction({ className = "" }) {
       setAvailable(false);
       setFeedback("");
     };
-    const standaloneCheck = window.requestAnimationFrame(() => setInstalled(isStandalone()));
+    const availabilityCheck = window.requestAnimationFrame(() => setAvailable(Boolean(window.__smartSafarInstallAvailable)));
     window.addEventListener("smart-safar:install-availability", sync);
     window.addEventListener("appinstalled", markInstalled);
     return () => {
-      window.cancelAnimationFrame(standaloneCheck);
+      window.cancelAnimationFrame(availabilityCheck);
       window.removeEventListener("smart-safar:install-availability", sync);
       window.removeEventListener("appinstalled", markInstalled);
     };
@@ -52,6 +64,6 @@ export function PwaInstallAction({ className = "" }) {
     }
   }
 
-  if (installed) return null;
+  if (!hydrated || standalone || installed) return null;
   return <span className="pwa-install-control"><button type="button" className={`pwa-install-action ${className}`} onClick={openInstall} aria-label="Install Smart Safar" title="Install Smart Safar"><Download size={18} /></button>{feedback && <span className="pwa-install-feedback" role="status">{feedback}</span>}</span>;
 }

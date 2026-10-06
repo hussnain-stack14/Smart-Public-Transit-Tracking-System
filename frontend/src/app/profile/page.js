@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { AlertCircle, BadgeCheck, Camera, CheckCircle2, ChevronRight, Eye, EyeOff, KeyRound, LockKeyhole, LogOut, Mail, Pencil, Phone, ShieldCheck, UserRound, X } from "lucide-react";
 import { Navbar } from "../../components/navigation/Navbar";
 import { Footer } from "../../components/navigation/Footer";
@@ -126,6 +127,7 @@ function Profile({ user }) {
           <aside className="profile-security-card rounded-2xl border border-[var(--border)] p-5">
             <span className="profile-security-icon grid h-11 w-11 place-items-center rounded-2xl"><KeyRound size={19} /></span>
             <h2 className="mt-4 text-lg font-bold text-[var(--foreground)]">Account & security</h2>
+            <Link href="/settings" className="mt-3 inline-flex min-h-11 items-center text-sm font-bold text-[var(--primary-ink)]">Theme settings <ChevronRight size={16} /></Link>
             <p className="mt-1 text-sm leading-6 text-[var(--muted)]">Manage how you access Smart Safar.</p>
             <button type="button" onClick={() => { setFormError(""); setDialog("password"); }} className="profile-security-action mt-5 flex min-h-12 w-full items-center justify-between rounded-xl border border-[var(--border)] px-3.5 text-left text-sm font-semibold text-[var(--foreground)]">
               <span className="inline-flex items-center gap-2"><LockKeyhole size={16} className="text-[var(--primary-ink)]" />Change password</span><ChevronRight size={17} className="text-[var(--muted)]" />

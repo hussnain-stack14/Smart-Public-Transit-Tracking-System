@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { BusFront, WifiOff, X } from "lucide-react";
@@ -9,6 +9,14 @@ import { useAuth } from "../../hooks/useAuth";
 function isStandalone() {
   return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
 }
+
+function subscribeDisplayMode(callback) {
+  const displayMode = window.matchMedia("(display-mode: standalone)");
+  displayMode.addEventListener("change", callback);
+  return () => displayMode.removeEventListener("change", callback);
+}
+
+function serverStandalone() { return false; }
 
 function isIOSSafari() {
   const userAgent = window.navigator.userAgent;
@@ -29,14 +37,18 @@ export function PwaSupport() {
   const [installPrompt, setInstallPrompt] = useState(null);
   const [showInstallPrompt, setShowInstallPrompt] = useState(true);
   const [installing, setInstalling] = useState(false);
-  const [installed, setInstalled] = useState(() => typeof window !== "undefined" && isStandalone());
+  const standalone = useSyncExternalStore(subscribeDisplayMode, isStandalone, serverStandalone);
+  const [appInstalled, setInstalled] = useState(false);
+  const installed = standalone || appInstalled;
   const [showIosHint, setShowIosHint] = useState(false);
-  const [showLaunch, setShowLaunch] = useState(() => typeof window !== "undefined" && isStandalone());
+  const [launchFinished, setLaunchFinished] = useState(false);
+  const showLaunch = standalone && !launchFinished;
   const installPromptDismissedRef = useRef(false);
   const iosHintDismissedRef = useRef(false);
   const isPublicHome = pathname === "/" && !isAuthenticated;
 
   const promptToInstall = useCallback(async () => {
+    if (installed) return;
     if (!installPrompt) {
       if (isIOSSafari() && !installed) setShowIosHint(true);
       return;
@@ -58,7 +70,7 @@ export function PwaSupport() {
   useEffect(() => {
     if (!showLaunch) return undefined;
     let completionTimer;
-    const finish = () => setShowLaunch(false);
+    const finish = () => setLaunchFinished(true);
     const onLoad = () => { completionTimer = window.setTimeout(finish, 850); };
 
     if (document.readyState === "complete") completionTimer = window.setTimeout(finish, 0);
@@ -76,6 +88,7 @@ export function PwaSupport() {
     const syncConnectivity = () => setOnline(window.navigator.onLine);
     const receiveInstallPrompt = (event) => {
       event.preventDefault();
+      if (isStandalone()) { publishInstallAvailability(false); return; }
       setInstallPrompt(event);
       if (!installPromptDismissedRef.current) setShowInstallPrompt(true);
       publishInstallAvailability(true);
@@ -90,7 +103,7 @@ export function PwaSupport() {
     const openInstall = () => promptToInstall();
 
     syncConnectivity();
-    publishInstallAvailability(Boolean(installPrompt) || (isIOSSafari() && !isStandalone()));
+    publishInstallAvailability(!installed && (Boolean(installPrompt) || (isIOSSafari() && !isStandalone())));
     window.addEventListener("online", syncConnectivity);
     window.addEventListener("offline", syncConnectivity);
     window.addEventListener("beforeinstallprompt", receiveInstallPrompt);
@@ -116,7 +129,7 @@ export function PwaSupport() {
       window.removeEventListener("smart-safar:open-install", openInstall);
       if (hintTimer) window.clearTimeout(hintTimer);
     };
-  }, [promptToInstall, installPrompt]);
+  }, [promptToInstall, installPrompt, installed]);
 
   function dismissInstallPrompt() {
     installPromptDismissedRef.current = true;

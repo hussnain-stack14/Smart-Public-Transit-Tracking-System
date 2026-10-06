@@ -7,7 +7,7 @@ import { getEtaLabel } from "../../lib/transit/format";
 export function DriverStatusCard({ bus, route, eta, errors, direction, directionLabel, shiftActive, shiftCompleted, shiftBusy, shiftError, hasRouteAssignment, gpsStatus, onShift, returnBusy, returnError, onReturn, children }) {
   const gpsLabel = !shiftActive ? "Off" : gpsStatus.state === "sharing" ? "Live" : gpsStatus.state === "permission-denied" ? "Permission required" : gpsStatus.state === "error" ? "Location error" : "Starting";
   return (
-    <Card id="driver-shift" aria-label="Driver assignment and shift" className="driver-status-card mt-4 scroll-mt-20 p-4 sm:p-5">
+    <Card treatment="operational" id="driver-shift" aria-label="Driver assignment and shift" className="driver-status-card mt-4 scroll-mt-20 p-4 sm:p-5">
       <div className="flex items-start gap-3">
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary-ink)]"><BusFront size={33} /></span>
         <div className="min-w-0 flex-1">

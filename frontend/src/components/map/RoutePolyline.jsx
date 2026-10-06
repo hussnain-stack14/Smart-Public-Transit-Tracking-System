@@ -11,12 +11,8 @@ function ArrowDecorators({ positions, color = "var(--primary)" }) {
   useEffect(() => {
     if (!map || !positions || positions.length < 2) return;
 
-    // Resolve CSS var to hex if needed (Leaflet canvas renderer can't use CSS vars).
-    const resolvedColor = color.startsWith("var(")
-      ? getComputedStyle(document.documentElement).getPropertyValue(
-          color.replace("var(", "").replace(")", "").trim(),
-        ).trim() || "#e97824"
-      : color;
+    // SVG arrow icons inherit theme variables immediately when the theme changes.
+    const resolvedColor = color;
 
     const L = window.L || require("leaflet");
     const arrows = [];

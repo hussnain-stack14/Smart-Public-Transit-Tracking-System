@@ -5,6 +5,15 @@ import { Edit3, X } from "lucide-react";
 import { Button } from "../../common/Button";
 import { busService } from "../../../services/busService";
 
+function layoutFromMap(seatMap = []) {
+  if (!seatMap.length) return "";
+  const rows = [];
+  seatMap.forEach((seat) => {
+    rows[seat.row] ||= [];
+    rows[seat.row][seat.column] = seat.label;
+  });
+  return rows.map((row) => Array.from({ length: row.length }, (_, index) => row[index] || "_").join(",")).join("\n");
+}
 const VALID_STATUSES = ["active", "idle", "maintenance"];
 
 export function EditBusModal({ isOpen, onClose, onUpdated, bus, routes = [] }) {
@@ -12,6 +21,7 @@ export function EditBusModal({ isOpen, onClose, onUpdated, bus, routes = [] }) {
   const [routeId, setRouteId] = useState(bus?.route?._id || bus?.route || "");
   const [capacity, setCapacity] = useState(bus?.capacity ?? "");
   const [availableSeats, setAvailableSeats] = useState(bus?.availableSeats ?? "");
+  const [seatLayout, setSeatLayout] = useState(layoutFromMap(bus?.seatMap));
   const [status, setStatus] = useState(bus?.status || "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -22,6 +32,11 @@ export function EditBusModal({ isOpen, onClose, onUpdated, bus, routes = [] }) {
 
 
   if (!isOpen || !bus) return null;
+  const hasSeatLayout = Boolean(bus.seatMap?.length || seatLayout.trim());
+  const layoutChanged = seatLayout.trim() !== layoutFromMap(bus.seatMap);
+  const shownAvailableSeats = hasSeatLayout
+    ? (layoutChanged ? capacity : bus.seatMap.filter((seat) => seat.status === "available").length)
+    : availableSeats;
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -39,16 +54,20 @@ export function EditBusModal({ isOpen, onClose, onUpdated, bus, routes = [] }) {
     }
     const capNum = Number(capacity);
     const seatsNum = Number(availableSeats);
-    if (!Number.isInteger(capNum) || capNum <= 0) {
-      setError("Capacity must be a positive integer.");
+    if (!Number.isInteger(capNum) || capNum <= 0 || capNum > 100) {
+      setError("Capacity must be an integer from 1 to 100.");
       return;
     }
-    if (!Number.isInteger(seatsNum) || seatsNum < 0) {
+    if (!hasSeatLayout && (!Number.isInteger(seatsNum) || seatsNum < 0)) {
       setError("Available seats cannot be negative.");
       return;
     }
-    if (seatsNum > capNum) {
+    if (!hasSeatLayout && seatsNum > capNum) {
       setError(`Available seats (${seatsNum}) cannot exceed total capacity (${capNum}).`);
+      return;
+    }
+    if (bus.seatMap?.length && !seatLayout.trim()) {
+      setError("A configured bus must keep its physical seat layout.");
       return;
     }
     if (!VALID_STATUSES.includes(status)) {
@@ -64,7 +83,8 @@ export function EditBusModal({ isOpen, onClose, onUpdated, bus, routes = [] }) {
         busNumber: trimmedBusNumber,
         route: routeId,
         capacity: capNum,
-        availableSeats: seatsNum,
+        ...(!hasSeatLayout ? { availableSeats: seatsNum } : {}),
+        ...(seatLayout.trim() && seatLayout.trim() !== layoutFromMap(bus.seatMap) ? { seatLayout: seatLayout.trim() } : {}),
         status,
       });
       if (mounted.current) { await onUpdated(updatedBus); if (mounted.current) onClose(); }
@@ -72,7 +92,7 @@ export function EditBusModal({ isOpen, onClose, onUpdated, bus, routes = [] }) {
       if (mounted.current) {
         const status = err.response?.status;
         const duplicate = String(err.response?.data?.error || "").includes("E11000");
-        setError(status === 403 ? "Administrator permission is required to manage buses." : status === 404 ? "This bus is no longer available. Refresh the fleet." : duplicate ? "This bus number is already registered. Choose a different number." : "Unable to save the bus. Check your connection and try again.");
+        setError(status === 403 ? "Administrator permission is required to manage buses." : status === 404 ? "This bus is no longer available. Refresh the fleet." : duplicate ? "This bus number is already registered. Choose a different number." : err.response?.data?.message || "Unable to save the bus. Check your connection and try again.");
       }
     } finally {
       inFlight.current = false;
@@ -87,7 +107,7 @@ export function EditBusModal({ isOpen, onClose, onUpdated, bus, routes = [] }) {
       aria-modal="true"
       aria-labelledby="edit-bus-modal-title"
     >
-      <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+      <div className="w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-[var(--border)] bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
         <div className="flex items-center justify-between border-b border-[var(--border)] pb-4">
           <div className="flex items-center gap-2">
             <span className="grid h-9 w-9 place-items-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary-ink)]">
@@ -148,7 +168,7 @@ export function EditBusModal({ isOpen, onClose, onUpdated, bus, routes = [] }) {
               <option value="" disabled>Select route</option>
               {routes.map((r) => (
                 <option key={r._id || r.id} value={r._id || r.id}>
-                  {r.routeName} ({r.startPoint} ↔ {r.endPoint})
+                  {r.routeName} ({r.startPoint} to {r.endPoint})
                 </option>
               ))}
             </select>
@@ -163,6 +183,7 @@ export function EditBusModal({ isOpen, onClose, onUpdated, bus, routes = [] }) {
                 id="edit-capacity"
                 type="number"
                 min="1"
+                max="100"
                 required
                 disabled={submitting}
                 value={capacity}
@@ -172,22 +193,30 @@ export function EditBusModal({ isOpen, onClose, onUpdated, bus, routes = [] }) {
             </div>
             <div>
               <label htmlFor="edit-availableSeats" className="block text-xs font-semibold text-[var(--foreground)] uppercase tracking-wider mb-1.5">
-                Available Seats *
+                Available Seats {hasSeatLayout ? "(derived)" : "*"}
               </label>
               <input
                 id="edit-availableSeats"
                 type="number"
                 min="0"
-                max={capacity}
+                max={hasSeatLayout ? undefined : capacity}
                 required
                 disabled={submitting}
-                value={availableSeats}
+                value={shownAvailableSeats}
+                readOnly={hasSeatLayout}
+                aria-describedby={hasSeatLayout ? "edit-seat-count-note" : undefined}
                 onChange={(e) => setAvailableSeats(e.target.value)}
                 className="field-input text-sm"
               />
             </div>
           </div>
 
+          {hasSeatLayout && <p id="edit-seat-count-note" className="text-xs leading-5 text-[var(--muted)]">Availability comes from individual seats. A replacement layout starts with all seats available and requires no occupied seats or active bookings.</p>}
+          <div>
+            <label htmlFor="edit-seat-layout" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--foreground)]">Physical seat layout</label>
+            <textarea id="edit-seat-layout" rows={4} value={seatLayout} onChange={(event) => setSeatLayout(event.target.value)} disabled={submitting} className="field-input font-mono text-sm" placeholder={'A1,A2,_,A3,A4\nB1,B2,_,B3,B4'} />
+            <p className="mt-1 text-xs leading-5 text-[var(--muted)]">Rows use comma-separated labels and _ for aisles. Seat count must equal capacity. Layout changes require all seats free and no active bookings.</p>
+          </div>
           <div>
             <label htmlFor="edit-status" className="block text-xs font-semibold text-[var(--foreground)] uppercase tracking-wider mb-1.5">
               Operational Status *

@@ -10,6 +10,7 @@ export function AddBusModal({ isOpen, onClose, onCreated, routes = [] }) {
   const [busNumber, setBusNumber] = useState("");
   const [routeId, setRouteId] = useState(routes[0]?._id || "");
   const [capacity, setCapacity] = useState("");
+  const [seatLayout, setSeatLayout] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -35,8 +36,8 @@ export function AddBusModal({ isOpen, onClose, onCreated, routes = [] }) {
       return;
     }
     const capNum = Number(capacity);
-    if (!Number.isInteger(capNum) || capNum <= 0) {
-      setError("Capacity must be a positive integer.");
+    if (!Number.isInteger(capNum) || capNum <= 0 || capNum > 100) {
+      setError("Capacity must be an integer from 1 to 100.");
       return;
     }
 
@@ -47,13 +48,14 @@ export function AddBusModal({ isOpen, onClose, onCreated, routes = [] }) {
         busNumber: trimmedBusNumber,
         route: routeId,
         capacity: capNum,
+        ...(seatLayout.trim() ? { seatLayout: seatLayout.trim() } : {}),
       });
       if (mounted.current) { await onCreated(newBus); if (mounted.current) onClose(); }
     } catch (err) {
       if (mounted.current) {
         const status = err.response?.status;
         const duplicate = String(err.response?.data?.error || "").includes("E11000");
-        setError(status === 403 ? "Administrator permission is required to manage buses." : status === 404 ? "This bus is no longer available. Refresh the fleet." : duplicate ? "This bus number is already registered. Choose a different number." : "Unable to save the bus. Check your connection and try again.");
+        setError(status === 403 ? "Administrator permission is required to manage buses." : status === 404 ? "This bus is no longer available. Refresh the fleet." : duplicate ? "This bus number is already registered. Choose a different number." : err.response?.data?.message || "Unable to save the bus. Check your connection and try again.");
       }
     } finally {
       inFlight.current = false;
@@ -68,7 +70,7 @@ export function AddBusModal({ isOpen, onClose, onCreated, routes = [] }) {
       aria-modal="true"
       aria-labelledby="add-bus-modal-title"
     >
-      <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+      <div className="w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-[var(--border)] bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
         <div className="flex items-center justify-between border-b border-[var(--border)] pb-4">
           <div className="flex items-center gap-2">
             <span className="grid h-9 w-9 place-items-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary-ink)]">
@@ -131,7 +133,7 @@ export function AddBusModal({ isOpen, onClose, onCreated, routes = [] }) {
               <option value="" disabled>Select transit corridor</option>
               {routes.map((r) => (
                 <option key={r._id || r.id} value={r._id || r.id}>
-                  {r.routeName} ({r.startPoint} ↔ {r.endPoint})
+                  {r.routeName} ({r.startPoint} to {r.endPoint})
                 </option>
               ))}
             </select>
@@ -145,6 +147,7 @@ export function AddBusModal({ isOpen, onClose, onCreated, routes = [] }) {
               id="capacity"
               type="number"
               min="1"
+              max="100"
               required
               disabled={submitting}
               value={capacity}
@@ -156,6 +159,11 @@ export function AddBusModal({ isOpen, onClose, onCreated, routes = [] }) {
             </p>
           </div>
 
+          <div>
+            <label htmlFor="seat-layout" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--foreground)]">Physical seat layout (optional)</label>
+            <textarea id="seat-layout" rows={4} value={seatLayout} onChange={(event) => setSeatLayout(event.target.value)} disabled={submitting} className="field-input font-mono text-sm" placeholder={'A1,A2,_,A3,A4\nB1,B2,_,B3,B4'} />
+            <p className="mt-1 text-xs leading-5 text-[var(--muted)]">One row per line; comma-separated labels, _ for an aisle. Unique seat count must equal capacity. Leave blank for a legacy count-only bus.</p>
+          </div>
           <div className="mt-6 flex items-center justify-end gap-2.5 border-t border-[var(--border)] pt-4">
             <Button type="button" variant="secondary" className="min-h-12" onClick={onClose} disabled={submitting}>
               Cancel

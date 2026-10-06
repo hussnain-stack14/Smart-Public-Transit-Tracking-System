@@ -17,6 +17,7 @@ import { BookingProgress } from "./BookingProgress";
 import { Badge } from "../common/Badge";
 import { Button } from "../common/Button";
 import { Card } from "../common/Card";
+import { CardBackdrop } from "../common/CardBackdrop";
 import { ErrorState } from "../common/ErrorState";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { bookingService } from "../../services/bookingService";
@@ -165,7 +166,8 @@ export default function ConfirmationPage({ bookingId }) {
     <PageShell>
       <div className="mx-auto max-w-4xl">
         <BookingProgress currentStep={3} />
-        <section className="mt-8 text-center">
+        <section className="premium-card premium-card--primary premium-card--imagery mt-8 p-5 text-center sm:p-7">
+          <CardBackdrop visual="journey" priority />
           <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[var(--success-soft)] text-[var(--success)]">
             <CheckCircle2 size={34} />
           </span>
@@ -180,7 +182,7 @@ export default function ConfirmationPage({ bookingId }) {
           </p>
         </section>
 
-        <Card className="mt-8 overflow-hidden">
+        <Card treatment="operational" className="mt-8 overflow-hidden">
           <div className="flex flex-col justify-between gap-4 border-b border-[var(--border)] bg-[var(--primary-soft)] p-5 sm:flex-row sm:items-center sm:p-6">
             <div className="flex min-w-0 items-center gap-3">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-[var(--primary-ink)]">
@@ -307,7 +309,7 @@ function InfoRow({ icon: Icon, label, value, badgeTone }) {
 
 function StateCard({ title, description, actionHref, actionLabel }) {
   return (
-    <Card className="mx-auto max-w-lg p-8 text-center">
+    <Card treatment="operational" className="mx-auto max-w-lg p-8 text-center">
       <h1 className="text-2xl font-bold text-[var(--foreground)]">{title}</h1>
       <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{description}</p>
       <Link

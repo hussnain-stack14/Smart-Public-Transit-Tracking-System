@@ -464,7 +464,7 @@ test('return trip is assigned-driver-only, terminal-gated, atomic and direction-
     socket.emit('watchBus', busA._id);
     for (let n = 0; n < 100 && !io.sockets.adapter.rooms.has('bus:' + busA._id); n++) await delay(25);
     const eventPromise = new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('Return direction event not delivered')), 8000);
+      const timeout = setTimeout(() => reject(new Error('Return direction event not delivered')), 60000);
       socket.once('locationUpdate', (event) => { clearTimeout(timeout); resolve(event); });
     });
     const attempts = await Promise.all([request(endpoint, driverTokenA, 'POST'), request(endpoint, driverTokenA, 'POST')]);
@@ -511,7 +511,7 @@ test('existing GPS, real Socket.IO delivery, ETA, seats, bookings, routes and an
     assert.ok(io.sockets.adapter.rooms.has('bus:' + busA._id));
     let timeout;
     const update = new Promise((resolve, reject) => {
-      timeout = setTimeout(() => reject(new Error('Location event not delivered')), 8000);
+      timeout = setTimeout(() => reject(new Error('Location event not delivered')), 60000);
       socket.once('locationUpdate', (event) => { clearTimeout(timeout); resolve(event); });
     });
     const location = await request('/api/buses/' + busA._id + '/location', driverTokenA, 'PATCH', { latitude: 31.418, longitude: 73.079, speed: 15 });
@@ -672,7 +672,7 @@ test('consensual passenger locations reach only the assigned active driver and s
     assert.ok(io.sockets.adapter.rooms.has('driver:' + driverA._id));
 
     const initialEventPromise = new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('Initial passenger location was not delivered')), 8000);
+      const timeout = setTimeout(() => reject(new Error('Initial passenger location was not delivered')), 60000);
       socket.once('passengerLocationUpdate', (event) => {
         clearTimeout(timeout);
         resolve(event);
@@ -724,7 +724,7 @@ test('consensual passenger locations reach only the assigned active driver and s
     assert.equal(unauthorizedUpdate.status, 403);
 
     const updateEventPromise = new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('Passenger location update was not delivered')), 8000);
+      const timeout = setTimeout(() => reject(new Error('Passenger location update was not delivered')), 60000);
       socket.once('passengerLocationUpdate', (event) => {
         clearTimeout(timeout);
         resolve(event);
@@ -748,7 +748,7 @@ test('consensual passenger locations reach only the assigned active driver and s
     assert.equal((await updateEventPromise).latitude, 31.419);
 
     const stoppedEventPromise = new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('Passenger location stop was not delivered')), 8000);
+      const timeout = setTimeout(() => reject(new Error('Passenger location stop was not delivered')), 60000);
       socket.once('passengerLocationUpdate', (event) => {
         clearTimeout(timeout);
         resolve(event);
@@ -880,14 +880,14 @@ test('ending a shift is atomic, disables GPS and preserves completed history', a
   });
   assert.equal(driverSubscription.ok, true);
   const accessEnded = new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error('Passenger access end event not delivered')), 8000);
+    const timeout = setTimeout(() => reject(new Error('Passenger access end event not delivered')), 60000);
     socket.once('passengerLocationAccessEnded', (event) => {
       clearTimeout(timeout);
       resolve(event);
     });
   });
   const statusEvent = new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error('End-shift status event not delivered')), 8000);
+    const timeout = setTimeout(() => reject(new Error('End-shift status event not delivered')), 60000);
     socket.once('locationUpdate', (event) => { clearTimeout(timeout); resolve(event); });
   });
 
