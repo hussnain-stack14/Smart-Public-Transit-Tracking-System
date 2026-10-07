@@ -8,6 +8,7 @@ const {
   publicRouteStop,
   stopIdentity,
 } = require('../services/routeStopService');
+const { queueRouteGeometryRefresh } = require('../services/routeGeometryService');
 
 function validCoordinates(latitude, longitude) {
   return Number.isFinite(Number(latitude)) && Number(latitude) >= -90 && Number(latitude) <= 90 &&
@@ -35,6 +36,7 @@ const createStop = async (req, res) => {
       return res.status(409).json({ message: 'This physical stop is already assigned to the selected route.' });
     }
     const assignment = await RouteStop.create({ route, stop: stop._id, stopOrder: Number(stopOrder) });
+    queueRouteGeometryRefresh(route);
     res.status(201).json(publicRouteStop(await populatedAssignment(assignment._id)));
   } catch (err) {
     res.status(500).json({ message: 'Server error creating stop', error: err.message });
@@ -105,6 +107,8 @@ const updateStop = async (req, res) => {
     if (!targetStop._id.equals(currentStop._id) && !await RouteStop.exists({ stop: currentStop._id })) {
       await Stop.deleteOne({ _id: currentStop._id });
     }
+    queueRouteGeometryRefresh(assignment.route);
+    if (originalRoute && String(originalRoute) !== String(assignment.route)) queueRouteGeometryRefresh(originalRoute);
     res.status(200).json(publicRouteStop(await populatedAssignment(assignment._id)));
   } catch (err) {
     res.status(500).json({ message: 'Server error updating stop', error: err.message });
@@ -125,6 +129,7 @@ const deleteStop = async (req, res) => {
 
     const stillUsed = await RouteStop.exists({ stop: req.params.id });
     if (!stillUsed) await Stop.deleteOne({ _id: req.params.id });
+    queueRouteGeometryRefresh(assignment.route);
     res.status(200).json({ message: 'Stop removed from route', physicalStopDeleted: !stillUsed });
   } catch (err) {
     res.status(500).json({ message: 'Server error deleting stop', error: err.message });

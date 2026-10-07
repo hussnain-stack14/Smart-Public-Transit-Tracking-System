@@ -156,7 +156,7 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
     setSubmitError("");
     if (!bookingBus) {
       setSubmitError(
-        "No active bus with an assigned driver and available seats is currently shown for this route.",
+        "No active bus is available for this route right now.",
       );
       return;
     }
@@ -183,14 +183,13 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
         <header className="premium-card premium-card--primary premium-card--imagery p-5 sm:p-7">
           <CardBackdrop visual="booking" priority />
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary-ink)]">
-            Plan your journey
+            Book your journey
           </p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--foreground)] sm:text-4xl">
-            Reserve your seat.
+            Choose your route
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
-            Start with a route. Smart Safar selects the current valid bus and assigned driver,
-            while manual mode lets you choose from the currently available assignments.
+            Select a route and Smart Safar will show an active bus with available seats.
           </p>
         </header>
 
@@ -219,9 +218,9 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
                   <RouteIcon size={19} />
                 </span>
                 <div>
-                  <h2 className="text-xl font-bold text-[var(--foreground)]">Trip Details</h2>
+                  <h2 className="text-xl font-bold text-[var(--foreground)]">Route selection</h2>
                   <p className="mt-1 text-sm text-[var(--muted)]">
-                    Select a route, then review the active assignment.
+                    Choose a route to see the active service.
                   </p>
                 </div>
               </div>
@@ -242,15 +241,33 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
                   </select>
                 </Field>
 
+                {selectedRoute && (
+                  <section className="rounded-2xl border border-[var(--primary-border)] bg-[var(--primary-soft)] p-4">
+                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--primary-ink)]">Selected route</p>
+                    <div className="mt-3 grid items-center gap-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--muted)]">Start</p>
+                        <p className="mt-1 break-words font-semibold text-[var(--foreground)]">{selectedRoute.startPoint || "Route start"}</p>
+                      </div>
+                      <ArrowRight size={16} className="text-[var(--primary-ink)] sm:hidden" aria-hidden="true" />
+                      <ArrowRight size={18} className="hidden text-[var(--primary-ink)] sm:block" aria-hidden="true" />
+                      <div className="min-w-0 sm:text-right">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--muted)]">Destination</p>
+                        <p className="mt-1 break-words font-semibold text-[var(--foreground)]">{selectedRoute.endPoint || "Route destination"}</p>
+                      </div>
+                    </div>
+                  </section>
+                )}
+
                 {selectedRouteId && (
                   <section className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--primary-ink)]">
-                          {manualSelection ? "Manual selection" : "Automatic assignment"}
+                          Active service
                         </p>
                         <h3 className="mt-1 font-bold text-[var(--foreground)]">
-                          {bookingBus?.busNumber || "No eligible bus available"}
+                          {bookingBus?.busNumber || "No active bus available"}
                         </h3>
                         <p className="mt-1 text-sm text-[var(--muted)]">
                           {bookingBus
@@ -258,17 +275,22 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
                               " · " +
                               bookingBus.availableSeats +
                               " seats available"
-                            : "No active bus with an assigned driver is available for this route yet."}
+                            : "No active bus is available for this route right now."}
                         </p>
                       </div>
                       {bookingBus && <Badge tone="success">{busStatusLabel(bookingBus.status)}</Badge>}
                     </div>
 
+                    {bookingBus && <dl className="mt-4 grid gap-3 border-t border-[var(--border)] pt-4 text-sm sm:grid-cols-2">
+                      <div><dt className="text-xs font-medium text-[var(--muted)]">Driver</dt><dd className="mt-1 font-semibold text-[var(--foreground)]">{getDriverName(bookingBus)}</dd></div>
+                      <div><dt className="text-xs font-medium text-[var(--muted)]">Available seats</dt><dd className="mt-1 font-semibold text-[var(--foreground)]">{bookingBus.availableSeats} seats available</dd></div>
+                    </dl>}
+
                     {manualSelection && (
                       <div className="mt-4">
-                        <Field label="Valid bus and driver" error={errors.bus?.message}>
+                        <Field label="Choose an active bus" error={errors.bus?.message}>
                           <select {...register("bus")} className="field-input">
-                            <option value="">Select an active assignment</option>
+                            <option value="">Select a bus</option>
                             {eligibleBuses.map((bus) => (
                               <option key={bus._id} value={bus._id}>
                                 {bus.busNumber} · {getDriverName(bus)} · {bus.availableSeats} seats
@@ -276,6 +298,7 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
                             ))}
                           </select>
                         </Field>
+                        {!eligibleBuses.length && <p className="mt-3 text-sm text-[var(--muted)]">There&apos;s no available bus for this route right now.</p>}
                       </div>
                     )}
 
@@ -284,13 +307,13 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
                       onClick={toggleManualSelection}
                       className="mt-4 min-h-10 text-sm font-semibold text-[var(--primary-ink)] hover:text-[var(--primary-ink)]"
                     >
-                      {manualSelection ? "Use automatic assignment" : "Book manually / Change selection"}
+                      {manualSelection ? "Use automatic service" : "Choose a different bus"}
                     </button>
 
                     {!manualSelection && bookingBus && (
                       <div className="mt-3 flex items-start gap-2 rounded-xl bg-white p-3 text-xs leading-5 text-[var(--muted)]">
                         <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-[var(--success)]" />
-                        We&apos;ll confirm the bus, driver, and seat availability when you book.
+                        This service will be checked again when you continue to seat selection.
                       </div>
                     )}
                   </section>
@@ -306,7 +329,7 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
                 </span>
                 <div>
                   <h2 className="text-xl font-bold text-[var(--foreground)]">Booking Summary</h2>
-                  <p className="mt-1 text-sm text-[var(--muted)]">Review before selecting a seat.</p>
+                  <p className="mt-1 text-sm text-[var(--muted)]">Seat selection comes next.</p>
                 </div>
               </div>
               <dl className="mt-6 grid gap-4 border-t border-[var(--border)] pt-5 text-sm">
@@ -318,7 +341,7 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
 
               {noEligibleBus && (
                 <div className="mt-5 rounded-xl border border-[#f4cccc] bg-[#fff8f8] p-3 text-sm text-[var(--danger)]">
-                  No valid active bus and driver assignment is currently available for this route.
+                  No active bus is available for this route right now.
                 </div>
               )}
               {submitError && (
@@ -326,7 +349,7 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
               )}
               {!authLoading && !isAuthenticated && (
                 <div className="mt-5 rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 text-sm text-[var(--muted)]">
-                  You will be asked to sign in before seat selection.
+                  Sign in is required before choosing a seat.
                 </div>
               )}
               <Button
@@ -334,7 +357,7 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
                 className="mt-6 w-full gap-2"
                 disabled={authLoading || !isAuthenticated || routesLoading || !selectedRouteId || !bookingBus}
               >
-                {isAuthenticated ? "Continue to Seat Selection" : "Log in to continue"}
+                {isAuthenticated ? "Continue to seats" : "Log in to continue"}
                 <ArrowRight size={16} />
               </Button>
             </Card>

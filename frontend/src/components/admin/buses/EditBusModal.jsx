@@ -22,6 +22,8 @@ export function EditBusModal({ isOpen, onClose, onUpdated, bus, routes = [] }) {
   const [capacity, setCapacity] = useState(bus?.capacity ?? "");
   const [availableSeats, setAvailableSeats] = useState(bus?.availableSeats ?? "");
   const [seatLayout, setSeatLayout] = useState(layoutFromMap(bus?.seatMap));
+  const [gentsSeats, setGentsSeats] = useState(bus?.seatSections?.gents || "");
+  const [ladiesSeats, setLadiesSeats] = useState(bus?.seatSections?.ladies || "");
   const [status, setStatus] = useState(bus?.status || "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -58,6 +60,14 @@ export function EditBusModal({ isOpen, onClose, onUpdated, bus, routes = [] }) {
       setError("Capacity must be an integer from 1 to 100.");
       return;
     }
+    const usesSections = gentsSeats !== "" || ladiesSeats !== "";
+    const gentsNum = Number(gentsSeats);
+    const ladiesNum = Number(ladiesSeats);
+    const sectionsChanged = usesSections && (gentsNum !== Number(bus.seatSections?.gents || 0) || ladiesNum !== Number(bus.seatSections?.ladies || 0));
+    if (usesSections && (!Number.isInteger(gentsNum) || !Number.isInteger(ladiesNum) || gentsNum < 0 || ladiesNum < 0 || gentsNum + ladiesNum !== capNum)) {
+      setError("Gents and ladies seat counts must be whole numbers that add up to capacity.");
+      return;
+    }
     if (!hasSeatLayout && (!Number.isInteger(seatsNum) || seatsNum < 0)) {
       setError("Available seats cannot be negative.");
       return;
@@ -83,6 +93,7 @@ export function EditBusModal({ isOpen, onClose, onUpdated, bus, routes = [] }) {
         busNumber: trimmedBusNumber,
         route: routeId,
         capacity: capNum,
+        ...(sectionsChanged ? { gentsSeats: gentsNum, ladiesSeats: ladiesNum } : {}),
         ...(!hasSeatLayout ? { availableSeats: seatsNum } : {}),
         ...(seatLayout.trim() && seatLayout.trim() !== layoutFromMap(bus.seatMap) ? { seatLayout: seatLayout.trim() } : {}),
         status,
@@ -212,10 +223,15 @@ export function EditBusModal({ isOpen, onClose, onUpdated, bus, routes = [] }) {
           </div>
 
           {hasSeatLayout && <p id="edit-seat-count-note" className="text-xs leading-5 text-[var(--muted)]">Availability comes from individual seats. A replacement layout starts with all seats available and requires no occupied seats or active bookings.</p>}
+          <div className="grid grid-cols-2 gap-3">
+            <div><label htmlFor="edit-gents-seats" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--foreground)]">Gents seats</label><input id="edit-gents-seats" type="number" min="0" max="100" value={gentsSeats} onChange={(event) => setGentsSeats(event.target.value)} disabled={submitting} className="field-input text-sm" /></div>
+            <div><label htmlFor="edit-ladies-seats" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--foreground)]">Ladies seats</label><input id="edit-ladies-seats" type="number" min="0" max="100" value={ladiesSeats} onChange={(event) => setLadiesSeats(event.target.value)} disabled={submitting} className="field-input text-sm" /></div>
+          </div>
+          <p className="-mt-2 text-xs leading-5 text-[var(--muted)]">Configure both counts for a sectioned Gents/Ladies map. Changing sections replaces the layout only when every seat is free.</p>
           <div>
             <label htmlFor="edit-seat-layout" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--foreground)]">Physical seat layout</label>
-            <textarea id="edit-seat-layout" rows={4} value={seatLayout} onChange={(event) => setSeatLayout(event.target.value)} disabled={submitting} className="field-input font-mono text-sm" placeholder={'A1,A2,_,A3,A4\nB1,B2,_,B3,B4'} />
-            <p className="mt-1 text-xs leading-5 text-[var(--muted)]">Rows use comma-separated labels and _ for aisles. Seat count must equal capacity. Layout changes require all seats free and no active bookings.</p>
+            <textarea id="edit-seat-layout" rows={4} value={seatLayout} onChange={(event) => setSeatLayout(event.target.value)} disabled={submitting} className="field-input font-mono text-sm" placeholder={'G01,G02,_,G03,G04\nW01,W02,_,W03,W04'} />
+            <p className="mt-1 text-xs leading-5 text-[var(--muted)]">Rows use comma-separated labels and _ for aisles. Seat count must equal capacity. Sectioned layouts use G01… and W01… labels matching the configured counts.</p>
           </div>
           <div>
             <label htmlFor="edit-status" className="block text-xs font-semibold text-[var(--foreground)] uppercase tracking-wider mb-1.5">

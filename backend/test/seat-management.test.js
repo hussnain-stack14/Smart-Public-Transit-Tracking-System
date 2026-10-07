@@ -75,6 +75,21 @@ after(async () => {
   } finally { await mongoose.disconnect(); }
 }, { timeout: 45000 });
 
+test('admin section configuration creates labelled front-to-back individual seats', { timeout: 45000 }, async () => {
+  const created = await request('/api/buses', adminToken, 'POST', {
+    busNumber: 'SEAT-SECTION-01', route: route._id, capacity: 6, gentsSeats: 2, ladiesSeats: 4,
+  });
+  assert.equal(created.status, 201);
+  assert.deepEqual(created.data.seatSections, { gents: 2, ladies: 4 });
+  assert.deepEqual(created.data.seatMap.map((seat) => seat.label), ['G01', 'G02', 'W01', 'W02', 'W03', 'W04']);
+  assert.deepEqual(created.data.seatMap.map((seat) => seat.section), ['gents', 'gents', 'ladies', 'ladies', 'ladies', 'ladies']);
+  assert.ok(created.data.seatMap.filter((seat) => seat.section === 'ladies').every((seat) => seat.row > created.data.seatMap.find((seat) => seat.section === 'gents').row));
+  const invalid = await request('/api/buses', adminToken, 'POST', {
+    busNumber: 'SEAT-SECTION-INVALID', route: route._id, capacity: 6, gentsSeats: 2, ladiesSeats: 3,
+  });
+  assert.equal(invalid.status, 400);
+});
+
 test('configured seats stay consistent across driver, booking, concurrency, and sockets', { timeout: 240000 }, async () => {
   const endpoint = (seat) => `/api/buses/${bus._id}/seats/${seat}`;
   assert.equal((await request(endpoint('A1'), otherDriverToken, 'PATCH', { action: 'occupy' })).status, 403);

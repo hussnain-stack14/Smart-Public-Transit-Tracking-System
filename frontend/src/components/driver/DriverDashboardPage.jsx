@@ -395,7 +395,7 @@ function DriverOperations({ user, view }) {
     shift: "Shift",
     route: "Route",
     tracking: "Live Tracking",
-    seats: "Seat Management",
+    seats: "Seats",
   }[view] || "Driver Dashboard";
 
   return (
@@ -404,7 +404,7 @@ function DriverOperations({ user, view }) {
         <div className="relative z-10 min-w-0"><p className="text-xs font-bold uppercase tracking-[.14em] text-[var(--primary-ink)]">Driver operations</p><h1 className="mt-1 text-2xl font-bold">{viewTitle}</h1><p className="mt-1 break-words text-sm text-[var(--muted)]">{profile.name}</p></div>
         <div className="relative z-10">{retry}</div>
       </header>
-      {bus && !error && <DriverStatusCard bus={bus} route={route} eta={eta} errors={errors} direction={direction} directionLabel={directionLabel} shiftActive={shiftActive} shiftCompleted={shiftCompleted} shiftBusy={shiftBusy} shiftError={shiftError} hasRouteAssignment={hasRouteAssignment} gpsStatus={gpsStatus} onShift={shiftActive ? endShift : startShift} returnBusy={returnBusy} returnError={returnError} onReturn={startReturnTrip}>
+      {bus && !error && view !== "seats" && <DriverStatusCard bus={bus} route={route} eta={eta} errors={errors} direction={direction} directionLabel={directionLabel} shiftActive={shiftActive} shiftCompleted={shiftCompleted} shiftBusy={shiftBusy} shiftError={shiftError} hasRouteAssignment={hasRouteAssignment} gpsStatus={gpsStatus} onShift={shiftActive ? endShift : startShift} returnBusy={returnBusy} returnError={returnError} onReturn={startReturnTrip}>
         {trackingView && <DriverLocationControl key={`location-${bus._id}-${activeShift?._id || "inactive"}`} bus={bus} enabled={shiftActive} onUpdate={locationUpdated} onStatusChange={locationStatusChanged} />}
       </DriverStatusCard>}
       {loading && !bus ? <div className="grid min-h-80 place-items-center"><LoadingSpinner label="Loading assigned bus, route, ETA and alerts..." /></div> : error ? <div className="mt-6"><ErrorState title="Driver information unavailable" description={error} action={retry} /></div> : !bus ? <div className="mt-6"><EmptyState title="No Bus Assigned" description="Please contact the administrator to get a bus assigned before starting a shift." /></div> : (
@@ -418,7 +418,7 @@ function DriverOperations({ user, view }) {
           {view === "shift" && <section className="driver-section-note mt-4"><p>Shift controls use your existing assigned bus and active-shift state. Start location sharing from Live Tracking after the shift begins.</p><Link href="/driver/tracking">Open live tracking</Link></section>}
           {view === "route" && <div className="driver-detail-grid mt-4"><DriverRouteCard route={route} stops={directionalStops} nextStopId={nextStopId} errors={errors} /></div>}
           {view === "tracking" && <div className="driver-main-grid mt-4 grid items-start gap-4 md:grid-cols-2"><DriverMap bus={bus} stops={directionalStops} nextStopId={nextStopId} connection={connection} passengers={passengerLocations} /><DriverPassengerPanel active={shiftActive} passengers={passengerLocations} loading={passengerLoading} error={passengerError} onRetry={loadPassengerLocations} /></div>}
-          {view === "seats" && <Card treatment="operational" className="mt-4 min-w-0 p-5"><h2 className="font-bold">Bus controls</h2>{seatSyncError && <p role="status" className="mt-3 text-sm text-[var(--warning)]">{seatSyncError}</p>}<DriverSeatControl key={`seats-${bus._id}`} bus={bus} onUpdate={seatsUpdated} shiftActive={shiftActive} /></Card>}
+          {view === "seats" && <Card treatment="operational" className="mt-4 min-w-0 p-5"><h2 className="font-bold">Seats</h2>{seatSyncError && <p role="status" className="mt-3 text-sm text-[var(--warning)]">{seatSyncError}</p>}<DriverSeatControl key={`seats-${bus._id}`} bus={bus} onUpdate={seatsUpdated} shiftActive={shiftActive} /></Card>}
         </>
       )}
     </>

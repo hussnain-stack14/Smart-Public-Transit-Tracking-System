@@ -5,21 +5,66 @@ const { ApiError } = require('../utils/apiError');
 const { assertObjectId } = require('../utils/accountValidation');
 const { runInTransaction } = require('./transactionService');
 
-function parseSeatLayout(value, capacity) {
+function sectionForLabel(label) {
+  if (/^G\d/i.test(label)) return 'gents';
+  if (/^W\d/i.test(label)) return 'ladies';
+  return 'general';
+}
+
+function sectionCounts(seats) {
+  return seats.reduce((counts, seat) => {
+    if (seat.section === 'gents' || seat.section === 'ladies') counts[seat.section] += 1;
+    return counts;
+  }, { gents: 0, ladies: 0 });
+}
+
+function normalizeSeatSections({ gentsSeats, ladiesSeats }, capacity) {
+  const supplied = gentsSeats !== undefined || ladiesSeats !== undefined;
+  if (!supplied) return null;
+  if (gentsSeats === undefined || ladiesSeats === undefined) {
+    throw new ApiError(400, 'Provide both gents and ladies seat counts to configure sections.');
+  }
+  if (!Number.isInteger(gentsSeats) || !Number.isInteger(ladiesSeats) || gentsSeats < 0 || ladiesSeats < 0 || gentsSeats + ladiesSeats !== capacity) {
+    throw new ApiError(400, 'Gents and ladies seat counts must be whole numbers that add up to total capacity.');
+  }
+  return { gents: gentsSeats, ladies: ladiesSeats };
+}
+
+function buildSectionSeatMap(sections) {
+  const seats = [];
+  let row = 0;
+  for (const [section, prefix, count] of [['gents', 'G', sections.gents], ['ladies', 'W', sections.ladies]]) {
+    for (let index = 0; index < count; index += 1) {
+      const column = [0, 1, 3, 4][index % 4];
+      seats.push({ label: `${prefix}${String(index + 1).padStart(2, '0')}`, row, column, section, status: 'available', booking: null });
+      if (index % 4 === 3) row += 1;
+    }
+    if (count % 4) row += 1;
+  }
+  return seats;
+}
+
+function parseSeatLayout(value, capacity, expectedSections = null) {
   if (typeof value !== 'string' || !value.trim()) throw new ApiError(400, 'Seat layout must contain labelled rows. Use _ for an aisle or empty position.');
   const rows = value.trim().split(/\r?\n/).map((row) => row.split(',').map((cell) => cell.trim().toUpperCase()));
   if (rows.length > 40 || rows.some((row) => row.length > 6 || row.some((cell) => !cell || (cell !== '_' && !/^[A-Z0-9-]{1,12}$/.test(cell))))) {
     throw new ApiError(400, 'Seat layout must have at most 40 rows and 6 comma-separated positions per row.');
   }
-  const seats = rows.flatMap((row, rowIndex) => row.flatMap((label, column) => label === '_' ? [] : [{ label, row: rowIndex, column, status: 'available', booking: null }]));
+  const seats = rows.flatMap((row, rowIndex) => row.flatMap((label, column) => label === '_' ? [] : [{ label, row: rowIndex, column, section: sectionForLabel(label), status: 'available', booking: null }]));
   if (!seats.length || seats.length > 100 || seats.length !== capacity || new Set(seats.map((seat) => seat.label)).size !== seats.length) {
     throw new ApiError(400, 'Seat labels must be unique and their count must match capacity (maximum 100).');
+  }
+  if (expectedSections) {
+    const actual = sectionCounts(seats);
+    if (actual.gents !== expectedSections.gents || actual.ladies !== expectedSections.ladies || seats.some((seat) => seat.section === 'general')) {
+      throw new ApiError(400, 'Sectioned layouts must use G01… labels for gents and W01… labels for ladies, matching the configured counts.');
+    }
   }
   return seats;
 }
 
 function publicSeatMap(bus) {
-  return (bus.seatMap || []).map(({ label, row, column, status }) => ({ label, row, column, status }));
+  return (bus.seatMap || []).map(({ label, row, column, section, status }) => ({ label, row, column, section: section || sectionForLabel(label), status }));
 }
 
 function seatCount(bus) {
@@ -69,4 +114,4 @@ async function changeManualSeat(busId, driverId, label, action) {
   });
 }
 
-module.exports = { parseSeatLayout, publicSeatMap, publicBus, seatCount, emitSeatUpdate, emitSeatUpdateById, changeManualSeat };
+module.exports = { parseSeatLayout, normalizeSeatSections, buildSectionSeatMap, publicSeatMap, publicBus, seatCount, emitSeatUpdate, emitSeatUpdateById, changeManualSeat };

@@ -1,12 +1,12 @@
 const Bus = require('../models/Bus');
 const Booking = require('../models/Booking');
-const { parseSeatLayout, seatCount } = require('./seatService');
+const { parseSeatLayout, normalizeSeatSections, buildSectionSeatMap, seatCount } = require('./seatService');
 const User = require('../models/User');
 const { ApiError } = require('../utils/apiError');
 const { assertObjectId, requireObjectBody } = require('../utils/accountValidation');
 const { runInTransaction } = require('./transactionService');
 
-const BUS_FIELDS = ['busNumber', 'route', 'driver', 'capacity', 'availableSeats', 'currentLocation', 'lastLocationUpdate', 'status', 'trustScore', 'currentStopIndex', 'recentSpeeds', 'seatLayout'];
+const BUS_FIELDS = ['busNumber', 'route', 'driver', 'capacity', 'availableSeats', 'currentLocation', 'lastLocationUpdate', 'status', 'trustScore', 'currentStopIndex', 'recentSpeeds', 'seatLayout', 'gentsSeats', 'ladiesSeats'];
 
 function busUpdates(body) {
   requireObjectBody(body);
@@ -48,13 +48,14 @@ async function setDriver(bus, driverId, session) {
 
 async function createFleetBus(body) {
   const values = busUpdates(body);
-  const { busNumber, route, capacity, driver, seatLayout } = values;
+  const { busNumber, route, capacity, driver, seatLayout, gentsSeats, ladiesSeats, ...busValues } = values;
   if (!busNumber || !route || capacity == null) throw new ApiError(400, 'busNumber, route, and capacity are required');
   if (!Number.isInteger(capacity) || capacity < 1 || capacity > 100) throw new ApiError(400, 'Capacity must be a whole number between 1 and 100.');
   assertObjectId(route, 'Route ID');
-  const seatMap = seatLayout ? parseSeatLayout(seatLayout, capacity) : [];
+  const seatSections = normalizeSeatSections({ gentsSeats, ladiesSeats }, capacity);
+  const seatMap = seatLayout ? parseSeatLayout(seatLayout, capacity, seatSections) : seatSections ? buildSectionSeatMap(seatSections) : [];
   return runInTransaction(async (session) => {
-    const bus = new Bus({ ...values, busNumber, route, capacity, availableSeats: capacity, seatMap });
+    const bus = new Bus({ ...busValues, busNumber, route, capacity, availableSeats: capacity, seatSections: seatSections || undefined, seatMap });
     await setDriver(bus, driver === undefined || driver === '' ? null : driver, session);
     await bus.save({ session });
     return bus;
@@ -67,13 +68,14 @@ async function updateFleetBus(id, body) {
   return runInTransaction(async (session) => {
     const bus = await Bus.findById(id).session(session);
     if (!bus) throw new ApiError(404, 'Bus not found.');
-    const { driver, seatLayout, ...fields } = updates;
+    const { driver, seatLayout, gentsSeats, ladiesSeats, ...fields } = updates;
     const nextCapacity = Object.hasOwn(fields, 'capacity') ? fields.capacity : bus.capacity;
     if (!Number.isInteger(nextCapacity) || nextCapacity < 1 || nextCapacity > 100) throw new ApiError(400, 'Capacity must be a whole number between 1 and 100.');
-    if (seatLayout !== undefined) {
-      const requestedMap = parseSeatLayout(seatLayout, nextCapacity);
-      const existing = (bus.seatMap || []).map((seat) => `${seat.label}:${seat.row}:${seat.column}`).join('|');
-      const requested = requestedMap.map((seat) => `${seat.label}:${seat.row}:${seat.column}`).join('|');
+    const requestedSections = normalizeSeatSections({ gentsSeats, ladiesSeats }, nextCapacity);
+    if (seatLayout !== undefined || requestedSections) {
+      const requestedMap = seatLayout !== undefined ? parseSeatLayout(seatLayout, nextCapacity, requestedSections) : buildSectionSeatMap(requestedSections);
+      const existing = (bus.seatMap || []).map((seat) => `${seat.label}:${seat.row}:${seat.column}:${seat.section || 'general'}`).join('|');
+      const requested = requestedMap.map((seat) => `${seat.label}:${seat.row}:${seat.column}:${seat.section}`).join('|');
       if (existing !== requested) {
         const activeBookings = await Booking.countDocuments({ bus: bus._id, status: 'confirmed' }).session(session);
         if (activeBookings || bus.availableSeats !== bus.capacity || bus.seatMap?.some((seat) => seat.status !== 'available')) {
@@ -81,6 +83,7 @@ async function updateFleetBus(id, body) {
         }
         bus.seatMap = requestedMap;
       }
+      if (requestedSections) bus.seatSections = requestedSections;
     }
     if (bus.seatMap?.length) {
       if (nextCapacity !== bus.seatMap.length) throw new ApiError(400, 'Capacity must match the configured seat layout.');

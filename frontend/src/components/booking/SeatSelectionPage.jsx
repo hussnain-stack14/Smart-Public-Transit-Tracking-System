@@ -2,7 +2,7 @@
 
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BusFront, ArrowLeft,
   ArrowRight,
@@ -332,12 +332,17 @@ export default function SeatSelectionPage({
                   Driver / front
                 </div>
                 <div className="grid gap-2">
-                  {rows.map((row) => <div key={row} className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
-                    {Array.from({ length: columns }, (_, column) => {
-                      const seat = seats.find((item) => item.row === row && item.column === column);
-                      return seat ? <SeatButton key={seat.label} seat={seat} selected={selectedSeat === seat.label && seat.status === "available"} disabled={submitting || isFull || seat.status !== "available"} onSelect={selectSeat} /> : <span key={column} aria-hidden="true" />;
-                    })}
-                  </div>)}
+                  {rows.map((row, index) => {
+                    const rowSeats = seats.filter((item) => item.row === row);
+                    const section = sectionLabel(rowSeats[0]);
+                    const previousSection = index ? sectionLabel(seats.filter((item) => item.row === rows[index - 1])[0]) : null;
+                    return <Fragment key={row}>{section && section !== previousSection && <p className="seat-section-label">{section}</p>}<div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
+                      {Array.from({ length: columns }, (_, column) => {
+                        const seat = rowSeats.find((item) => item.column === column);
+                        return seat ? <SeatButton key={seat.label} seat={seat} selected={selectedSeat === seat.label && seat.status === "available"} disabled={submitting || isFull || seat.status !== "available"} onSelect={selectSeat} /> : <span key={column} aria-hidden="true" />;
+                      })}
+                    </div></Fragment>;
+                  })}
                 </div>
               </div>
             ) : (
@@ -533,6 +538,11 @@ function SummaryItem({ label, value }) {
 
 function SeatButton({ seat, selected, disabled, onSelect }) {
   return <button type="button" disabled={disabled} aria-label={`Seat ${seat.label}, ${selected ? "selected" : seat.status === "booked" ? "booked online" : seat.status === "occupied" ? "occupied by walk-in passenger" : "available"}`} aria-pressed={selected} title={`Seat ${seat.label}`} className={`seat-position overflow-hidden seat-position--${seat.status} ${selected ? "!bg-[var(--primary)] !text-white" : ""}`} onClick={() => onSelect(seat.label)}>{selected ? <Check size={15} /> : <span className="block max-w-full truncate px-1">{seat.label}</span>}</button>;
+}
+function sectionLabel(seat) {
+  if (seat?.section === "gents") return "Gents section";
+  if (seat?.section === "ladies") return "Ladies section";
+  return null;
 }
 function Legend({ color, label }) {
   return (

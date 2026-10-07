@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import { Button } from "../common/Button";
 import { busService } from "../../services/busService";
@@ -113,7 +113,7 @@ function ConfiguredSeatControl({ bus, onUpdate, shiftActive }) {
 
   return <section className="mt-4 border-t border-[var(--border)] pt-4" aria-label="Individual seats">
     <div className="flex flex-wrap items-end justify-between gap-2"><div><h3 className="text-lg font-bold text-[var(--foreground)]">{bus.busNumber} seat map</h3><p className="mt-1 text-sm text-[var(--muted)]">Select a seat to manage a walk-in passenger.</p></div><strong className="rounded-full bg-[var(--primary-soft)] px-3 py-1 text-sm text-[var(--primary-ink)]">{bus.availableSeats} / {bus.capacity} available</strong></div>
-    <div className="mt-4 flex flex-wrap gap-3 text-xs font-semibold text-[var(--muted)]"><span>{booked} booked online</span><span>{occupied} walk-in occupied</span></div>
+    <div className="mt-4 grid grid-cols-2 gap-2 text-center text-xs sm:grid-cols-4"><Summary label="Total" value={bus.capacity} /><Summary label="Available" value={bus.availableSeats} /><Summary label="Booked" value={booked} /><Summary label="Occupied" value={occupied} /></div>
     <label className="mt-4 grid gap-2 text-sm font-semibold text-[var(--foreground)] sm:hidden" htmlFor={`driver-seat-choice-${bus._id}`}>Select a seat
       <select id={`driver-seat-choice-${bus._id}`} className="field-input min-h-12 w-full min-w-0" value={selected} disabled={busy} onChange={(event) => { setSelected(event.target.value); setConfirmation(null); setMessage(""); setError(""); }}>
         <option value="">Choose a seat</option>
@@ -122,13 +122,18 @@ function ConfiguredSeatControl({ bus, onUpdate, shiftActive }) {
     </label>
     <div className="seat-bus-shell mx-auto mt-5 max-w-sm rounded-[1.75rem] border-2 border-[var(--primary-border)] bg-[var(--background)] p-3 sm:p-5">
       <div className="mb-4 rounded-xl bg-[var(--primary-soft)] px-3 py-2 text-center text-xs font-bold uppercase tracking-widest text-[var(--primary-ink)]">Front / driver</div>
-      <div className="grid gap-2">{rows.map((row) => <div key={row} className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
-        {Array.from({ length: columns }, (_, column) => {
-          const item = bus.seatMap.find((candidate) => candidate.row === row && candidate.column === column);
-          if (!item) return <span key={column} aria-hidden="true" />;
-          return <button key={item.label} type="button" disabled={busy} title={`Seat ${item.label}`} className={`seat-position overflow-hidden seat-position--${item.status}`} aria-pressed={selected === item.label} onClick={() => { setSelected(item.label); setConfirmation(null); setMessage(""); setError(""); }} aria-label={`Seat ${item.label}, ${item.status === "occupied" ? "occupied by walk-in passenger" : item.status === "booked" ? "booked online" : "available"}`}><span className="block max-w-full truncate px-1">{item.label}</span></button>;
-        })}
-      </div>)}</div>
+      <div className="grid gap-2">{rows.map((row, index) => {
+        const rowSeats = bus.seatMap.filter((item) => item.row === row);
+        const section = sectionLabel(rowSeats[0]);
+        const previousSection = index ? sectionLabel(bus.seatMap.find((item) => item.row === rows[index - 1])) : null;
+        return <Fragment key={row}>{section && section !== previousSection && <p className="seat-section-label">{section}</p>}<div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
+          {Array.from({ length: columns }, (_, column) => {
+            const item = rowSeats.find((candidate) => candidate.column === column);
+            if (!item) return <span key={column} aria-hidden="true" />;
+            return <button key={item.label} type="button" disabled={busy} title={`Seat ${item.label}`} className={`seat-position overflow-hidden seat-position--${item.status}`} aria-pressed={selected === item.label} onClick={() => { setSelected(item.label); setConfirmation(null); setMessage(""); setError(""); }} aria-label={`Seat ${item.label}, ${item.status === "occupied" ? "occupied by walk-in passenger" : item.status === "booked" ? "booked online" : "available"}`}><span className="block max-w-full truncate px-1">{item.label}</span></button>;
+          })}
+        </div></Fragment>;
+      })}</div>
     </div>
     <div className="mt-4 flex flex-wrap gap-3 text-xs text-[var(--muted)]"><span className="seat-legend seat-legend--available">Available</span><span className="seat-legend seat-legend--booked">Booked online</span><span className="seat-legend seat-legend--occupied">Walk-in occupied</span></div>
     {!shiftActive && <p className="mt-4 text-sm text-[var(--muted)]">Start your assigned shift to manage seats.</p>}
@@ -140,4 +145,14 @@ function ConfiguredSeatControl({ bus, onUpdate, shiftActive }) {
     {message && <p role="status" className="mt-3 text-sm text-[var(--success)]">{message}</p>}
     {error && <p role="alert" className="mt-3 text-sm text-[var(--danger)]">{error}</p>}
   </section>;
+}
+
+function Summary({ label, value }) {
+  return <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-2"><strong className="block text-sm text-[var(--foreground)]">{value}</strong><span className="text-[var(--muted)]">{label}</span></div>;
+}
+
+function sectionLabel(seat) {
+  if (seat?.section === "gents") return "Gents section";
+  if (seat?.section === "ladies") return "Ladies section";
+  return null;
 }

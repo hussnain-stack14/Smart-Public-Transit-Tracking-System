@@ -10,6 +10,8 @@ export function AddBusModal({ isOpen, onClose, onCreated, routes = [] }) {
   const [busNumber, setBusNumber] = useState("");
   const [routeId, setRouteId] = useState(routes[0]?._id || "");
   const [capacity, setCapacity] = useState("");
+  const [gentsSeats, setGentsSeats] = useState("");
+  const [ladiesSeats, setLadiesSeats] = useState("");
   const [seatLayout, setSeatLayout] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -40,6 +42,13 @@ export function AddBusModal({ isOpen, onClose, onCreated, routes = [] }) {
       setError("Capacity must be an integer from 1 to 100.");
       return;
     }
+    const usesSections = gentsSeats !== "" || ladiesSeats !== "";
+    const gentsNum = Number(gentsSeats);
+    const ladiesNum = Number(ladiesSeats);
+    if (usesSections && (!Number.isInteger(gentsNum) || !Number.isInteger(ladiesNum) || gentsNum < 0 || ladiesNum < 0 || gentsNum + ladiesNum !== capNum)) {
+      setError("Gents and ladies seat counts must be whole numbers that add up to capacity.");
+      return;
+    }
 
     inFlight.current = true;
     setSubmitting(true);
@@ -48,6 +57,7 @@ export function AddBusModal({ isOpen, onClose, onCreated, routes = [] }) {
         busNumber: trimmedBusNumber,
         route: routeId,
         capacity: capNum,
+        ...(usesSections ? { gentsSeats: gentsNum, ladiesSeats: ladiesNum } : {}),
         ...(seatLayout.trim() ? { seatLayout: seatLayout.trim() } : {}),
       });
       if (mounted.current) { await onCreated(newBus); if (mounted.current) onClose(); }
@@ -118,6 +128,12 @@ export function AddBusModal({ isOpen, onClose, onCreated, routes = [] }) {
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            <div><label htmlFor="gents-seats" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--foreground)]">Gents seats</label><input id="gents-seats" type="number" min="0" max="100" value={gentsSeats} onChange={(event) => setGentsSeats(event.target.value)} disabled={submitting} className="field-input text-sm" /></div>
+            <div><label htmlFor="ladies-seats" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--foreground)]">Ladies seats</label><input id="ladies-seats" type="number" min="0" max="100" value={ladiesSeats} onChange={(event) => setLadiesSeats(event.target.value)} disabled={submitting} className="field-input text-sm" /></div>
+          </div>
+          <p className="-mt-2 text-xs leading-5 text-[var(--muted)]">Optional. Enter both counts to create a sectioned bus. If no custom layout is provided, we create G01… seats at the front and W01… seats toward the back.</p>
+
           <div>
             <label htmlFor="route" className="block text-xs font-semibold text-[var(--foreground)] uppercase tracking-wider mb-1.5">
               Assigned Route *
@@ -161,8 +177,8 @@ export function AddBusModal({ isOpen, onClose, onCreated, routes = [] }) {
 
           <div>
             <label htmlFor="seat-layout" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--foreground)]">Physical seat layout (optional)</label>
-            <textarea id="seat-layout" rows={4} value={seatLayout} onChange={(event) => setSeatLayout(event.target.value)} disabled={submitting} className="field-input font-mono text-sm" placeholder={'A1,A2,_,A3,A4\nB1,B2,_,B3,B4'} />
-            <p className="mt-1 text-xs leading-5 text-[var(--muted)]">One row per line; comma-separated labels, _ for an aisle. Unique seat count must equal capacity. Leave blank for a legacy count-only bus.</p>
+            <textarea id="seat-layout" rows={4} value={seatLayout} onChange={(event) => setSeatLayout(event.target.value)} disabled={submitting} className="field-input font-mono text-sm" placeholder={'G01,G02,_,G03,G04\nW01,W02,_,W03,W04'} />
+            <p className="mt-1 text-xs leading-5 text-[var(--muted)]">One row per line; comma-separated labels, _ for an aisle. Unique seat count must equal capacity. For sectioned buses, use G01… and W01… labels that match the counts above.</p>
           </div>
           <div className="mt-6 flex items-center justify-end gap-2.5 border-t border-[var(--border)] pt-4">
             <Button type="button" variant="secondary" className="min-h-12" onClick={onClose} disabled={submitting}>

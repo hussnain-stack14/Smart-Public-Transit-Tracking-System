@@ -1,6 +1,6 @@
 import { Check } from "lucide-react";
 
-const steps = ["Trip Details", "Seat Selection", "Confirmation"];
+const steps = ["Route", "Seat", "Confirmation"];
 
 export function BookingProgress({ currentStep }) {
   return <ol className="mt-6 grid grid-cols-3 gap-2 sm:mt-8 sm:max-w-2xl sm:gap-4" aria-label="Booking steps">
