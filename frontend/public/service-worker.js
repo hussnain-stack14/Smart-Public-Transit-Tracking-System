@@ -1,6 +1,6 @@
 /* Public shell and public transit snapshots only. Private sessions, bookings,
    live sockets, map tiles, and mutations are deliberately never cached. */
-const SHELL_CACHE = "smart-safar-shell-v7";
+const SHELL_CACHE = "smart-safar-shell-v8";
 const TRANSIT_CACHE = "smart-safar-transit-v6";
 const STATIC_ASSETS = [
   "/",
@@ -9,6 +9,7 @@ const STATIC_ASSETS = [
   "/offline.html",
   "/manifest.webmanifest",
   "/smart-transit-logo.svg",
+  "/smart-safar-launch-bus.svg",
   "/icon-192x192.png",
   "/icon-512x512.png",
   "/apple-touch-icon.png",

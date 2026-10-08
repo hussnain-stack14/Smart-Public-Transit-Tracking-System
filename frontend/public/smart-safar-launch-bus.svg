@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 180" role="img" aria-label="Smart Safar city bus">
+  <defs>
+    <linearGradient id="busBody" x1="46" y1="50" x2="369" y2="151" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f8fafc"/>
+      <stop offset=".46" stop-color="#e8eef5"/>
+      <stop offset="1" stop-color="#cbd5e1"/>
+    </linearGradient>
+    <linearGradient id="busAccent" x1="54" y1="72" x2="370" y2="140" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f59e0b"/>
+      <stop offset=".53" stop-color="#f97316"/>
+      <stop offset="1" stop-color="#d95b12"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="76" y1="58" x2="329" y2="107" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#173b56"/>
+      <stop offset=".5" stop-color="#0f2740"/>
+      <stop offset="1" stop-color="#091827"/>
+    </linearGradient>
+    <filter id="busShadow" x="-20%" y="-40%" width="140%" height="190%"><feDropShadow dx="0" dy="9" stdDeviation="7" flood-color="#0f172a" flood-opacity=".22"/></filter>
+  </defs>
+  <style>.wheel{transform-box:fill-box;transform-origin:center;animation:wheelSpin .24s linear 4}@keyframes wheelSpin{to{transform:rotate(360deg)}}</style>
+  <g filter="url(#busShadow)">
+    <path d="M47 126V73c0-18 14-32 32-32h226c20 0 39 9 52 25l20 24c8 9 12 20 12 32v16c0 12-10 22-22 22H67c-11 0-20-9-20-20v-14Z" fill="url(#busBody)"/>
+    <path d="M58 121V77c0-14 10-24 24-24h215c15 0 29 6 39 18l22 27c5 6 8 14 8 22v5H58Z" fill="url(#glass)"/>
+    <path d="m82 56 39 0v60H76V71c0-8 2-12 6-15Zm48 0h53v60h-53zm62 0h54v60h-54zm63 0h45c10 0 19 5 26 14l16 20v26h-87Z" fill="none" stroke="#9cc4dc" stroke-opacity=".68" stroke-width="3"/>
+    <path d="M50 118h337v20c0 12-10 22-22 22H72c-12 0-22-10-22-22Z" fill="url(#busAccent)"/>
+    <path d="M80 143h277" stroke="#fff" stroke-opacity=".6" stroke-width="3" stroke-linecap="round"/>
+    <path d="M299 55v62M339 85v34M112 56v61" stroke="#cbd5e1" stroke-width="3"/>
+    <path d="M62 95h13M371 109h8" stroke="#f8fafc" stroke-width="6" stroke-linecap="round"/>
+    <g class="wheel"><circle cx="127" cy="157" r="25" fill="#152334"/><circle cx="127" cy="157" r="14" fill="#dce6ee"/><circle cx="127" cy="157" r="5" fill="#718096"/><path d="M127 139v36M109 157h36" stroke="#718096" stroke-width="3"/></g>
+    <g class="wheel"><circle cx="326" cy="157" r="25" fill="#152334"/><circle cx="326" cy="157" r="14" fill="#dce6ee"/><circle cx="326" cy="157" r="5" fill="#718096"/><path d="M326 139v36M308 157h36" stroke="#718096" stroke-width="3"/></g>
+    <path d="M66 134h35M356 134h17" stroke="#f8fafc" stroke-width="4" stroke-linecap="round"/>
+    <text x="194" y="147" fill="#fff" font-family="Arial, sans-serif" font-size="17" font-weight="700" letter-spacing="1" text-anchor="middle">SMART SAFAR</text>
+  </g>
+</svg>

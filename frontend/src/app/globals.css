@@ -738,7 +738,7 @@ body {
 .driver-section-note { gap: 10px; }
 .driver-section-note a { color: var(--primary-ink); font-size: 13px; font-weight: 700; }
 
-/* A short standalone-PWA launch transition; the application never waits on it. */
+/* Standalone-PWA launch: compositor-only bus, trail and brand reveal. */
 .pwa-launch {
   position: fixed;
   inset: 0;
@@ -746,19 +746,31 @@ body {
   display: grid;
   place-items: center;
   padding: max(24px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
-  background: linear-gradient(150deg, var(--primary-soft), #fff 68%, var(--primary-soft-strong));
-  pointer-events: none;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 44%, color-mix(in srgb, var(--primary-soft-strong) 74%, #fff) 0, var(--primary-soft) 42%, #fff 100%);
 }
-.pwa-launch__scene { display: grid; width: min(260px, 100%); justify-items: center; text-align: center; animation: safar-launch-in .42s ease-out both; }
-.pwa-launch__scene > img { border-radius: 17px; box-shadow: 0 8px 24px color-mix(in srgb, var(--primary) 18%, transparent); }
-.pwa-launch__route { position: relative; display: block; width: 174px; height: 2px; margin: 20px 0 15px; overflow: visible; background: linear-gradient(90deg, transparent, var(--primary), transparent); }
-.pwa-launch__route::before,
-.pwa-launch__route::after { position: absolute; top: -4px; width: 9px; height: 9px; border: 2px solid var(--primary); border-radius: 999px; background: white; content: ""; }
-.pwa-launch__route::before { left: 18px; }.pwa-launch__route::after { right: 18px; }
-.pwa-launch__route > span { position: absolute; top: -15px; left: 0; display: grid; width: 30px; height: 30px; place-items: center; border-radius: 10px; background: var(--primary); color: var(--primary-contrast); box-shadow: 0 5px 12px color-mix(in srgb, var(--primary) 28%, transparent); animation: safar-launch-bus .8s cubic-bezier(.3,.8,.4,1) both; }
-.pwa-launch strong { font-size: 20px; font-weight: 800; letter-spacing: -.03em; }.pwa-launch p { margin-top: 5px; color: var(--muted); font-size: 12px; }
-@keyframes safar-launch-in { from { opacity: 0; transform: translateY(7px) scale(.98); } to { opacity: 1; transform: none; } }
-@keyframes safar-launch-bus { from { transform: translateX(0); } to { transform: translateX(144px); } }
+.pwa-launch__scene { display: grid; width: min(560px, 100%); justify-items: center; text-align: center; }
+.pwa-launch__skip { position: absolute; top: max(16px, env(safe-area-inset-top)); right: max(16px, env(safe-area-inset-right)); z-index: 2; min-height: 38px; border: 1px solid var(--primary-border); border-radius: 999px; background: color-mix(in srgb, #fff 85%, transparent); padding: 0 14px; color: var(--primary-ink); font-size: 12px; font-weight: 750; }
+.pwa-launch__skip:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.pwa-launch__cinema { position: relative; width: 100%; height: clamp(112px, 28vw, 152px); overflow: hidden; }
+.pwa-launch__glow { position: absolute; inset: 42% 13% 17%; border-radius: 50%; background: var(--primary-soft-strong); opacity: 0; transform: scaleX(.25); animation: safar-launch-glow 1.35s ease-out both; }
+.pwa-launch__bus { position: absolute; z-index: 1; bottom: 15px; left: -52%; width: clamp(190px, 56%, 280px); height: auto; will-change: transform; animation: safar-launch-bus 1.02s cubic-bezier(.38,.05,.68,1) both; }
+.pwa-launch__trail { position: absolute; z-index: 0; bottom: 43px; left: 0; display: flex; width: 54%; height: 16px; align-items: center; gap: 7px; opacity: 0; transform-origin: left center; animation: safar-launch-trail .72s cubic-bezier(.2,.75,.4,1) .24s both; }
+.pwa-launch__trail::before { width: 100%; height: 5px; border-radius: 999px; background: linear-gradient(90deg, transparent, #f6a21a 18%, #ed6c16 70%, transparent); content: ""; }
+.pwa-launch__trail i { position: absolute; width: 18%; height: 3px; border-radius: 999px; background: #f6a21a; box-shadow: 0 0 8px color-mix(in srgb, #ed6c16 56%, transparent); }
+.pwa-launch__trail i:nth-child(1) { top: -5px; left: 27%; }.pwa-launch__trail i:nth-child(2) { top: 13px; left: 53%; width: 12%; }.pwa-launch__trail i:nth-child(3) { top: -9px; left: 74%; width: 9%; }
+.pwa-launch__route { position: absolute; z-index: 1; right: 9%; bottom: 2px; width: min(70%, 360px); height: 96px; overflow: visible; opacity: 0; transform: translateY(8px); animation: safar-launch-route-in .16s ease-out .94s both; }
+.pwa-launch__route path { stroke: var(--primary); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: safar-launch-route-draw .42s cubic-bezier(.2,.76,.35,1) 1s both; }
+.pwa-launch__route path + path { stroke: #f28a1f; stroke-width: 2.5; animation-delay: 1.08s; }
+.pwa-launch__brand { display: grid; justify-items: center; opacity: 0; transform: translateY(8px) scale(.97); animation: safar-launch-brand .3s cubic-bezier(.2,.8,.3,1) 1.18s both; }
+.pwa-launch__brand > img { border-radius: 17px; box-shadow: 0 8px 24px color-mix(in srgb, var(--primary) 18%, transparent); }
+.pwa-launch__brand strong { margin-top: 12px; font-size: 21px; font-weight: 800; letter-spacing: -.03em; }.pwa-launch__brand p { margin-top: 5px; color: var(--muted); font-size: 12px; }
+@keyframes safar-launch-bus { 0% { opacity: 0; transform: translate3d(0, 5px, 0) rotate(0); } 12% { opacity: 1; } 43% { transform: translate3d(160%, -1px, 0) rotate(-.35deg); } 100% { opacity: 1; transform: translate3d(410%, -3px, 0) rotate(0); } }
+@keyframes safar-launch-trail { 0% { opacity: 0; transform: scaleX(.1); } 28% { opacity: 1; transform: scaleX(1); } 100% { opacity: 0; transform: scaleX(.58); } }
+@keyframes safar-launch-glow { 0%, 18% { opacity: 0; transform: scaleX(.25); } 48% { opacity: .7; transform: scaleX(1); } 100% { opacity: 0; transform: scaleX(1.18); } }
+@keyframes safar-launch-route-in { to { opacity: 1; transform: translateY(0); } }
+@keyframes safar-launch-route-draw { to { stroke-dashoffset: 0; } }
+@keyframes safar-launch-brand { to { opacity: 1; transform: none; } }
 
 @media (max-width: 767px) {
   .compact-page-search__field { position: absolute; top: 0; right: 0; z-index: 5; width: min(310px, calc(100vw - 32px)); }
@@ -772,8 +784,8 @@ body {
   .public-footer > div:first-child p { margin-top: 4px; font-size: 12px; line-height: 1.45; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .pwa-launch__scene,
-  .pwa-launch__route > span { animation: none; }
+  .pwa-launch__cinema { display: none; }
+  .pwa-launch__brand { opacity: 1; transform: none; animation: none; }
 }
 /* PWA install affordances and non-blocking connectivity status. */
 .pwa-install { position: fixed; padding-right: 48px; }

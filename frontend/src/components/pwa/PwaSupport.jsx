@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { BusFront, Wifi, WifiOff, X } from "lucide-react";
+import { Wifi, WifiOff, X } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 
 function isStandalone() {
@@ -86,10 +86,10 @@ export function PwaSupport() {
   useEffect(() => {
     if (!showLaunch) return undefined;
     const finish = () => setLaunchFinished(true);
-    // This root-mounted transition runs only once per PWA launch. It is short
-    // enough not to delay a ready app, while still giving the logo motion time
-    // to read after the operating system splash has closed.
-    const completionTimer = window.setTimeout(finish, 650);
+    // This root-mounted sequence runs once per PWA launch, never on route
+    // changes. Reduced-motion users receive the static brand reveal instead.
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const completionTimer = window.setTimeout(finish, reducedMotion ? 420 : 1600);
     return () => {
       window.clearTimeout(completionTimer);
     };
@@ -223,8 +223,12 @@ export function PwaSupport() {
     setShowIosHint(false);
   }
 
+  function skipLaunch() {
+    setLaunchFinished(true);
+  }
+
   return <>
-    {showLaunch && <section className="pwa-launch" aria-label="Opening Smart Safar"><div className="pwa-launch__scene"><Image src="/smart-transit-logo.svg" width={56} height={56} alt="" priority /><span className="pwa-launch__route" aria-hidden="true"><span><BusFront size={22} /></span></span><strong>Smart Safar</strong><p>Smart Public Transit for Faisalabad</p></div></section>}
+    {showLaunch && <section className="pwa-launch" role="dialog" aria-label="Opening Smart Safar"><button type="button" className="pwa-launch__skip" onClick={skipLaunch}>Skip animation</button><div className="pwa-launch__scene"><div className="pwa-launch__cinema" aria-hidden="true"><Image className="pwa-launch__bus" src="/smart-safar-launch-bus.svg" width={420} height={180} alt="" priority /><span className="pwa-launch__glow" /><span className="pwa-launch__trail"><i /><i /><i /></span><svg className="pwa-launch__route" viewBox="0 0 340 96" fill="none" focusable="false"><path d="M12 72C64 72 72 22 128 22c59 0 48 52 106 52 40 0 56-26 94-43" pathLength="1" /><path d="M16 83c44 0 53-40 107-40 50 0 53 35 104 35 42 0 62-29 97-36" pathLength="1" /></svg></div><div className="pwa-launch__brand"><Image src="/smart-transit-logo.svg" width={56} height={56} alt="" priority /><strong>Smart Safar</strong><p>Smart Public Transit for Faisalabad</p></div></div></section>}
     {!online && <aside className="pwa-connectivity pwa-offline" role="status" aria-live="polite"><WifiOff size={18} aria-hidden="true" /><span><strong>Offline</strong><small>Showing saved transit information where it is available.</small></span></aside>}
     {showBackOnline && online && <aside className="pwa-connectivity pwa-online" role="status" aria-live="polite"><Wifi size={18} aria-hidden="true" /><span><strong>Back online</strong><small>Live transit updates are reconnecting.</small></span></aside>}
     {isPublicHome && !installed && installPrompt && showInstallPrompt && <aside className="pwa-install" role="status" aria-live="polite"><div><strong>Install Smart Safar</strong><span>Add Smart Safar to your home screen for a faster app-like experience.</span></div><button type="button" onClick={promptToInstall} disabled={installing}>{installing ? "Opening..." : "Install"}</button><button type="button" className="pwa-install-close" onClick={dismissInstallPrompt} aria-label="Dismiss install prompt"><X size={17} /></button></aside>}
