@@ -13,7 +13,7 @@ import { EmptyState } from "../common/EmptyState";
 import { ErrorState } from "../common/ErrorState";
 import { BusCard } from "../bus/BusCard";
 import { RouteStopTimeline } from "./RouteStopTimeline";
-import { LoadingSpinner } from "../common/LoadingSpinner";
+import { RouteDetailsSkeleton } from "./RouteDetailsSkeleton";
 import { ClientTransitMap } from "../map/MapShell";
 import { BusMarker } from "../map/BusMarker";
 import { StopMarker } from "../map/StopMarker";
@@ -149,7 +149,7 @@ export default function RouteDetailsPage({ routeId }) {
   const mapPositions = [...positions, ...busPositions];
   const routeLabel = route?.routeCode || route?.number || "Route";
 
-  if (loading && !route) return <div className="min-h-screen bg-[var(--background)]"><Navbar /><main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8"><div className="grid min-h-64 place-items-center"><LoadingSpinner label="Loading route details..." /></div></main><Footer /></div>;
+  if (loading && !route) return <div className="min-h-screen bg-[var(--background)]"><Navbar /><main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8"><RouteDetailsSkeleton /></main><Footer /></div>;
   if (error === "not-found") return <NotFoundState />;
   if (error === "offline") return <OfflineRouteState />;
   if (error || !route) return <RouteErrorState onRetry={loadRoute} />;

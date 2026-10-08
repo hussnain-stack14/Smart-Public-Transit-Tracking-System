@@ -79,11 +79,6 @@ body {
 .pwa-install-control { position: relative; display: inline-flex; flex: none; }
 .app-header-actions .pwa-install-action { border-color: var(--border); background: white; box-shadow: none; }
 .pwa-install-feedback { position: absolute; top: calc(100% + 8px); right: 0; z-index: 1050; width: min(260px, calc(100vw - 24px)); border: 1px solid var(--border); border-radius: 12px; background: rgba(17, 24, 39, .96); padding: 9px 11px; color: white; box-shadow: 0 10px 24px rgba(15, 23, 42, .16); font-size: 11px; font-weight: 650; line-height: 1.4; text-align: left; }
-.pwa-offline { position: fixed; inset: 0; z-index: 2200; display: grid; align-content: center; justify-items: center; padding: max(28px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); background: var(--background); text-align: center; }
-.pwa-offline img { border-radius: 18px; }
-.pwa-offline h1 { margin-top: 24px; font-size: clamp(26px, 7vw, 34px); font-weight: 800; letter-spacing: -.03em; }
-.pwa-offline p { max-width: 31rem; margin-top: 8px; color: var(--muted); font-size: 15px; line-height: 1.55; }
-.pwa-offline .pwa-offline-note { color: #94a3b8; font-size: 13px; }
 .pwa-ios-install { position: fixed; right: max(12px, env(safe-area-inset-right)); bottom: calc(82px + env(safe-area-inset-bottom)); left: max(12px, env(safe-area-inset-left)); z-index: 1100; display: flex; max-width: 420px; align-items: center; gap: 12px; margin: auto; border: 1px solid var(--primary-border); border-radius: 14px; background: #fff; padding: 12px 14px; box-shadow: 0 14px 34px #0F172A26; }
 .pwa-ios-install div { display: grid; min-width: 0; flex: 1; gap: 2px; }
 .pwa-ios-install strong { font-size: 13px; }
@@ -394,7 +389,7 @@ textarea {
 @media (max-width: 639px) { .map-live-sheet { bottom: 12px; } .map-v2-surface:has(.map-live-sheet) .live-map-legend { bottom: auto; top: 12px; left: 12px; right: 64px; } .live-map-legend { max-width: calc(100% - 76px); font-size: 11px; gap: 8px; } }
 
 .leaflet-marker-icon.transit-map-icon { transition: filter .15s ease, opacity .15s ease; }
-.leaflet-marker-icon.transit-map-icon:hover { filter: brightness(1.06) drop-shadow(0 0 6px rgba(255,165,0,.4)); }
+.leaflet-marker-icon.transit-map-icon:hover { filter: brightness(1.06) drop-shadow(0 0 6px color-mix(in srgb, var(--primary) 42%, transparent)); }
 
 /* Lightweight interaction and page motion. These use compositor-friendly
    opacity/transform changes only; the map surface is intentionally excluded. */
@@ -410,19 +405,15 @@ textarea {
   from { opacity: .45; transform: translateY(2px); }
   to { opacity: 1; transform: translateY(0); }
 }
-
-.app-content > div > main > :first-child,
-.app-content > main > :first-child,
-.public-shell > main > :first-child,
-.min-h-screen > main > :first-child,
-main.min-h-screen > :first-child {
-  animation: safar-content-enter .22s ease-out both;
+@keyframes safar-section-reveal {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .ui-card {
   transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
-.ui-card:active { transform: scale(.995); }
+.ui-card[data-interactive="true"]:active { transform: scale(.995); }
 .ui-button,
 button,
 .app-nav-link,
@@ -484,7 +475,7 @@ button:active:not(:disabled),
 }
 
 @media (hover: hover) {
-  .ui-card:hover { transform: translateY(-2px); border-color: var(--primary-border); box-shadow: 0 12px 32px rgba(15,23,42, .1); }
+  .ui-card[data-interactive="true"]:hover { transform: translateY(-2px); border-color: var(--primary-border); box-shadow: 0 12px 32px rgba(15,23,42, .1); }
   .ui-button:hover svg { transform: translateY(-1px); }
   .app-nav-link:hover svg, .public-bottom-nav a:hover svg, .public-quick-action:hover svg { transform: translateY(-1px); }
   .ui-card a:hover svg { transform: translate(2px, -1px); }
@@ -493,19 +484,21 @@ button:active:not(:disabled),
 .leaflet-container button {
   transition: none;
 }
+.leaflet-container button:active:not(:disabled),
+.leaflet-container a:active { transform: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-home-reveal="shown"] { animation: safar-section-reveal .34s cubic-bezier(.22, .8, .26, 1) both; }
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .app-content > div > main > :first-child,
-  .app-content > main > :first-child,
-  .public-shell > main > :first-child,
-  .min-h-screen > main > :first-child,
-  main.min-h-screen > :first-child,
   .app-account-menu,
   .app-notification-panel,
   .live-transit-value,
   .safar-loader-orbit {
     animation: none !important;
   }
+  [data-home-reveal="shown"] { animation: none; }
   .ui-card,
   .ui-button,
   button,
@@ -520,8 +513,8 @@ button:active:not(:disabled),
     scroll-behavior: auto !important;
     transition: none !important;
   }
-  .ui-card:hover,
-  .ui-card:active,
+  .ui-card[data-interactive="true"]:hover,
+  .ui-card[data-interactive="true"]:active,
   .ui-button:active:not(:disabled),
   button:active:not(:disabled),
   .app-nav-link:active,
@@ -658,9 +651,7 @@ body {
   50% { box-shadow: 0 0 0 6px rgba(22,132,91,0); }
 }
 @media (hover: hover) {
-  .route-card:hover,
   .bus-card:hover,
-  .feature-card:hover,
   .mobile-bus-card:hover,
   .mobile-route-card:hover,
   .commuter-quick a:hover,
@@ -756,8 +747,9 @@ body {
   place-items: center;
   padding: max(24px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
   background: linear-gradient(150deg, var(--primary-soft), #fff 68%, var(--primary-soft-strong));
+  pointer-events: none;
 }
-.pwa-launch__scene { display: grid; width: min(260px, 100%); justify-items: center; text-align: center; animation: safar-launch-in .3s ease-out both; }
+.pwa-launch__scene { display: grid; width: min(260px, 100%); justify-items: center; text-align: center; animation: safar-launch-in .42s ease-out both; }
 .pwa-launch__scene > img { border-radius: 17px; box-shadow: 0 8px 24px color-mix(in srgb, var(--primary) 18%, transparent); }
 .pwa-launch__route { position: relative; display: block; width: 174px; height: 2px; margin: 20px 0 15px; overflow: visible; background: linear-gradient(90deg, transparent, var(--primary), transparent); }
 .pwa-launch__route::before,
@@ -821,7 +813,7 @@ body {
 .pwa-install-control { position: relative; display: inline-flex; flex: none; }
 .app-header-actions .pwa-install-action { border-color: var(--border); background: white; box-shadow: none; }
 .pwa-install-feedback { position: absolute; top: calc(100% + 8px); right: 0; z-index: 1050; width: min(260px, calc(100vw - 24px)); border: 1px solid var(--border); border-radius: 12px; background: rgba(17, 24, 39, .96); padding: 9px 11px; color: white; box-shadow: 0 10px 24px rgba(15, 23, 42, .16); font-size: 11px; font-weight: 650; line-height: 1.4; text-align: left; }
-.pwa-offline {
+.pwa-connectivity {
   position: fixed;
   inset: auto max(12px, env(safe-area-inset-right)) auto max(12px, env(safe-area-inset-left));
   top: calc(68px + env(safe-area-inset-top));
@@ -832,7 +824,7 @@ body {
   justify-items: unset;
   gap: 10px;
   margin: 0 auto;
-  border: 1px solid rgba(255, 165, 0, .55);
+  border: 1px solid color-mix(in srgb, var(--primary) 58%, transparent);
   border-radius: 14px;
   background: rgba(17, 24, 39, .94);
   padding: 10px 13px;
@@ -840,11 +832,15 @@ body {
   box-shadow: 0 12px 28px rgba(15, 23, 42, .18);
   text-align: left;
   backdrop-filter: blur(12px);
+  animation: safar-connectivity-in .2s cubic-bezier(.2, .8, .2, 1) both;
 }
-.pwa-offline > svg { flex: none; color: var(--primary); }
-.pwa-offline > span { display: grid; min-width: 0; gap: 1px; }
-.pwa-offline strong { font-size: 12px; font-weight: 800; }
-.pwa-offline small { color: rgba(255, 255, 255, .76); font-size: 11px; line-height: 1.35; }
+.pwa-connectivity > svg { flex: none; color: var(--primary); }
+.pwa-connectivity > span { display: grid; min-width: 0; gap: 1px; }
+.pwa-connectivity strong { font-size: 12px; font-weight: 800; }
+.pwa-connectivity small { color: rgba(255, 255, 255, .76); font-size: 11px; line-height: 1.35; }
+.pwa-online { border-color: color-mix(in srgb, var(--success) 70%, transparent); }
+.pwa-online > svg { color: var(--success); }
+@keyframes safar-connectivity-in { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 .home-map-summary > a {
   display: grid;
   min-height: 86px;
@@ -865,10 +861,11 @@ body {
   .pwa-install-control { position: relative; display: inline-flex; flex: none; }
 .app-header-actions .pwa-install-action { border-color: var(--border); background: white; box-shadow: none; }
 .pwa-install-feedback { position: absolute; top: calc(100% + 8px); right: 0; z-index: 1050; width: min(260px, calc(100vw - 24px)); border: 1px solid var(--border); border-radius: 12px; background: rgba(17, 24, 39, .96); padding: 9px 11px; color: white; box-shadow: 0 10px 24px rgba(15, 23, 42, .16); font-size: 11px; font-weight: 650; line-height: 1.4; text-align: left; }
-.pwa-offline { right: 20px; left: auto; top: 80px; width: min(430px, calc(100vw - 40px)); }
+  .pwa-connectivity { right: 20px; left: auto; top: 80px; width: min(430px, calc(100vw - 40px)); }
 }
 @media (prefers-reduced-motion: reduce) {
   .home-map-summary > a { transition: none; }
+  .pwa-connectivity { animation: none; }
 }
 
 .pwa-ios-install { position: fixed; padding-right: 48px; }
@@ -889,7 +886,7 @@ body {
 .pwa-ios-install .pwa-ios-install-close:hover,
 .pwa-ios-install .pwa-ios-install-close:focus-visible { background: var(--primary-soft); color: var(--primary-ink); outline: none; }
 /* Premium transit experience */
-html { overflow-x: clip; background: var(--background); scroll-behavior: smooth; }
+html { overflow-x: clip; background: var(--background); scroll-behavior: auto; }
 body {
   min-width: 320px;
   overflow-x: hidden;
@@ -915,11 +912,16 @@ button:active:not(:disabled), .ui-button:active:not(:disabled) { transform: tran
 .app-sidebar { border-color: rgba(223, 227, 232, .78) !important; background: rgba(255, 255, 255, .38); box-shadow: inset -1px 0 rgba(255, 255, 255, .55); backdrop-filter: blur(18px); }
 .app-nav-link { position: relative; overflow: hidden; }
 .app-nav-link:hover { background: rgba(255, 255, 255, .76); color: var(--foreground); transform: translateX(2px); }
-.app-nav-link.is-active { border: 1px solid color-mix(in srgb, var(--primary-border) 72%, transparent); background: linear-gradient(135deg, color-mix(in srgb, var(--primary-soft) 96%, transparent), rgba(255, 255, 255, .84)); color: var(--primary-ink); box-shadow: 0 8px 20px color-mix(in srgb, var(--primary-ink) 8%, transparent); }
+.app-nav-link { border: 1px solid transparent; }
+.app-nav-link.is-active { border-color: color-mix(in srgb, var(--primary-border) 72%, transparent); background: linear-gradient(135deg, color-mix(in srgb, var(--primary-soft) 96%, transparent), rgba(255, 255, 255, .84)); color: var(--primary-ink); box-shadow: 0 8px 20px color-mix(in srgb, var(--primary-ink) 8%, transparent); }
 .app-nav-link.is-active svg { filter: drop-shadow(0 2px 3px color-mix(in srgb, var(--primary-ink) 16%, transparent)); transform: translateY(-1px); }
 .app-bottom-nav { border-color: rgba(223, 227, 232, .82); background: rgba(255, 255, 255, .84); box-shadow: 0 -10px 34px rgba(23, 34, 56, .1); backdrop-filter: saturate(150%) blur(22px); }
 .app-bottom-nav .app-nav-link:hover { transform: none; }
+.app-bottom-nav .app-nav-link,
+.app-bottom-nav button.app-nav-link { border: 1px solid transparent; }
+.app-bottom-nav .app-nav-link::after { position: absolute; right: 50%; bottom: 4px; width: 22px; height: 3px; border-radius: 999px; background: var(--primary); content: ""; opacity: 0; transform: translateX(50%) scaleX(.35); transition: transform 180ms ease, opacity 180ms ease; }
 .app-bottom-nav .app-nav-link.is-active { border-color: transparent; box-shadow: none; }
+.app-bottom-nav .app-nav-link.is-active::after { opacity: 1; transform: translateX(50%) scaleX(1); }
 .app-icon-button, .app-avatar { border-color: rgba(223, 227, 232, .9); background: rgba(255, 255, 255, .76); box-shadow: 0 5px 16px rgba(23, 34, 56, .06); backdrop-filter: blur(14px); }
 .app-icon-button:hover, .app-avatar:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(23, 34, 56, .1); }
 .app-account-menu, .app-notification-panel { border-color: var(--glass-border); background: rgba(255, 255, 255, .92); box-shadow: var(--shadow-float); backdrop-filter: saturate(145%) blur(24px); animation: premium-pop 180ms ease-out both; }
@@ -931,8 +933,8 @@ button:active:not(:disabled), .ui-button:active:not(:disabled) { transform: tran
 .premium-card--imagery > :not(.card-backdrop) { position: relative; z-index: 1; }
 .card-backdrop { position: absolute; z-index: 0; inset: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
 .card-backdrop__wash { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(255, 255, 255, .92), rgba(255, 255, 255, .6) 58%, rgba(255, 255, 255, .28)); }
-.ui-button { box-shadow: 0 8px 18px rgba(185, 75, 11, .13); transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease; }
-.ui-button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 12px 24px rgba(185, 75, 11, .18); }
+.ui-button { box-shadow: 0 8px 18px color-mix(in srgb, var(--primary) 18%, transparent); transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease; }
+.ui-button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 12px 24px color-mix(in srgb, var(--primary) 25%, transparent); }
 .ui-button[class*="bg-white"] { box-shadow: 0 5px 16px rgba(23, 34, 56, .06); }
 .ui-empty-state { position: relative; overflow: hidden; background: linear-gradient(120deg, rgba(255, 255, 255, .96), rgba(255, 248, 241, .9)), url('/faisalabad-clocktower.jpg') center 45% / cover; box-shadow: inset 0 1px rgba(255, 255, 255, .8); }
 .ui-empty-state::after { content: ""; position: absolute; right: -30px; bottom: -32px; width: 110px; height: 110px; border-radius: 999px; background: rgba(216, 103, 31, .08); }
@@ -962,7 +964,9 @@ button:active:not(:disabled), .ui-button:active:not(:disabled) { transform: tran
   box-shadow: none;
 }
 
-.app-content > div > main, .public-shell > main, .profile-page main { animation: premium-page-in 360ms cubic-bezier(.22,.8,.26,1) both; }
+.app-content > div:not(:has(.map-v2-surface)) > main,
+.public-shell:not(:has(.public-home-map)) > main,
+.profile-page main { animation: premium-page-in 240ms cubic-bezier(.22,.8,.26,1) both; }
 .app-content main > header:not(.premium-dashboard-header):not(.premium-driver-header) { padding-top: 2px; }
 .premium-dashboard-header, .premium-driver-header { position: relative; isolation: isolate; overflow: hidden; border-radius: 24px; background: linear-gradient(105deg, rgba(255, 255, 255, .96) 0%, rgba(255, 247, 238, .88) 56%, rgba(235, 240, 246, .86) 100%); box-shadow: var(--shadow-card); }
 .premium-dashboard-header::after, .premium-driver-header::after { content: ""; position: absolute; z-index: -1; inset: 0 0 0 auto; width: min(42%, 420px); background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .18)), url('/faisalabad-clocktower.jpg') center / cover; opacity: .13; mask-image: linear-gradient(90deg, transparent, #000 42%); }
@@ -987,7 +991,6 @@ button:active:not(:disabled), .ui-button:active:not(:disabled) { transform: tran
     linear-gradient(180deg, rgba(23, 34, 56, .02), rgba(23, 34, 56, .14)),
     url('/smart-safar-transit-hero.webp') 58% center / cover no-repeat;
   transform: scale(1.035);
-  animation: home-background-drift 20s ease-in-out infinite alternate;
 }
 .home-premium-hero::after {
   content: "";
@@ -1070,8 +1073,6 @@ button:active:not(:disabled), .ui-button:active:not(:disabled) { transform: tran
 .home-map-summary a { background: rgba(255, 255, 255, .9); border-color: #d8dde4; backdrop-filter: blur(12px); }
 @media (hover: hover) {
   .home-hero-actions a:hover, .home-final-cta a:hover { transform: translateY(-2px); }
-  .home-benefits-section .feature-card:hover { border-color: #f0b27f !important; transform: translateY(-4px); box-shadow: 0 22px 44px rgba(4, 10, 22, .22) !important; }
-  .home-benefits-section .feature-card--live:hover { border-color: #52a680 !important; }
 }
 @media (min-width: 768px) {
   .home-live-section { width: calc(100% - 48px); margin-top: 28px; margin-bottom: 28px; border: 1px solid rgba(223, 227, 232, .9); border-radius: 28px; box-shadow: 0 14px 40px rgba(23, 34, 56, .06); }
@@ -1098,8 +1099,8 @@ button:active:not(:disabled), .ui-button:active:not(:disabled) { transform: tran
 @keyframes home-media-enter { from { opacity: 0; transform: translateY(12px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes home-background-drift { from { transform: scale(1.035) translate3d(0, 0, 0); } to { transform: scale(1.055) translate3d(-.6%, -.4%, 0); } }
 
-.bus-card, .route-card, .admin-overview-card { transform: translateZ(0); }
-.bus-card:hover, .route-card:hover, .admin-overview-card:hover { border-color: rgba(241, 191, 145, .95) !important; transform: translateY(-3px); box-shadow: 0 20px 40px rgba(23, 34, 56, .12) !important; }
+.bus-card { transform: translateZ(0); }
+.bus-card:hover { border-color: var(--primary-border) !important; transform: translateY(-3px); box-shadow: 0 20px 40px rgba(23, 34, 56, .12) !important; }
 .leaflet-container { background: #e8ecef; }
 .map-control-button { border-color: rgba(223,227,232,.86) !important; background: rgba(255,255,255,.88) !important; box-shadow: 0 8px 20px rgba(23,34,56,.1) !important; backdrop-filter: blur(12px); }
 .map-control-button:first-child { background: var(--primary) !important; border-color: var(--primary) !important; color: white !important; }
@@ -1140,7 +1141,7 @@ button:active:not(:disabled), .ui-button:active:not(:disabled) { transform: tran
 @keyframes premium-fade-in { from { opacity: 0; } to { opacity: 1; } }
 
 @media (hover: hover) {
-  .ui-card:hover { border-color: rgba(241, 191, 145, .72) !important; box-shadow: 0 18px 42px rgba(23,34,56,.11) !important; }
+  .ui-card[data-interactive="true"]:hover { border-color: var(--primary-border) !important; box-shadow: 0 18px 42px rgba(23,34,56,.11) !important; }
 }
 @media (max-width: 767px) {
   body { background-attachment: scroll; }
@@ -1167,7 +1168,7 @@ button:active:not(:disabled), .ui-button:active:not(:disabled) { transform: tran
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
-  .ui-card:hover, .bus-card:hover, .route-card:hover, .admin-overview-card:hover, .driver-overview-actions a:hover { transform: none !important; }
+  .ui-card[data-interactive="true"]:hover, .bus-card:hover, .driver-overview-actions a:hover { transform: none !important; }
 }
 
 /* Shared theme controls */
@@ -1240,8 +1241,7 @@ button:active:not(:disabled), .ui-button:active:not(:disabled) { transform: tran
 :root:not([data-theme="orange"]) .ui-empty-state::after { background: rgba(70,149,197,.09); }
 :root:not([data-theme="orange"]) .app-experience thead { background: rgba(223,236,247,.84) !important; }
 :root:not([data-theme="orange"]) .app-experience tbody tr:hover, :root:not([data-theme="orange"]) .app-notification-list article:hover { background: rgba(223,236,247,.65); }
-:root:not([data-theme="orange"]) .bus-card:hover, :root:not([data-theme="orange"]) .route-card:hover, :root:not([data-theme="orange"]) .admin-overview-card:hover { border-color: var(--primary-border) !important; }
-:root:not([data-theme="orange"]) .home-benefits-section .feature-card:hover { border-color: var(--primary-border) !important; }
+:root:not([data-theme="orange"]) .bus-card:hover { border-color: var(--primary-border) !important; }
 :root:not([data-theme="orange"]) .ui-button { box-shadow: 0 8px 18px rgba(15,87,151,.13); }
 :root:not([data-theme="orange"]) .ui-button:hover:not(:disabled) { box-shadow: 0 12px 24px rgba(15,87,151,.2); }
 @media (max-width: 767px) { :root:not([data-theme="orange"]) .home-premium-hero::before { background: linear-gradient(90deg, rgba(245,250,254,.98), rgba(245,250,254,.86)), linear-gradient(180deg, rgba(11,50,104,.02), rgba(11,50,104,.12)), url('/smart-safar-transit-hero.webp') 63% center / cover no-repeat; } }
@@ -1376,18 +1376,24 @@ button:active:not(:disabled), .ui-button:active:not(:disabled) { transform: tran
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .premium-card:hover {
+  a.premium-card:hover,
+  button.premium-card:hover,
+  .premium-card[data-interactive="true"]:hover {
     border-color: var(--primary-border) !important;
     box-shadow: var(--glass-card-shadow-hover) !important;
     transform: translateY(-3px);
   }
 
-  .premium-card.premium-card--operational:hover {
+  a.premium-card.premium-card--operational:hover,
+  button.premium-card.premium-card--operational:hover,
+  .premium-card[data-interactive="true"].premium-card--operational:hover {
     box-shadow: 0 16px 36px rgba(11, 50, 104, .1) !important;
     transform: translateY(-1px);
   }
 
-  .premium-card:hover .card-backdrop__image {
+  a.premium-card:hover .card-backdrop__image,
+  button.premium-card:hover .card-backdrop__image,
+  .premium-card[data-interactive="true"]:hover .card-backdrop__image {
     opacity: calc(var(--glass-photo-opacity) + .035);
     transform: scale(1.045);
   }
@@ -1418,18 +1424,27 @@ button:active:not(:disabled), .ui-button:active:not(:disabled) { transform: tran
     transition: none !important;
   }
 
-  .premium-card:hover,
-  .premium-card.premium-card--operational:hover,
-  .premium-card:hover .card-backdrop__image {
+  a.premium-card:hover,
+  button.premium-card:hover,
+  .premium-card[data-interactive="true"]:hover,
+  a.premium-card.premium-card--operational:hover,
+  button.premium-card.premium-card--operational:hover,
+  .premium-card[data-interactive="true"].premium-card--operational:hover,
+  a.premium-card:hover .card-backdrop__image,
+  button.premium-card:hover .card-backdrop__image,
+  .premium-card[data-interactive="true"]:hover .card-backdrop__image {
     transform: none !important;
   }
 }
-.app-driver-more-menu { position: fixed; right: 12px; bottom: calc(76px + env(safe-area-inset-bottom)); left: 12px; z-index: 901; display: grid; gap: 6px; border: 1px solid var(--border); border-radius: 16px; background: var(--card); padding: 8px; box-shadow: var(--shadow-float); }
+@keyframes safar-bottom-sheet-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.map-live-sheet { max-block-size: min(58dvh, 440px); overflow-y: auto; overscroll-behavior: contain; animation: safar-bottom-sheet-in .24s cubic-bezier(.2, .8, .2, 1) both; }
+.app-driver-more-menu { position: fixed; right: 12px; bottom: calc(76px + env(safe-area-inset-bottom)); left: 12px; z-index: 901; display: grid; gap: 6px; border: 1px solid var(--border); border-radius: 16px; background: var(--card); padding: 8px; box-shadow: var(--shadow-float); animation: safar-bottom-sheet-in .2s cubic-bezier(.2, .8, .2, 1) both; }
 .app-driver-more-menu a { display: flex; min-height: 44px; align-items: center; gap: 10px; border-radius: 10px; padding: 0 12px; color: var(--foreground); font-size: 14px; font-weight: 700; }
 .app-driver-more-menu button { display: flex; min-height: 44px; align-items: center; gap: 10px; border: 0; border-radius: 10px; background: transparent; padding: 0 12px; color: var(--foreground); font-size: 14px; font-weight: 700; text-align: left; }
 .app-driver-more-menu a:hover { background: var(--primary-soft); color: var(--primary-ink); }
 .app-driver-more-menu button:hover { background: var(--primary-soft); color: var(--primary-ink); }
 @media (min-width: 768px) { .app-driver-more-menu { display: none; } }
+@media (prefers-reduced-motion: reduce) { .map-live-sheet, .app-driver-more-menu { animation: none; } }
 
 /* Live Map is intentionally map-first on compact screens. The existing
    Leaflet instance stays mounted; only its surface is promoted above the
@@ -1454,7 +1469,7 @@ button:active:not(:disabled), .ui-button:active:not(:disabled) { transform: tran
 
 .leaflet-container:fullscreen { width: 100vw; height: 100dvh; background: var(--surface-subtle); }
 
-.app-bottom-nav button.app-nav-link { border: 0; background: transparent; }
+.app-bottom-nav button.app-nav-link { border: 1px solid transparent; background: transparent; }
 
 /* Safety card keeps its own dark surface so card text never sits on the generic glass wash. */
 .premium-card.home-safety-card {

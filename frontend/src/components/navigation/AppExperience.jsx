@@ -78,10 +78,14 @@ function markAlertsSeen(userId, alerts) {
   }
 }
 
+function motionSafeScrollBehavior() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+}
+
 function Navigation({ items, pathname, activeHash, onNavigate, onMore, moreOpen = false, mobile = false }) {
   return <nav aria-label={mobile ? "Mobile app navigation" : "Application navigation"} className={mobile ? "app-bottom-nav" : "app-desktop-nav"}>
     {items.map(({ href, label, shortLabel, icon: Icon, action }) => {
-      if (action === "more") return <button key={action} type="button" onClick={onMore} aria-expanded={moreOpen} className={moreOpen ? "app-nav-link is-active" : "app-nav-link"}><Icon size={mobile ? 20 : 18} /><span>{label}</span></button>;
+      if (action === "more") return <button key={action} type="button" onClick={(event) => onMore?.(event)} aria-expanded={moreOpen} className={moreOpen ? "app-nav-link is-active" : "app-nav-link"}><Icon size={mobile ? 20 : 18} /><span>{label}</span></button>;
       const [path, fragment] = href.split("#");
       const sameSection = items.some((item) => item.href?.startsWith(path + "#"));
       const active = fragment
@@ -119,6 +123,8 @@ export function AppExperience({ children }) {
   const notificationsOpenRef = useRef(false);
   const notificationRequestRef = useRef(false);
   const notificationOwnerRef = useRef("");
+  const driverMoreRef = useRef(null);
+  const driverMoreTriggerRef = useRef(null);
 
   useEffect(() => {
     if (!token) return;
@@ -206,6 +212,22 @@ export function AppExperience({ children }) {
     return () => { document.removeEventListener("pointerdown", close); document.removeEventListener("keydown", escape); };
   }, [accountOpen, notificationsOpen]);
 
+  useEffect(() => {
+    if (!driverMoreOpen) return undefined;
+    const closeDriverMore = (event) => {
+      if (event.type === "keydown" && event.key !== "Escape") return;
+      if (event.type === "pointerdown" && (driverMoreRef.current?.contains(event.target) || driverMoreTriggerRef.current?.contains(event.target))) return;
+      setDriverMoreOpen(false);
+      if (event.type === "keydown") driverMoreTriggerRef.current?.focus();
+    };
+    document.addEventListener("keydown", closeDriverMore);
+    document.addEventListener("pointerdown", closeDriverMore);
+    return () => {
+      document.removeEventListener("keydown", closeDriverMore);
+      document.removeEventListener("pointerdown", closeDriverMore);
+    };
+  }, [driverMoreOpen]);
+
 
   // Never mount booking forms or their data effects before authentication succeeds.
   if (isBookingPage && (!token || error === "auth")) return <div className="app-auth-state"><p role="status">Please sign in to book a ticket.</p></div>;
@@ -250,7 +272,7 @@ export function AppExperience({ children }) {
     if (target) {
       window.history.pushState(null, "", href);
       setActiveHash(`#${hash}`);
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      target.scrollIntoView({ behavior: motionSafeScrollBehavior(), block: "start" });
     }
   }
 
@@ -288,8 +310,8 @@ export function AppExperience({ children }) {
       </div>
     </header>
     <div className="app-frame"><aside className="app-sidebar"><Navigation items={items} pathname={pathname} activeHash={activeHash} onNavigate={navigate} /></aside><div className="app-content">{children}</div></div>
-    <Navigation items={mobileItems} pathname={pathname} activeHash={activeHash} onNavigate={navigate} onMore={() => setDriverMoreOpen((open) => !open)} moreOpen={driverMoreOpen} mobile />
-    {role === "driver" && driverMoreOpen && <section className="app-driver-more-menu" aria-label="More driver tools"><Link href="/driver/route" onClick={() => setDriverMoreOpen(false)}><MapPinned size={18} /> Route</Link><Link href="/reports" onClick={() => setDriverMoreOpen(false)}><ChartNoAxesCombined size={18} /> Reports</Link><Link href="/profile" onClick={() => setDriverMoreOpen(false)}><UserRound size={18} /> Profile</Link><button type="button" onClick={() => { setDriverMoreOpen(false); setConfirmLogout(true); }}><LogOut size={18} /> Sign out</button></section>}
+    <Navigation items={mobileItems} pathname={pathname} activeHash={activeHash} onNavigate={(event, href) => { setDriverMoreOpen(false); navigate(event, href); }} onMore={(event) => { driverMoreTriggerRef.current = event.currentTarget; setDriverMoreOpen((open) => !open); }} moreOpen={driverMoreOpen} mobile />
+    {role === "driver" && driverMoreOpen && <section ref={driverMoreRef} className="app-driver-more-menu" aria-label="More driver tools"><Link href="/driver/route" onClick={() => setDriverMoreOpen(false)}><MapPinned size={18} /> Route</Link><Link href="/reports" onClick={() => setDriverMoreOpen(false)}><ChartNoAxesCombined size={18} /> Reports</Link><Link href="/profile" onClick={() => setDriverMoreOpen(false)}><UserRound size={18} /> Profile</Link><button type="button" onClick={() => { setDriverMoreOpen(false); setConfirmLogout(true); }}><LogOut size={18} /> Sign out</button></section>}
     {confirmLogout && <div className="app-dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setConfirmLogout(false); }}><section className="app-logout-dialog" role="alertdialog" aria-modal="true" aria-labelledby="logout-title"><button type="button" className="app-dialog-close" aria-label="Close" onClick={() => setConfirmLogout(false)}><X size={18} /></button><span className="app-dialog-icon"><LogOut size={22} /></span><h2 id="logout-title">Log out?</h2><p>Are you sure you want to log out?</p><div><button type="button" onClick={() => setConfirmLogout(false)}>Cancel</button><button type="button" className="is-danger" onClick={logout}>Log out</button></div></section></div>}
   </div>;
 }

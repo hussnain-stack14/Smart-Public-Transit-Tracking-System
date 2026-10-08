@@ -16,7 +16,6 @@ import { Button } from "../common/Button";
 import { Card } from "../common/Card";
 import { CardBackdrop } from "../common/CardBackdrop";
 import { ErrorState } from "../common/ErrorState";
-import { LoadingSpinner } from "../common/LoadingSpinner";
 import { busService } from "../../services/busService";
 import { routeService } from "../../services/routeService";
 import { useAuth } from "../../hooks/useAuth";
@@ -195,7 +194,7 @@ export default function BookingPage({ initialBusId = "", initialRouteId = "" }) 
 
         <BookingProgress currentStep={1} />
 
-        {routesLoading && !routes.length ? <div className="mt-6"><LoadingSpinner label="Loading booking options..." /></div> : loadError ? (
+        {routesLoading && !routes.length ? <BookingOptionsSkeleton /> : loadError ? (
           <div className="mt-8">
             <ErrorState
               title="Unable to load routes"
@@ -388,4 +387,11 @@ function SummaryRow({ label, value }) {
       </dd>
     </div>
   );
+}
+
+function BookingOptionsSkeleton() {
+  return <div className="mt-8 grid animate-pulse gap-6 lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.85fr)] lg:items-start" role="status" aria-label="Loading booking options">
+    <Card treatment="operational" className="space-y-5 p-5 sm:p-6"><span className="block h-5 w-36 rounded bg-[var(--skeleton)]" /><span className="block h-12 w-full rounded-xl bg-[var(--skeleton)]" /><span className="block h-12 w-full rounded-xl bg-[var(--skeleton)]" /><span className="block h-12 w-full rounded-xl bg-[var(--skeleton)]" /></Card>
+    <Card treatment="stat" className="space-y-4 p-5"><span className="block h-5 w-28 rounded bg-[var(--skeleton)]" /><span className="block h-4 w-full rounded bg-[var(--skeleton)]" /><span className="block h-4 w-4/5 rounded bg-[var(--skeleton)]" /><span className="block h-12 w-full rounded-xl bg-[var(--skeleton)]" /></Card>
+  </div>;
 }

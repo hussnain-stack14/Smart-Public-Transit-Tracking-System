@@ -17,7 +17,7 @@ export function RouteCard({ route, className = "" }) {
     activeBuses != null && { label: `${activeBuses} active`, icon: BusFront },
   ].filter(Boolean);
 
-  return <Card treatment="operational" className={`route-card flex h-full min-w-0 flex-col p-4 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_30px_rgba(15,23,42,0.08)] ${className}`}>
+  return <Card treatment="operational" className={`route-card flex h-full min-w-0 flex-col p-4 ${className}`}>
     <div className="flex items-start justify-between gap-3">
       <h3 className="min-w-0 text-base font-bold leading-5 text-[var(--foreground)]">{routeName}</h3>
       {showStatus && <span className={`route-card-status inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold ${isActive ? "is-active text-[var(--success)]" : "text-[var(--muted)]"}`}><span className="h-1.5 w-1.5 rounded-full bg-current" />{isActive ? "Active" : "Inactive"}</span>}

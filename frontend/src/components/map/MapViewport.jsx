@@ -5,12 +5,17 @@ import { useMap } from "react-leaflet";
 import { isValidPosition } from "../../lib/transit/coordinates";
 import { readLiveMapState, saveLiveMapViewport } from "../../lib/live-map/liveMapStorage";
 
-export function MapViewport({ positions = [], focusKey, focusPosition, followPosition }) {
+function reducedMotionPreferred() {
+  return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+export function MapViewport({ positions = [], focusKey, focusPosition, followPosition, persistViewport = false }) {
   const map = useMap();
   const positionsRef = useRef(positions);
   const restoredViewport = useRef(false);
 
   useEffect(() => {
+    if (!persistViewport) return undefined;
     let active = true;
     readLiveMapState().then((saved) => {
       const viewport = saved?.data?.mapViewport;
@@ -19,17 +24,22 @@ export function MapViewport({ positions = [], focusKey, focusPosition, followPos
       restoredViewport.current = true;
     });
     return () => { active = false; };
-  }, [map]);
+  }, [map, persistViewport]);
 
   useEffect(() => {
+    if (!persistViewport) return undefined;
+    let saveTimer;
     const save = () => {
-      const center = map.getCenter();
-      saveLiveMapViewport({ center: [center.lat, center.lng], zoom: map.getZoom() });
+      window.clearTimeout(saveTimer);
+      saveTimer = window.setTimeout(() => {
+        const center = map.getCenter();
+        saveLiveMapViewport({ center: [center.lat, center.lng], zoom: map.getZoom() });
+      }, 300);
     };
     map.on("moveend", save);
     map.on("zoomend", save);
-    return () => { map.off("moveend", save); map.off("zoomend", save); };
-  }, [map]);
+    return () => { window.clearTimeout(saveTimer); map.off("moveend", save); map.off("zoomend", save); };
+  }, [map, persistViewport]);
 
   // Keep the newest coordinates available to the fit effect without making a
   // live location event re-fit the map.
@@ -58,13 +68,13 @@ export function MapViewport({ positions = [], focusKey, focusPosition, followPos
   }, [focusKey, map]);
 
   useEffect(() => {
-    if (isValidPosition(focusPosition)) map.setView(focusPosition, Math.max(map.getZoom(), 15), { animate: true, duration: 0.45 });
+    if (isValidPosition(focusPosition)) map.setView(focusPosition, Math.max(map.getZoom(), 15), { animate: !reducedMotionPreferred(), duration: 0.45 });
   // A selection changes focusKey; a live location update must not recenter unless follow is on.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusKey, map]);
 
   useEffect(() => {
-    if (isValidPosition(followPosition)) map.panTo(followPosition, { animate: true, duration: 0.45 });
+    if (isValidPosition(followPosition)) map.panTo(followPosition, { animate: !reducedMotionPreferred(), duration: 0.45 });
   }, [followPosition, map]);
 
   return null;

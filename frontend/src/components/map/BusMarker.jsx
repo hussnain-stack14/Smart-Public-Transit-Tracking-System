@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef } from "react";
 import { Marker, Popup } from "react-leaflet";
 import { createBusMapIcon } from "./transitMarkerIcons";
 
@@ -19,27 +19,20 @@ function BusMarkerView({ position, bus, onSelect, selected = false, stale = fals
   const markerRef = useRef(null);
   const previousPosition = useRef(position);
   const heading = useRef(null);
-  const [initialPosition] = useState(position);
   const label = bus?.name || bus?.number || bus?.busNumber || "Live bus";
   useEffect(() => {
     const marker = markerRef.current;
     const start = previousPosition.current;
-    if (!marker || !start || !position || samePosition(start, position)) return undefined;
+    if (!marker || !position) return;
     const nextHeading = bearing(start, position);
     if (nextHeading != null) heading.current = nextHeading;
+    if (!samePosition(start, position)) marker.setLatLng(position);
     marker.setIcon(createBusMapIcon({ heading: heading.current, selected, stale }));
-    const started = Date.now();
-    const timer = setInterval(() => {
-      const progress = Math.min(1, (Date.now() - started) / 650);
-      marker.setLatLng([start[0] + (position[0] - start[0]) * progress, start[1] + (position[1] - start[1]) * progress]);
-      if (progress === 1) clearInterval(timer);
-    }, 50);
     previousPosition.current = position;
-    return () => clearInterval(timer);
   }, [position, selected, stale]);
   useEffect(() => { markerRef.current?.setIcon(createBusMapIcon({ heading: heading.current, selected, stale })); }, [selected, stale]);
   if (!position) return null;
-  return <Marker ref={markerRef} position={initialPosition || position} title={label} icon={createBusMapIcon({ selected, stale })} zIndexOffset={selected ? 450 : 300} riseOnHover eventHandlers={{ click: () => onSelect?.(bus) }}><Popup><strong>{label}</strong><p className="mt-1">{stale ? "Location update delayed" : "Live bus location"}</p></Popup></Marker>;
+  return <Marker ref={markerRef} position={position} title={label} icon={createBusMapIcon({ selected, stale })} zIndexOffset={selected ? 450 : 300} riseOnHover eventHandlers={{ click: () => onSelect?.(bus) }}><Popup><strong>{label}</strong><p className="mt-1">{stale ? "Location update delayed" : "Live bus location"}</p></Popup></Marker>;
 }
 
 export const BusMarker = memo(BusMarkerView, (previous, next) => samePosition(previous.position, next.position) && previous.selected === next.selected && previous.stale === next.stale && previous.bus?.busNumber === next.bus?.busNumber);

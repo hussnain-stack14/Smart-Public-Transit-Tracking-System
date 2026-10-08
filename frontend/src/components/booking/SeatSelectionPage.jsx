@@ -21,7 +21,6 @@ import { Badge } from "../common/Badge";
 import { Button } from "../common/Button";
 import { Card } from "../common/Card";
 import { ErrorState } from "../common/ErrorState";
-import { LoadingSpinner } from "../common/LoadingSpinner";
 import { ClientTransitMap } from "../map/MapShell";
 import { MapViewport } from "../map/MapViewport";
 import { StopMarker } from "../map/StopMarker";
@@ -249,9 +248,7 @@ export default function SeatSelectionPage({
   if (loading && !bus) {
     return (
       <PageShell>
-        <div className="grid min-h-96 place-items-center">
-          <LoadingSpinner label="Loading seat availability..." />
-        </div>
+        <SeatSelectionSkeleton />
       </PageShell>
     );
   }
@@ -539,6 +536,13 @@ function PageShell({ children }) {
       <Footer />
     </div>
   );
+}
+
+function SeatSelectionSkeleton() {
+  return <div className="grid animate-pulse gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(300px,.8fr)] lg:items-start" role="status" aria-label="Loading seat availability">
+    <Card treatment="operational" className="p-5 sm:p-6"><span className="block h-5 w-40 rounded bg-[var(--skeleton)]" /><span className="mt-3 block h-4 w-3/5 rounded bg-[var(--skeleton)]" /><div className="mt-6 grid grid-cols-4 gap-3 rounded-[1.75rem] border border-[var(--primary-border)] p-5 sm:grid-cols-5">{Array.from({ length: 20 }, (_, index) => <span key={index} className="aspect-square rounded-lg bg-[var(--skeleton)]" />)}</div></Card>
+    <Card treatment="stat" className="space-y-4 p-5"><span className="block h-5 w-32 rounded bg-[var(--skeleton)]" /><span className="block h-4 w-full rounded bg-[var(--skeleton)]" /><span className="block h-4 w-4/5 rounded bg-[var(--skeleton)]" /><span className="block h-12 w-full rounded-xl bg-[var(--skeleton)]" /></Card>
+  </div>;
 }
 
 function SummaryItem({ label, value }) {
