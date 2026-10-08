@@ -21,6 +21,8 @@ import { ErrorState } from "../common/ErrorState";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { bookingService } from "../../services/bookingService";
 import { useAuth } from "../../hooks/useAuth";
+import { getAccessToken } from "../../lib/auth/token";
+import { readPrivateSnapshot, savePrivateSnapshot } from "../../lib/live-map/liveMapStorage";
 
 const filters = ["all", "confirmed", "completed", "cancelled"];
 
@@ -64,6 +66,7 @@ export default function MyTripsPage() {
   const [error, setError] = useState("");
   const [cancellingId, setCancellingId] = useState("");
   const [cancelError, setCancelError] = useState("");
+  const [online, setOnline] = useState(() => typeof navigator === "undefined" || navigator.onLine);
 
   const loadBookings = useCallback(async () => {
     if (!isAuthenticated) {
@@ -72,16 +75,26 @@ export default function MyTripsPage() {
     }
     setLoading(true);
     setError("");
+    const token = getAccessToken();
+    const cached = await readPrivateSnapshot(token, "my-trips");
+    const cachedBookings = Array.isArray(cached?.data?.bookings) ? cached.data.bookings : [];
+    if (cachedBookings.length) setBookings(cachedBookings);
+    if (!navigator.onLine) {
+      setError(cachedBookings.length ? "offline" : "offline-empty");
+      setLoading(false);
+      return;
+    }
     try {
       const response = await bookingService.getMyBookings();
       const list = Array.isArray(response) ? response : response.bookings;
       if (!Array.isArray(list)) throw new Error("Unexpected bookings response");
       setBookings(list);
+      savePrivateSnapshot(token, "my-trips", { bookings: list });
     } catch (requestError) {
       if (requestError.response?.status === 401) setError("auth");
       else {
         console.error("Unable to load booking history", requestError);
-        setError("load");
+        setError(cachedBookings.length ? "offline" : "load");
       }
     } finally {
       setLoading(false);
@@ -92,12 +105,23 @@ export default function MyTripsPage() {
     Promise.resolve().then(() => loadBookings());
   }, [loadBookings]);
 
+  useEffect(() => {
+    const sync = () => setOnline(navigator.onLine);
+    window.addEventListener("online", sync);
+    window.addEventListener("offline", sync);
+    return () => { window.removeEventListener("online", sync); window.removeEventListener("offline", sync); };
+  }, []);
+
   const visibleBookings = useMemo(
     () => (filter === "all" ? bookings : bookings.filter((booking) => booking.status === filter)),
     [bookings, filter],
   );
 
   async function cancelBooking(booking) {
+    if (!online) {
+      setCancelError("You're offline. Connect to the internet before cancelling a booking.");
+      return;
+    }
     const confirmed = window.confirm(
       "Cancel this booking? Its seat will be released and pickup-location sharing will stop.",
     );
@@ -157,6 +181,9 @@ export default function MyTripsPage() {
       </PageShell>
     );
   }
+  if (error === "offline-empty") {
+    return <PageShell><StateCard title="No saved trips yet" description="Connect to the internet and open My Trips once to save your booking summaries on this device." actionHref="/" actionLabel="Back to home" /></PageShell>;
+  }
 
   return (
     <PageShell>
@@ -172,6 +199,8 @@ export default function MyTripsPage() {
           View booking, payment, pickup, and assignment details from your private booking history.
         </p>
       </header>
+
+      {error === "offline" && <p role="status" className="mt-5 rounded-xl border border-[var(--warning-border)] bg-[var(--warning-soft)] p-3 text-sm text-[var(--warning)]">Saved booking information — connect to refresh. Booking changes are unavailable offline.</p>}
 
       <div className="mt-8 flex flex-wrap gap-2" role="tablist" aria-label="Trip filters">
         {filters.map((value) => (
@@ -233,6 +262,7 @@ export default function MyTripsPage() {
             bookings={visibleBookings}
             cancellingId={cancellingId}
             onCancel={cancelBooking}
+            readOnly={!online || error === "offline"}
           />
         </div>
       )}
@@ -240,7 +270,7 @@ export default function MyTripsPage() {
   );
 }
 
-function TripSection({ title, icon: Icon, bookings, cancellingId, onCancel }) {
+function TripSection({ title, icon: Icon, bookings, cancellingId, onCancel, readOnly }) {
   return (
     <section>
       <div className="flex items-center gap-3">
@@ -261,6 +291,7 @@ function TripSection({ title, icon: Icon, bookings, cancellingId, onCancel }) {
             booking={booking}
             cancelling={cancellingId === booking._id}
             onCancel={onCancel}
+            readOnly={readOnly}
           />
         ))}
       </div>
@@ -268,7 +299,7 @@ function TripSection({ title, icon: Icon, bookings, cancellingId, onCancel }) {
   );
 }
 
-function TripCard({ booking, cancelling, onCancel }) {
+function TripCard({ booking, cancelling, onCancel, readOnly }) {
   const bus = booking.bus && typeof booking.bus === "object" ? booking.bus : {};
   const route = booking.route && typeof booking.route === "object" ? booking.route : {};
   const driver = booking.driver && typeof booking.driver === "object" ? booking.driver : {};
@@ -314,10 +345,10 @@ function TripCard({ booking, cancelling, onCancel }) {
             type="button"
             variant="secondary"
             className="min-h-10 gap-2 text-[var(--danger)]"
-            disabled={cancelling}
+            disabled={cancelling || readOnly}
             onClick={() => onCancel(booking)}
           >
-            <Trash2 size={15} /> {cancelling ? "Cancelling..." : "Cancel booking"}
+            <Trash2 size={15} /> {cancelling ? "Cancelling..." : readOnly ? "Connect to cancel" : "Cancel booking"}
           </Button>
         )}
         <Link

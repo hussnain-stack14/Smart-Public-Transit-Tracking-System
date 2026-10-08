@@ -1,6 +1,7 @@
 import api from "../lib/api/axios";
 import { API_PATHS } from "../config/api";
 import { setAccessToken } from "../lib/auth/token";
+import { readPrivateSnapshot, savePrivateSnapshot } from "../lib/live-map/liveMapStorage";
 
 let cachedProfile = null;
 let cachedProfileToken = null;
@@ -50,6 +51,7 @@ export async function getProfile({ force = false } = {}) {
   profileRequestToken = token;
   profileRequest = api.get(`${API_PATHS.auth}/profile`).then(({ data }) => {
     if (profileRequestToken === token) { cachedProfile = data; cachedProfileToken = token; }
+    if (token) savePrivateSnapshot(token, "profile", data);
     return data;
   }).finally(() => { if (profileRequestToken === token) profileRequest = null; });
   return profileRequest;
@@ -61,7 +63,13 @@ export async function updateProfile(values) {
   cachedProfileToken = typeof window === "undefined" ? null : window.localStorage.getItem("smart-transit-access-token");
   profileRequest = null;
   profileRequestToken = null;
+  if (cachedProfileToken) savePrivateSnapshot(cachedProfileToken, "profile", data);
   return data;
+}
+
+export async function getCachedProfile(token) {
+  const cached = await readPrivateSnapshot(token, "profile");
+  return cached?.data || null;
 }
 
 export async function changePassword(values) {

@@ -1,7 +1,7 @@
 /* Public shell and public transit snapshots only. Private sessions, bookings,
    live sockets, map tiles, and mutations are deliberately never cached. */
-const SHELL_CACHE = "smart-safar-shell-v6";
-const TRANSIT_CACHE = "smart-safar-transit-v5";
+const SHELL_CACHE = "smart-safar-shell-v7";
+const TRANSIT_CACHE = "smart-safar-transit-v6";
 const STATIC_ASSETS = [
   "/",
   "/routes",
@@ -19,6 +19,7 @@ function isPublicPage(url) {
     || url.pathname === "/live-map"
     || url.pathname === "/routes"
     || /^\/routes\/[^/]+$/.test(url.pathname)
+    || /^\/buses\/[^/]+$/.test(url.pathname)
     || url.pathname === "/login"
     || url.pathname === "/register";
 }

@@ -6,7 +6,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { BusFront, Bell, ChartNoAxesCombined, History, House, LogOut, MapPinned, MoreHorizontal, Route, Settings, Ticket, UserRound, Users, X } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { clearAccessToken, getAccessToken } from "../../lib/auth/token";
-import { getProfile, getRoleHome } from "../../services/authService";
+import { getCachedProfile, getProfile, getRoleHome } from "../../services/authService";
+import { clearPrivateSnapshots } from "../../lib/live-map/liveMapStorage";
 import { alertService } from "../../services/alertService";
 import { routeService } from "../../services/routeService";
 import { LoadingSpinner } from "../common/LoadingSpinner";
@@ -129,7 +130,12 @@ export function AppExperience({ children }) {
   useEffect(() => {
     if (!token) return;
     let active = true;
-    getProfile().then(user => { if (active) { const nextOwner = user?._id || user?.id || user?.email || ""; if (notificationOwnerRef.current !== nextOwner) { notificationOwnerRef.current = nextOwner; setNotifications({ status: "idle", items: [] }); } setProfile({ token, user, error: "" }); } }).catch(error => {
+    getProfile().then(user => { if (active) { const nextOwner = user?._id || user?.id || user?.email || ""; if (notificationOwnerRef.current !== nextOwner) { notificationOwnerRef.current = nextOwner; setNotifications({ status: "idle", items: [] }); } setProfile({ token, user, error: "" }); } }).catch(async (error) => {
+      if (!active) return;
+      if (![401, 403].includes(error.response?.status) && typeof navigator !== "undefined" && !navigator.onLine) {
+        const cachedUser = await getCachedProfile(token);
+        if (active && cachedUser) { setProfile({ token, user: cachedUser, error: "", offline: true }); return; }
+      }
       if (active) setProfile({ token, user: null, error: [401, 403].includes(error.response?.status) ? "auth" : "load" });
     });
     return () => { active = false; };
@@ -251,7 +257,7 @@ export function AppExperience({ children }) {
     })
     : [];
   const hasUnseenAlerts = unreadAlerts.length > 0;
-  function logout() { clearAccessToken(); setConfirmLogout(false); setAccountOpen(false); router.replace("/"); }
+  function logout() { clearPrivateSnapshots(getAccessToken()); clearAccessToken(); setConfirmLogout(false); setAccountOpen(false); router.replace("/"); }
   function closeNotifications() {
     notificationsOpenRef.current = false;
     setNotificationsOpen(false);

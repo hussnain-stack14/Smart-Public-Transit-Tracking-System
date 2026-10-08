@@ -4,6 +4,7 @@ const MAP_STATE_KEY = "map-state";
 const TRANSIT_SNAPSHOT_KEY = "transit-snapshot";
 const ROUTE_CATALOGUE_KEY = "route-catalogue";
 const MAX_CACHED_ROUTE_DETAILS = 50;
+const PRIVATE_SNAPSHOT_TYPES = ["profile", "my-trips"];
 
 function openStore(mode) {
   return new Promise((resolve, reject) => {
@@ -70,4 +71,45 @@ export async function saveCachedRouteDetails(routeId, details) {
     .sort(([, left], [, right]) => (right.cachedAt || 0) - (left.cachedAt || 0))
     .slice(0, MAX_CACHED_ROUTE_DETAILS);
   return write(ROUTE_CATALOGUE_KEY, { routes: current?.data?.routes || [], details: Object.fromEntries(retained) });
+}
+
+// Private records are intentionally kept out of Cache Storage. The token is
+// never persisted here: its deterministic scope is only used to avoid showing
+// one signed-in account another account's cached data on the same device.
+function privateScope(token) {
+  let hash = 2166136261;
+  for (let index = 0; index < token.length; index += 1) {
+    hash ^= token.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function privateKey(token, type) {
+  return token && PRIVATE_SNAPSHOT_TYPES.includes(type) ? `private:${privateScope(token)}:${type}` : null;
+}
+
+export function readPrivateSnapshot(token, type) {
+  const key = privateKey(token, type);
+  return key ? read(key) : Promise.resolve(null);
+}
+
+export function savePrivateSnapshot(token, type, data) {
+  const key = privateKey(token, type);
+  return key ? write(key, data) : Promise.resolve();
+}
+
+export async function clearPrivateSnapshots(token) {
+  const keys = PRIVATE_SNAPSHOT_TYPES.map((type) => privateKey(token, type)).filter(Boolean);
+  if (!keys.length || typeof window === "undefined" || !window.indexedDB) return;
+  try {
+    const store = await openStore("readwrite");
+    await Promise.all(keys.map((key) => new Promise((resolve, reject) => {
+      const request = store.delete(key);
+      request.onsuccess = resolve;
+      request.onerror = reject;
+    })));
+  } catch {
+    // Logging out remains successful when the browser denies storage access.
+  }
 }

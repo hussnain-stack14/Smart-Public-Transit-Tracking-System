@@ -31,6 +31,7 @@ import { busService } from "../../services/busService";
 import { routeService } from "../../services/routeService";
 import { stopService } from "../../services/stopService";
 import { normalizeBus, getRouteId } from "../../lib/transit/format";
+import { readTransitSnapshot, saveCachedRoutes, saveTransitSnapshot } from "../../lib/live-map/liveMapStorage";
 
 const benefits = [
   { title: "Live Tracking", text: "See active buses across the city.", icon: Map },
@@ -70,6 +71,7 @@ export default function HomePage() {
   const [routeGeometries, setRouteGeometries] = useState([]);
   const [transitLoading, setTransitLoading] = useState(true);
   const [transitError, setTransitError] = useState(false);
+  const [showingSavedTransit, setShowingSavedTransit] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
   const searchRef = useRef(null);
@@ -77,21 +79,47 @@ export default function HomePage() {
   useEffect(() => {
     let cancelled = false;
     Promise.resolve().then(async () => {
+      const restoreSavedTransit = async () => {
+        const snapshot = await readTransitSnapshot();
+        const saved = snapshot?.data;
+        if (!saved || cancelled) return false;
+        const savedRoutes = Array.isArray(saved.routes) ? saved.routes : [];
+        const savedGeometries = Array.isArray(saved.routeStops) ? saved.routeStops : [];
+        if (!savedRoutes.length && !savedGeometries.length) return false;
+        // A prior bus location is not presented as live on the home screen.
+        // Live Map owns its clearly-labelled last-known-location experience.
+        setRoutes(savedRoutes);
+        setRouteGeometries(savedGeometries);
+        setBuses([]);
+        setShowingSavedTransit(true);
+        return true;
+      };
       try {
+        if (typeof navigator !== "undefined" && !navigator.onLine) {
+          if (!await restoreSavedTransit() && !cancelled) setTransitError(true);
+          return;
+        }
         const [routeData, busData] = await Promise.all([routeService.list(), busService.list()]);
         const routeList = Array.isArray(routeData) ? routeData : routeData.routes || [];
         const busList = Array.isArray(busData) ? busData : busData.buses || [];
         const routeMap = Object.fromEntries(routeList.map((route) => [getRouteId(route), route]));
         const etaResults = await Promise.all(busList.map(async (bus) => isOperating(bus) ? busService.getEta(bus._id).catch(() => null) : null));
         const geometryResults = await Promise.all(routeList.map(async (route) => ({ route, stops: await stopService.listByRoute(getRouteId(route)).catch(() => []) })));
+        const normalizedBuses = busList.map((bus, index) => normalizeBus(bus, etaResults[index], routeMap));
+        // Home is the normal first online screen, so refresh the same bounded
+        // public snapshots used by Routes and Live Map without extra requests.
+        saveCachedRoutes(routeList);
+        saveTransitSnapshot({ routes: routeList, buses: normalizedBuses, routeStops: geometryResults });
         if (!cancelled) {
           setRoutes(routeList);
-          setBuses(busList.map((bus, index) => normalizeBus(bus, etaResults[index], routeMap)));
+          setBuses(normalizedBuses);
           setRouteGeometries(geometryResults);
+          setShowingSavedTransit(false);
         }
       } catch (error) {
         console.error("Unable to load home transit data", error);
-        if (!cancelled) setTransitError(true);
+        const restored = await restoreSavedTransit();
+        if (!cancelled && !restored) setTransitError(true);
       } finally {
         if (!cancelled) setTransitLoading(false);
       }
@@ -166,10 +194,10 @@ export default function HomePage() {
                   <div>
                     <p className="text-xs text-white/70">Network status</p>
                     <p className="mt-1 text-sm font-bold text-white">
-                      {transitLoading ? "Checking live service..." : `${activeBuses.length} ${activeBuses.length === 1 ? "bus" : "buses"} active now`}
+                      {transitLoading ? "Checking live service..." : showingSavedTransit ? "Saved route information is available" : `${activeBuses.length} ${activeBuses.length === 1 ? "bus" : "buses"} active now`}
                     </p>
                   </div>
-                  <Badge tone={activeBuses.length ? "success" : "neutral"}>{activeBuses.length ? "Live" : "Quiet"}</Badge>
+                  <Badge tone={activeBuses.length && !showingSavedTransit ? "success" : "neutral"}>{showingSavedTransit ? "Offline" : activeBuses.length ? "Live" : "Quiet"}</Badge>
                 </div>
               </div>
             </div>
@@ -181,8 +209,8 @@ export default function HomePage() {
 
       <section data-home-reveal className="home-quick-actions mx-auto max-w-5xl px-4 pt-4 sm:px-6 md:hidden" aria-label="Quick actions"><div className="grid grid-cols-3 gap-2"><Link href="/live-map" className="public-quick-action premium-card premium-card--glass"><span><BusFront size={19} /></span>Live Buses</Link><Link href="/routes" className="public-quick-action premium-card premium-card--glass"><span><RouteIcon size={19} /></span>Routes</Link><button type="button" onClick={focusSearch} className="public-quick-action premium-card premium-card--glass"><span><Search size={19} /></span>Find a Bus</button></div></section>
 
-      <section id="live-transit" className="home-content-section home-live-section mx-auto max-w-7xl scroll-mt-20 px-4 py-8 sm:px-6 md:py-16 lg:px-8"><div className="premium-card premium-card--primary premium-card--imagery flex items-end justify-between gap-4 p-4 sm:p-5"><CardBackdrop visual="transit" /><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary-ink)]">Right now</p><h2 className="mt-1 text-xl font-extrabold tracking-tight text-[var(--foreground)] sm:text-3xl md:mt-2">Live Transit</h2><p className="mt-1 text-xs text-[var(--muted)] sm:text-sm md:mt-2">Buses currently operating across Faisalabad.</p></div><Link href="/live-map" className="inline-flex min-h-10 flex-none items-center gap-1 text-xs font-bold text-[var(--primary-ink)] sm:text-sm">View all <ArrowRight size={15} /></Link></div>
-        {transitLoading ? <div className="mt-4 py-4"><LoadingSpinner label="Loading live buses..." /></div> : transitError ? <div className="mt-4"><EmptyState title="Live transit is unavailable" description="We couldn't retrieve current bus information right now." /></div> : displayedBuses.length ? <><div className="mt-4 grid gap-2.5 md:hidden">{displayedBuses.slice(0, 3).map((bus) => <MobileBusCard key={bus.id} bus={bus} />)}</div><div className="mt-8 hidden gap-4 md:grid md:grid-cols-2 lg:grid-cols-3">{displayedBuses.slice(0, 6).map((bus) => <BusCard key={bus.id} bus={bus} />)}</div></> : <div className="mt-4"><EmptyState title={hasSearched ? "No active buses found" : "No buses operating right now"} description={hasSearched ? "Try another bus number, route, or stop." : "Live details will appear when service is active."} /></div>}
+      <section id="live-transit" className="home-content-section home-live-section mx-auto max-w-7xl scroll-mt-20 px-4 py-8 sm:px-6 md:py-16 lg:px-8"><div className="premium-card premium-card--primary premium-card--imagery flex items-end justify-between gap-4 p-4 sm:p-5"><CardBackdrop visual="transit" /><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary-ink)]">{showingSavedTransit ? "Offline" : "Right now"}</p><h2 className="mt-1 text-xl font-extrabold tracking-tight text-[var(--foreground)] sm:text-3xl md:mt-2">{showingSavedTransit ? "Saved Transit" : "Live Transit"}</h2><p className="mt-1 text-xs text-[var(--muted)] sm:text-sm md:mt-2">{showingSavedTransit ? "Routes and stops saved from your last connection." : "Buses currently operating across Faisalabad."}</p></div><Link href="/live-map" className="inline-flex min-h-10 flex-none items-center gap-1 text-xs font-bold text-[var(--primary-ink)] sm:text-sm">View all <ArrowRight size={15} /></Link></div>
+        {transitLoading ? <div className="mt-4 py-4"><LoadingSpinner label="Loading live buses..." /></div> : transitError ? <div className="mt-4"><EmptyState title="Live transit is unavailable" description="We couldn't retrieve current bus information right now." /></div> : displayedBuses.length ? <><div className="mt-4 grid gap-2.5 md:hidden">{displayedBuses.slice(0, 3).map((bus) => <MobileBusCard key={bus.id} bus={bus} />)}</div><div className="mt-8 hidden gap-4 md:grid md:grid-cols-2 lg:grid-cols-3">{displayedBuses.slice(0, 6).map((bus) => <BusCard key={bus.id} bus={bus} />)}</div></> : <div className="mt-4"><EmptyState title={showingSavedTransit ? "Live updates are paused" : hasSearched ? "No active buses found" : "No buses operating right now"} description={showingSavedTransit ? "Connect to the internet for current bus positions and arrival times." : hasSearched ? "Try another bus number, route, or stop." : "Live details will appear when service is active."} /></div>}
       </section>
 
       <section className="home-content-section home-map-section border-y border-[var(--border)] bg-white"><div className="mx-auto grid max-w-7xl gap-4 px-4 py-8 sm:px-6 md:gap-8 md:py-16 lg:grid-cols-[1fr_1.55fr] lg:items-center lg:px-8"><Card visual="network" treatment="primary" className="p-5 sm:p-6"><p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary-ink)]">Live network map</p><h2 className="mt-1 text-xl font-extrabold tracking-tight text-[var(--foreground)] sm:text-3xl md:mt-2">Your journey, in view.</h2><p className="mt-2 max-w-md text-sm leading-6 text-[var(--muted)]">See active buses, stops and route movement together.</p><div className="home-map-summary mt-5 hidden grid-cols-3 gap-2 md:grid"><Link href="/live-map" className="premium-card premium-card--stat"><strong>{transitLoading ? "--" : activeBuses.length}</strong><span>Active buses</span></Link><Link href="/routes" className="premium-card premium-card--stat"><strong>{transitLoading ? "--" : routes.length}</strong><span>Available routes</span></Link><Link href="/live-map" className="premium-card premium-card--stat"><strong>{transitLoading ? "--" : stops.length}</strong><span>Mapped stops</span></Link></div><Link href="/live-map" className="home-map-all-link mt-4 hidden items-center gap-2 text-sm font-bold text-[var(--primary-ink)] md:inline-flex">Open live network <ArrowRight size={16} /></Link></Card><div><div className="public-home-map relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-subtle)] p-1 shadow-[0_14px_36px_rgba(15,23,42,0.08)]"><ClientTransitMap center={[31.416, 73.078]} zoom={13} className="h-[270px] rounded-xl sm:h-[340px] lg:h-[450px]">{routeGeometries.map(({ route, stops: routeStops }) => { const positions = routeStops.filter((stop) => stop.latitude != null && stop.longitude != null).map((stop) => [stop.latitude, stop.longitude]); return positions.length > 1 ? <RoutePolyline key={getRouteId(route)} positions={positions} /> : null; })}<MapControls />{activeBuses.filter((bus) => bus.position).map((bus) => <BusMarker key={bus.id} position={bus.position} bus={bus} />)}{stops.map((stop) => <StopMarker key={stop.id} position={stop.position} stop={stop} />)}</ClientTransitMap></div><Link href="/live-map" className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[var(--primary-border)] bg-white text-sm font-bold text-[var(--primary-ink)] md:hidden"><MapPin size={17} /> View live map</Link></div></div></section>

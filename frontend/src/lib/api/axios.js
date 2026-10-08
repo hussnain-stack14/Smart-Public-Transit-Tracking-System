@@ -11,6 +11,9 @@ api.interceptors.request.use((config) => {
   const token = getAccessToken();
   const bookingRequest = config.url === API_PATHS.bookings || config.url?.startsWith(API_PATHS.bookings + "/");
   const mutation = ["post", "patch", "put", "delete"].includes(config.method?.toLowerCase());
+  if (mutation && typeof navigator !== "undefined" && !navigator.onLine) {
+    return Promise.reject(new axios.AxiosError("You're offline. Connect to the internet before making changes.", "ERR_OFFLINE", config));
+  }
   if (!token && bookingRequest && mutation) {
     return Promise.reject(new axios.AxiosError("Please sign in to book a ticket.", "ERR_AUTH_REQUIRED", config));
   }

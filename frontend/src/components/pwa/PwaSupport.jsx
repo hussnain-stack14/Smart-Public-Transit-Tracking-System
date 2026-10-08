@@ -35,6 +35,7 @@ function isOfflinePublicPath(pathname) {
     || pathname === "/live-map"
     || pathname === "/routes"
     || /^\/routes\/[^/]+$/.test(pathname)
+    || /^\/buses\/[^/]+$/.test(pathname)
     || pathname === "/login"
     || pathname === "/register";
 }
@@ -172,6 +173,23 @@ export function PwaSupport() {
     if (document.readyState === "complete") register();
     else window.addEventListener("load", register, { once: true });
     return () => window.removeEventListener("load", register);
+  }, []);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator) || !navigator.onLine) return undefined;
+    let cancelled = false;
+    navigator.serviceWorker.ready.then(() => {
+      if (cancelled) return;
+      const appDocuments = ["/", "/routes", "/live-map"];
+      const loadedAssets = performance.getEntriesByType("resource")
+        .map((entry) => entry.name)
+        .filter((name) => name.startsWith(window.location.origin + "/_next/static/"))
+        .slice(0, 80);
+      // Fetch through the active worker so the current shell's chunks and the
+      // three essential public documents are available after a cold restart.
+      Promise.all([...appDocuments, ...loadedAssets].map((resource) => fetch(resource, { headers: resource.startsWith("/") ? { Accept: "text/html" } : undefined }).catch(() => null)));
+    });
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
