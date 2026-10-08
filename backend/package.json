@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+     "start": "node src/server.js",
     "test": "node --test --test-concurrency=1 test/driver-management.test.js test/seat-management.test.js test/route-geometry.test.js",
     "dev": "nodemon src/server.js",
     "migrate:stops": "node scripts/migrate-stops.js"
