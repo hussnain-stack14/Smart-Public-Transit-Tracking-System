@@ -30,6 +30,15 @@ function publishInstallAvailability(available) {
   window.dispatchEvent(new CustomEvent("smart-safar:install-availability", { detail: { available } }));
 }
 
+function isOfflinePublicPath(pathname) {
+  return pathname === "/"
+    || pathname === "/live-map"
+    || pathname === "/routes"
+    || /^\/routes\/[^/]+$/.test(pathname)
+    || pathname === "/login"
+    || pathname === "/register";
+}
+
 export function PwaSupport() {
   const pathname = usePathname();
   const { isAuthenticated } = useAuth();
@@ -130,6 +139,27 @@ export function PwaSupport() {
       if (hintTimer) window.clearTimeout(hintTimer);
     };
   }, [promptToInstall, installPrompt, installed]);
+
+  useEffect(() => {
+    if (!window.navigator.onLine || !isOfflinePublicPath(pathname)) return;
+    fetch(pathname, { headers: { Accept: "text/html" } }).catch(() => {
+      // The route remains usable online even when warming its offline document fails.
+    });
+  }, [pathname]);
+
+  useEffect(() => {
+    const useCachedDocument = (event) => {
+      if (window.navigator.onLine || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const link = event.target.closest?.("a[href]");
+      if (!link || link.target === "_blank" || link.hasAttribute("download")) return;
+      const target = new URL(link.href, window.location.href);
+      if (target.origin !== window.location.origin || !isOfflinePublicPath(target.pathname)) return;
+      event.preventDefault();
+      window.location.assign(target.pathname + target.search + target.hash);
+    };
+    document.addEventListener("click", useCachedDocument, true);
+    return () => document.removeEventListener("click", useCachedDocument, true);
+  }, []);
 
   function dismissInstallPrompt() {
     installPromptDismissedRef.current = true;

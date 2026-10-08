@@ -11,6 +11,7 @@ import { Card } from "../common/Card";
 import { EmptyState } from "../common/EmptyState";
 import { ErrorState } from "../common/ErrorState";
 import { routeService } from "../../services/routeService";
+import { readCachedRoutes, saveCachedRoutes } from "../../lib/live-map/liveMapStorage";
 
 export default function RoutesPage() {
   const [routes, setRoutes] = useState([]);
@@ -24,14 +25,25 @@ export default function RoutesPage() {
     async function loadRoutes() {
       setLoading(true);
       setError(false);
+      const cached = await readCachedRoutes();
+      const cachedRoutes = Array.isArray(cached?.data?.routes) ? cached.data.routes : [];
+      if (isCurrent && cachedRoutes.length) setRoutes(cachedRoutes);
+      if (!navigator.onLine) {
+        if (isCurrent && !cachedRoutes.length) setError(true);
+        if (isCurrent) setLoading(false);
+        return;
+      }
       try {
         const data = await routeService.list();
         const routeList = Array.isArray(data) ? data : data.routes;
         if (!Array.isArray(routeList)) throw new Error("Unexpected routes response");
+        saveCachedRoutes(routeList);
         if (isCurrent) setRoutes(routeList);
       } catch (requestError) {
-        console.error("Unable to load transit routes", requestError);
-        if (isCurrent) setError(true);
+        if (!cachedRoutes.length) {
+          console.error("Unable to load transit routes", requestError);
+          if (isCurrent) setError(true);
+        }
       } finally {
         if (isCurrent) setLoading(false);
       }

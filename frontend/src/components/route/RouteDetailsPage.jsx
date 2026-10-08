@@ -25,6 +25,7 @@ import { routeService } from "../../services/routeService";
 import { stopService } from "../../services/stopService";
 import { busService } from "../../services/busService";
 import { alertService } from "../../services/alertService";
+import { readCachedRouteDetails, saveCachedRouteDetails } from "../../lib/live-map/liveMapStorage";
 
 function getId(item) {
   return item?._id || item?.id || item?.busId;
@@ -41,6 +42,11 @@ function getEtaLabel(eta) {
   if (!eta || eta.etaMinutes == null) return null;
   if (eta.etaMinutes <= 1) return "Arriving";
   return `${Math.round(eta.etaMinutes)} min`;
+}
+
+function getRouteGeometry(route) {
+  const points = route?.geometry?.outbound;
+  return Array.isArray(points) ? points.filter((point) => Array.isArray(point) && Number.isFinite(point[0]) && Number.isFinite(point[1])) : [];
 }
 
 function normalizeBus(bus, eta, route) {
@@ -79,6 +85,21 @@ export default function RouteDetailsPage({ routeId }) {
   const loadRoute = useCallback(async () => {
     setLoading(true);
     setError(null);
+    const cached = await readCachedRouteDetails(routeId);
+    const applyCachedRoute = () => {
+      if (!cached?.route) return false;
+      setRoute({ ...cached.route, isOfflineCache: true });
+      setStops(Array.isArray(cached.stops) ? cached.stops : []);
+      setBuses([]);
+      setAlerts([]);
+      setAlertError(false);
+      return true;
+    };
+    if (!navigator.onLine) {
+      if (!applyCachedRoute()) setError("offline");
+      setLoading(false);
+      return;
+    }
     try {
       const routeData = await routeService.get(routeId);
       const [stopResult, busResult, alertResult] = await Promise.allSettled([
@@ -102,8 +123,10 @@ export default function RouteDetailsPage({ routeId }) {
       setBuses(routeBuses.map((bus, index) => normalizeBus(bus, etaResults[index], routeData)));
       setAlerts(routeAlerts);
       setAlertError(alertResult.status === "rejected");
+      saveCachedRouteDetails(routeId, { route: routeData, stops: routeStops });
     } catch (requestError) {
       const isNotFound = requestError.response?.status === 404;
+      if (!isNotFound && applyCachedRoute()) return;
       if (!isNotFound) console.error("Unable to load route details", requestError);
       setError(isNotFound ? "not-found" : "error");
     } finally {
@@ -120,13 +143,15 @@ export default function RouteDetailsPage({ routeId }) {
     return buses.map((bus) => mergeLiveUpdate(bus, updatesById.get(bus.id))).filter((bus) => bus.status === "Active");
   }, [buses, liveUpdates]);
 
-  const positions = stops.filter((stop) => stop.latitude != null && stop.longitude != null).map((stop) => [stop.latitude, stop.longitude]);
+  const stopPositions = stops.filter((stop) => stop.latitude != null && stop.longitude != null).map((stop) => [stop.latitude, stop.longitude]);
+  const positions = getRouteGeometry(route).length > 1 ? getRouteGeometry(route) : stopPositions;
   const busPositions = displayedBuses.map((bus) => bus.position).filter(Boolean);
   const mapPositions = [...positions, ...busPositions];
   const routeLabel = route?.routeCode || route?.number || "Route";
 
   if (loading && !route) return <div className="min-h-screen bg-[var(--background)]"><Navbar /><main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8"><div className="grid min-h-64 place-items-center"><LoadingSpinner label="Loading route details..." /></div></main><Footer /></div>;
   if (error === "not-found") return <NotFoundState />;
+  if (error === "offline") return <OfflineRouteState />;
   if (error || !route) return <RouteErrorState onRetry={loadRoute} />;
 
   return <div className="min-h-screen overflow-x-hidden bg-[var(--background)]"><Navbar /><main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10"><div><Link href="/routes" aria-label="Back to routes" className="inline-grid h-11 w-11 place-items-center rounded-xl border border-[var(--border)] bg-white text-[var(--primary-ink)] hover:border-[var(--primary)]"><ArrowLeft size={19} /></Link></div><header className="mt-6 flex flex-col justify-between gap-6 lg:flex-row lg:items-end"><div><div className="flex items-center gap-3"><span className="grid min-h-11 min-w-11 place-items-center rounded-xl bg-[var(--primary-soft)] px-2 text-sm font-bold text-[var(--primary-ink)]">{routeLabel}</span><Badge tone={route.isActive ? "success" : "danger"}>{route.isActive ? "Active" : "Not operating"}</Badge></div><h1 className="mt-4 text-3xl font-bold tracking-tight text-[var(--foreground)] sm:text-4xl">{route.routeName}</h1><p className="mt-2 flex items-center gap-2 text-base text-[var(--muted)]"><MapPin size={17} className="text-[var(--primary-ink)]" /> {route.startPoint} <ArrowRight size={15} /> {route.endPoint}</p></div><div className="flex flex-col gap-3 sm:flex-row"><Link href={`/booking?route=${encodeURIComponent(route._id || routeId)}`} className="commuter-only-action inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-contrast)] transition hover:bg-[var(--primary-dark)]"><Ticket size={16} /> Book Ticket</Link><Link href={`/live-map?route=${routeId}`} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-contrast)] transition hover:bg-[var(--primary-dark)]"><BusFront size={16} /> View live buses</Link><Link href={`/live-map?route=${routeId}`} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-white px-5 text-sm font-semibold text-[var(--foreground)] transition hover:border-[var(--primary)] hover:text-[var(--primary-ink)]"><RouteIcon size={16} /> Track route</Link></div></header>
@@ -146,6 +171,10 @@ export default function RouteDetailsPage({ routeId }) {
 
 function NotFoundState() {
   return <div className="min-h-screen bg-[var(--background)]"><Navbar /><main className="mx-auto grid min-h-[60vh] max-w-7xl place-items-center px-4 py-16 sm:px-6 lg:px-8"><Card className="max-w-lg p-8 text-center"><h1 className="text-2xl font-bold text-[var(--foreground)]">Route not found</h1><p className="mt-2 text-sm leading-6 text-[var(--muted)]">The route you&apos;re looking for doesn&apos;t exist or is no longer available.</p><Link href="/routes" className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-contrast)]"><ArrowLeft size={16} /> Back to routes</Link></Card></main><Footer /></div>;
+}
+
+function OfflineRouteState() {
+  return <div className="min-h-screen bg-[var(--background)]"><Navbar /><main className="mx-auto grid min-h-[60vh] max-w-7xl place-items-center px-4 py-16 sm:px-6 lg:px-8"><Card className="max-w-lg p-8 text-center"><h1 className="text-2xl font-bold text-[var(--foreground)]">No saved route yet</h1><p className="mt-2 text-sm leading-6 text-[var(--muted)]">Connect to the internet and open this route once to save its stops and path for offline access.</p><Link href="/routes" className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-contrast)]"><ArrowLeft size={16} /> Back to routes</Link></Card></main><Footer /></div>;
 }
 
 function RouteErrorState({ onRetry }) {

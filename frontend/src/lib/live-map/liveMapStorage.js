@@ -2,6 +2,8 @@ const DB_NAME = "smart-safar-live-map";
 const STORE_NAME = "snapshots";
 const MAP_STATE_KEY = "map-state";
 const TRANSIT_SNAPSHOT_KEY = "transit-snapshot";
+const ROUTE_CATALOGUE_KEY = "route-catalogue";
+const MAX_CACHED_ROUTE_DETAILS = 50;
 
 function openStore(mode) {
   return new Promise((resolve, reject) => {
@@ -48,3 +50,24 @@ export async function saveLiveMapState(state) {
 export function saveLiveMapViewport(mapViewport) { return saveLiveMapState({ mapViewport }); }
 export function readTransitSnapshot() { return read(TRANSIT_SNAPSHOT_KEY); }
 export function saveTransitSnapshot(snapshot) { return write(TRANSIT_SNAPSHOT_KEY, snapshot); }
+
+export function readCachedRoutes() { return read(ROUTE_CATALOGUE_KEY); }
+
+export async function saveCachedRoutes(routes) {
+  const current = await read(ROUTE_CATALOGUE_KEY);
+  return write(ROUTE_CATALOGUE_KEY, { routes, details: current?.data?.details || {} });
+}
+
+export async function readCachedRouteDetails(routeId) {
+  const current = await read(ROUTE_CATALOGUE_KEY);
+  return current?.data?.details?.[String(routeId)] || null;
+}
+
+export async function saveCachedRouteDetails(routeId, details) {
+  const current = await read(ROUTE_CATALOGUE_KEY);
+  const entries = { ...(current?.data?.details || {}), [String(routeId)]: { ...details, cachedAt: Date.now() } };
+  const retained = Object.entries(entries)
+    .sort(([, left], [, right]) => (right.cachedAt || 0) - (left.cachedAt || 0))
+    .slice(0, MAX_CACHED_ROUTE_DETAILS);
+  return write(ROUTE_CATALOGUE_KEY, { routes: current?.data?.routes || [], details: Object.fromEntries(retained) });
+}
