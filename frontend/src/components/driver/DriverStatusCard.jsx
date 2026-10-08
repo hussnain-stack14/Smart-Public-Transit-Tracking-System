@@ -4,7 +4,7 @@ import { Button } from "../common/Button";
 import { Card } from "../common/Card";
 import { getEtaLabel } from "../../lib/transit/format";
 
-export function DriverStatusCard({ bus, route, eta, errors, direction, directionLabel, shiftActive, shiftCompleted, shiftBusy, shiftError, hasRouteAssignment, gpsStatus, onShift, returnBusy, returnError, onReturn, children }) {
+export function DriverStatusCard({ bus, route, eta, errors, direction, directionLabel, shiftActive, shiftBusy, shiftError, hasRouteAssignment, gpsStatus, onShift, returnBusy, returnError, onReturn, children }) {
   const gpsLabel = !shiftActive ? "Off" : gpsStatus.state === "sharing" ? "Live" : gpsStatus.state === "permission-denied" ? "Permission required" : gpsStatus.state === "error" ? "Location error" : "Starting";
   return (
     <Card treatment="operational" id="driver-shift" aria-label="Driver assignment and shift" className="driver-status-card mt-4 scroll-mt-20 p-4 sm:p-5">
@@ -17,7 +17,7 @@ export function DriverStatusCard({ bus, route, eta, errors, direction, direction
         </div>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
-        <Badge tone={shiftActive ? "success" : shiftCompleted ? "neutral" : "warning"} className="gap-1.5"><Clock3 size={14} aria-hidden="true" />Shift: {shiftActive ? "Active" : shiftCompleted ? "Completed" : "Not started"}</Badge>
+        <Badge tone={shiftActive ? "success" : "warning"} className="gap-1.5"><Clock3 size={14} aria-hidden="true" />Shift: {shiftActive ? "Active" : "Not started"}</Badge>
         <Badge tone={shiftActive && gpsStatus.state === "sharing" ? "success" : shiftActive ? "warning" : "neutral"} className="gap-1.5"><LocateFixed size={14} aria-hidden="true" />GPS: {gpsLabel}</Badge>
       </div>
       <dl className="driver-live-grid mt-4 grid gap-2 sm:grid-cols-2">

@@ -1,23 +1,45 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { Marker, Popup } from "react-leaflet";
-import { busMapIcon } from "./transitMarkerIcons";
+import { createBusMapIcon } from "./transitMarkerIcons";
 
-function samePosition(left, right) {
-  return left === right || (left?.[0] === right?.[0] && left?.[1] === right?.[1]);
+function samePosition(left, right) { return left === right || (left?.[0] === right?.[0] && left?.[1] === right?.[1]); }
+function bearing(from, to) {
+  if (!from || !to || samePosition(from, to)) return null;
+  const radians = (value) => value * Math.PI / 180;
+  const degrees = (value) => value * 180 / Math.PI;
+  const dLongitude = radians(to[1] - from[1]);
+  const y = Math.sin(dLongitude) * Math.cos(radians(to[0]));
+  const x = Math.cos(radians(from[0])) * Math.sin(radians(to[0])) - Math.sin(radians(from[0])) * Math.cos(radians(to[0])) * Math.cos(dLongitude);
+  return (degrees(Math.atan2(y, x)) + 360) % 360;
 }
 
-function BusMarkerView({ position, bus, onSelect }) {
-  if (!position) return null;
+function BusMarkerView({ position, bus, onSelect, selected = false, stale = false }) {
+  const markerRef = useRef(null);
+  const previousPosition = useRef(position);
+  const heading = useRef(null);
+  const [initialPosition] = useState(position);
   const label = bus?.name || bus?.number || bus?.busNumber || "Live bus";
-  return <Marker position={position} title={label} icon={busMapIcon} zIndexOffset={300} riseOnHover eventHandlers={{ click: () => onSelect?.(bus) }}><Popup><strong>{label}</strong><p className="mt-1">Live bus location</p></Popup></Marker>;
+  useEffect(() => {
+    const marker = markerRef.current;
+    const start = previousPosition.current;
+    if (!marker || !start || !position || samePosition(start, position)) return undefined;
+    const nextHeading = bearing(start, position);
+    if (nextHeading != null) heading.current = nextHeading;
+    marker.setIcon(createBusMapIcon({ heading: heading.current, selected, stale }));
+    const started = Date.now();
+    const timer = setInterval(() => {
+      const progress = Math.min(1, (Date.now() - started) / 650);
+      marker.setLatLng([start[0] + (position[0] - start[0]) * progress, start[1] + (position[1] - start[1]) * progress]);
+      if (progress === 1) clearInterval(timer);
+    }, 50);
+    previousPosition.current = position;
+    return () => clearInterval(timer);
+  }, [position, selected, stale]);
+  useEffect(() => { markerRef.current?.setIcon(createBusMapIcon({ heading: heading.current, selected, stale })); }, [selected, stale]);
+  if (!position) return null;
+  return <Marker ref={markerRef} position={initialPosition || position} title={label} icon={createBusMapIcon({ selected, stale })} zIndexOffset={selected ? 450 : 300} riseOnHover eventHandlers={{ click: () => onSelect?.(bus) }}><Popup><strong>{label}</strong><p className="mt-1">{stale ? "Location update delayed" : "Live bus location"}</p></Popup></Marker>;
 }
 
-// Socket updates should only reconcile the marker for the bus that moved.
-export const BusMarker = memo(BusMarkerView, (previous, next) => (
-  samePosition(previous.position, next.position)
-  && previous.bus?.name === next.bus?.name
-  && previous.bus?.number === next.bus?.number
-  && previous.bus?.busNumber === next.bus?.busNumber
-));
+export const BusMarker = memo(BusMarkerView, (previous, next) => samePosition(previous.position, next.position) && previous.selected === next.selected && previous.stale === next.stale && previous.bus?.busNumber === next.bus?.busNumber);

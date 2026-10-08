@@ -40,13 +40,15 @@ function createTransitIcon({ type, SvgComponent, iconSize, iconAnchor, popupAnch
   return L.divIcon({ className: "transit-map-icon", html, iconSize, iconAnchor, popupAnchor });
 }
 
-export const busMapIcon = createTransitIcon({
-  type: "bus",
-  SvgComponent: () => <BusFront size={22} strokeWidth={2} />,
-  iconSize: [36, 36],
-  iconAnchor: [18, 18],
-  popupAnchor: [0, -20],
-});
+export function createBusMapIcon({ heading = 0, selected = false, stale = false } = {}) {
+  return createTransitIcon({
+    type: `bus${selected ? " bus--selected" : ""}${stale ? " bus--stale" : ""}`,
+    SvgComponent: () => <span className="transit-map-bus-rotation" style={{ transform: `rotate(${heading || 0}deg)` }}><BusFront size={22} strokeWidth={2} /></span>,
+    iconSize: [36, 36], iconAnchor: [18, 18], popupAnchor: [0, -20],
+  });
+}
+
+export const busMapIcon = createBusMapIcon();
 
 export const stopMapIcon = createTransitIcon({
   type: "stop",
@@ -62,6 +64,12 @@ export const selectedStopMapIcon = createTransitIcon({
   iconSize: [30, 35],
   iconAnchor: [15, 33],
   popupAnchor: [0, -33],
+});
+
+export const nextStopMapIcon = createTransitIcon({
+  type: "next-stop",
+  SvgComponent: () => <StopPinSvg filled />,
+  iconSize: [32, 37], iconAnchor: [16, 35], popupAnchor: [0, -35],
 });
 
 export const userMapIcon = L.divIcon({

@@ -1,6 +1,6 @@
 export default function manifest() {
   return {
-    name: "Smart Safar - Faisalabad Transit",
+    name: "Smart Safar",
     short_name: "Smart Safar",
     description: "Smart Public Transit for Faisalabad",
     id: "/",

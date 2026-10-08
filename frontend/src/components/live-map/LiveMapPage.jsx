@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { LocateFixed, MapPinned, Search, Wifi, WifiOff, X } from "lucide-react";
 import { Badge } from "../common/Badge";
 import { Button } from "../common/Button";
@@ -29,8 +28,21 @@ import { busService } from "../../services/busService";
 import { routeService } from "../../services/routeService";
 import { stopService } from "../../services/stopService";
 import { getRouteId, normalizeBus, getBusPosition } from "../../lib/transit/format";
+import { readLiveMapState, readTransitSnapshot, saveLiveMapState, saveTransitSnapshot } from "../../lib/live-map/liveMapStorage";
 
 const statusOptions = ["All", "active", "idle", "maintenance"];
+const STALE_AFTER_MS = 30000;
+
+function routeGeometry(route, direction = "outbound") {
+  const points = route?.geometry?.[direction === "return" ? "return" : "outbound"];
+  return Array.isArray(points) && points.length > 1 ? points.filter((point) => Array.isArray(point) && Number.isFinite(point[0]) && Number.isFinite(point[1])) : [];
+}
+
+function isStale(bus, now) {
+  if (bus.status !== "active" || !bus.lastLocationUpdate) return false;
+  const updated = new Date(bus.lastLocationUpdate).getTime();
+  return Number.isFinite(updated) && now - updated > STALE_AFTER_MS;
+}
 
 export default function LiveMapPage() {
   const socket = useSocket();
@@ -41,131 +53,167 @@ export default function LiveMapPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRoute, setSelectedRoute] = useState("All routes");
   const [selectedStatus, setSelectedStatus] = useState("All");
-  const [selectedBus, setSelectedBus] = useState(null);
+  const [selectedBusId, setSelectedBusId] = useState(null);
   const [selectedStop, setSelectedStop] = useState(null);
+  const [followBus, setFollowBus] = useState(false);
   const [connection, setConnection] = useState("connecting");
   const [dataLoading, setDataLoading] = useState(true);
   const [dataError, setDataError] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
+  const [locationNotice, setLocationNotice] = useState("");
+  const [tileError, setTileError] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+  const [online, setOnline] = useState(() => typeof navigator === "undefined" || navigator.onLine);
+  const [cacheReady, setCacheReady] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    Promise.resolve().then(async () => {
-      try {
-        const [routeData, busData] = await Promise.all([routeService.list(), busService.list()]);
-        const routeList = Array.isArray(routeData) ? routeData : routeData.routes || [];
-        const routeMap = Object.fromEntries(routeList.map((route) => [getRouteId(route), route]));
-        const etaResults = await Promise.all(busData.map(async (bus) => {
-          try {
-            return await busService.getEta(bus._id);
-          } catch {
-            return null;
-          }
-        }));
-        const geometry = await Promise.all(routeList.map(async (route) => ({
-          route,
-          stops: await stopService.listByRoute(getRouteId(route)).catch(() => []),
-        })));
-        if (!cancelled) {
-          setRoutes(routeList);
-          setApiBuses(busData.map((bus, index) => normalizeBus(bus, etaResults[index], routeMap)));
-          setRouteStops(geometry);
-        }
-      } catch (error) {
-        console.error("Unable to load live transit data", error);
-        if (!cancelled) setDataError(true);
-      } finally {
-        if (!cancelled) setDataLoading(false);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
+  const restoreSnapshot = useCallback(async () => {
+    const snapshot = await readTransitSnapshot();
+    if (!snapshot?.data) return false;
+    const { routes: savedRoutes = [], buses: savedBuses = [], routeStops: savedStops = [] } = snapshot.data;
+    setRoutes(savedRoutes);
+    setApiBuses(savedBuses);
+    setRouteStops(savedStops);
+    return true;
   }, []);
 
+  const loadData = useCallback(async () => {
+    setDataLoading(true); setDataError(false);
+    if (!navigator.onLine) {
+      const restored = await restoreSnapshot();
+      setDataError(!restored);
+      setDataLoading(false);
+      return;
+    }
+    try {
+      routeService.invalidateCache();
+      const [routeData, busData] = await Promise.all([routeService.list(), busService.list()]);
+      const routeList = Array.isArray(routeData) ? routeData : routeData.routes || [];
+      const routeMap = Object.fromEntries(routeList.map((route) => [getRouteId(route), route]));
+      const [etas, geometry] = await Promise.all([
+        Promise.all(busData.map((bus) => busService.getEta(bus._id).catch(() => null))),
+        Promise.all(routeList.map(async (route) => ({ route, stops: await stopService.listByRoute(getRouteId(route)).catch(() => []) }))),
+      ]);
+      setRoutes(routeList);
+      const normalizedBuses = busData.map((bus, index) => normalizeBus(bus, etas[index], routeMap));
+      setApiBuses(normalizedBuses);
+      setRouteStops(geometry);
+      saveTransitSnapshot({ routes: routeList, buses: normalizedBuses, routeStops: geometry });
+    } catch {
+      const restored = await restoreSnapshot();
+      setDataError(!restored);
+    } finally { setDataLoading(false); }
+  }, [restoreSnapshot]);
+
   useEffect(() => {
-    const markLive = () => setConnection("live");
-    const markOffline = () => setConnection("offline");
-    const markConnecting = () => setConnection("connecting");
-    socket.on("connect", markLive);
-    socket.on("disconnect", markOffline);
-    socket.on("connect_error", markOffline);
-    socket.io.on("reconnect_attempt", markConnecting);
-    if (socket.connected) markLive();
-    return () => {
-      socket.off("connect", markLive);
-      socket.off("disconnect", markOffline);
-      socket.off("connect_error", markOffline);
-      socket.io.off("reconnect_attempt", markConnecting);
+    let active = true;
+    Promise.all([readLiveMapState(), readTransitSnapshot()]).then(([savedState, snapshot]) => {
+      if (!active) return;
+      if (savedState?.data) {
+        const saved = savedState.data;
+        setSearchTerm(saved.searchTerm || "");
+        setSelectedRoute(saved.selectedRoute || "All routes");
+        setSelectedStatus(saved.selectedStatus || "All");
+        setSelectedBusId(saved.selectedBusId || null);
+      }
+      if (snapshot?.data) {
+        setRoutes(snapshot.data.routes || []);
+        setApiBuses(snapshot.data.buses || []);
+        setRouteStops(snapshot.data.routeStops || []);
+      }
+      setCacheReady(true);
+    });
+    return () => { active = false; };
+  }, []);
+  useEffect(() => {
+    if (!cacheReady) return undefined;
+    let active = true;
+    Promise.resolve().then(() => { if (active) loadData(); });
+    return () => { active = false; };
+  }, [cacheReady, loadData]);
+  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 15000); return () => clearInterval(timer); }, []);
+
+  useEffect(() => {
+    const goOffline = () => { setOnline(false); setConnection("offline"); };
+    const goOnline = () => { setOnline(true); setConnection("connecting"); if (!socket.connected) socket.connect(); loadData(); };
+    window.addEventListener("offline", goOffline);
+    window.addEventListener("online", goOnline);
+    return () => { window.removeEventListener("offline", goOffline); window.removeEventListener("online", goOnline); };
+  }, [loadData, socket]);
+
+  useEffect(() => {
+    const visibilityChange = () => {
+      if (document.visibilityState === "hidden") return;
+      if (navigator.onLine) {
+        if (!socket.connected) socket.connect();
+        loadData();
+      }
     };
+    document.addEventListener("visibilitychange", visibilityChange);
+    return () => document.removeEventListener("visibilitychange", visibilityChange);
+  }, [loadData, socket]);
+
+  useEffect(() => {
+    const markLive = () => setConnection("live"); const markOffline = () => setConnection("offline"); const markConnecting = () => setConnection("connecting");
+    socket.on("connect", markLive); socket.on("disconnect", markOffline); socket.on("connect_error", markOffline); socket.io.on("reconnect_attempt", markConnecting);
+    if (socket.connected) markLive();
+    return () => { socket.off("connect", markLive); socket.off("disconnect", markOffline); socket.off("connect_error", markOffline); socket.io.off("reconnect_attempt", markConnecting); };
   }, [socket]);
 
+  useEffect(() => {
+    const watch = () => apiBuses.forEach((bus) => { if (bus.id) socket.emit("watchBus", bus.id); });
+    socket.on("connect", watch); if (socket.connected) watch();
+    return () => socket.off("connect", watch);
+  }, [socket, apiBuses]);
+
   const buses = useMemo(() => apiBuses.map((bus) => {
-    const update = liveUpdates.find((item) => (item.id || item._id || item.busId)?.toString() === bus.id?.toString());
+    if (!online) return { ...bus, eta: null, occupancy: null, availableSeats: null, lastKnownAt: bus.lastLocationUpdate, lastLocationUpdate: new Date(0).toISOString() };
+    const update = liveUpdates.find((item) => String(item.id || item._id || item.busId) === String(bus.id));
     if (!update) return bus;
     const direction = update.direction === "return" ? "return" : bus.direction;
     const origin = direction === "return" ? bus.routeEnd : bus.routeStart;
     const destination = direction === "return" ? bus.routeStart : bus.routeEnd;
-    return { ...bus, ...update, direction, directionLabel: origin && destination ? `${origin} → ${destination}` : bus.directionLabel, nextStop: update.nextStop?.stopName || update.nextStop || bus.nextStop, nextStopId: update.nextStop?._id || bus.nextStopId, eta: update.etaMinutes != null ? (update.etaMinutes <= 1 ? "Arriving" : `${Math.round(update.etaMinutes)} min`) : bus.eta, position: getBusPosition(update) || bus.position };
-  }), [apiBuses, liveUpdates]);
-
+    return { ...bus, ...update, direction, directionLabel: origin && destination ? `${origin} → ${destination}` : bus.directionLabel, nextStop: update.nextStop?.stopName || update.nextStop || bus.nextStop, nextStopId: update.nextStop?._id || bus.nextStopId, eta: update.etaMinutes != null ? (update.etaMinutes <= 1 ? "Arriving" : `${Math.round(update.etaMinutes)} min`) : bus.eta, distanceKm: update.distanceKm ?? bus.distanceKm, terminalReached: update.terminalReached ?? bus.terminalReached, position: getBusPosition(update) || bus.position };
+  }), [apiBuses, liveUpdates, online]);
+  const selectedBus = buses.find((bus) => String(bus.id) === String(selectedBusId)) || null;
+  const routeOptions = routes.map((route) => ({ id: getRouteId(route), label: route.routeName || route.routeCode || "Route" }));
+  const matchingRouteIds = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase(); if (!term) return new Set(routes.map(getRouteId));
+    return new Set(routes.filter((route) => `${route.routeName || ""} ${route.startPoint || ""} ${route.endPoint || ""} ${(routeStops.find((item) => getRouteId(item.route) === getRouteId(route))?.stops || []).map((stop) => stop.stopName).join(" ")}`.toLowerCase().includes(term)).map(getRouteId));
+  }, [routes, routeStops, searchTerm]);
   const filteredBuses = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
     return buses.filter((bus) => {
-      const matchesTerm = !term || `${bus.number} ${bus.route} ${bus.routeName} ${bus.nextStop || ""}`.toLowerCase().includes(term);
-      const matchesRoute = selectedRoute === "All routes" || bus.routeId === selectedRoute;
-      const matchesStatus = selectedStatus === "All" || bus.status === selectedStatus;
-      return matchesTerm && matchesRoute && matchesStatus;
+      const matchesTerm = !term || `${bus.number} ${bus.route} ${bus.routeName} ${bus.nextStop || ""}`.toLowerCase().includes(term) || matchingRouteIds.has(bus.routeId);
+      return matchesTerm && (selectedRoute === "All routes" || bus.routeId === selectedRoute) && (selectedStatus === "All" || bus.status === selectedStatus);
     });
-  }, [buses, searchTerm, selectedRoute, selectedStatus]);
-
-  const selectedGeometry = routeStops.find(({ route }) => getRouteId(route) === selectedRoute);
-  const selectedRouteLine = (selectedGeometry?.stops || routeStops[0]?.stops || []).filter((stop) => stop.latitude != null && stop.longitude != null).map((stop) => [stop.latitude, stop.longitude]);
-  const operatingBuses = buses.filter((bus) => bus.status === "active");
-  const mapPositions = useMemo(() => buses.filter((bus) => bus.status === "active").map((bus) => bus.position).filter(Boolean), [buses]);
-  const routeOptions = routes.map((route) => ({ id: getRouteId(route), label: route.routeName || route.routeCode || "Route" }));
-  const visibleStops = (selectedGeometry ? selectedGeometry.stops.map((stop) => ({ stop, route: selectedGeometry.route })) : routeStops.flatMap((item) => item.stops.map((stop) => ({ stop, route: item.route })))).filter(({ stop }) => stop.latitude != null && stop.longitude != null).map(({ stop, route }) => ({ ...stop, id: stop._id, name: stop.stopName, routeId: getRouteId(route), routeName: route.routeName, position: [stop.latitude, stop.longitude] }));
-  const routeCards = routes.slice(0, 2).map((route) => {
-    const id = getRouteId(route);
-    const stopsForRoute = routeStops.find((item) => getRouteId(item.route) === id)?.stops || [];
-    const activeBuses = apiBuses.filter((bus) => bus.routeId === id && bus.status === "active").length;
-    return { ...route, id, stops: stopsForRoute.length, activeBuses, isActive: activeBuses > 0 };
-  });
-  const routeLine = selectedRouteLine;
-  const stops = visibleStops;
-  const popularRoutes = routeCards;
+  }, [buses, matchingRouteIds, searchTerm, selectedRoute, selectedStatus]);
+  const selectedRouteId = selectedBus?.routeId || (selectedRoute === "All routes" ? null : selectedRoute);
+  const selectedGeometry = routeStops.find(({ route }) => getRouteId(route) === selectedRouteId);
+  const displayRouteIds = selectedRouteId ? new Set([selectedRouteId]) : searchTerm.trim() ? matchingRouteIds : new Set(routes.map(getRouteId));
+  const routeLines = routeStops.filter(({ route }) => displayRouteIds.has(getRouteId(route))).map(({ route }) => ({ id: getRouteId(route), positions: routeGeometry(route, selectedBus?.routeId === getRouteId(route) ? selectedBus.direction : "outbound") })).filter((item) => item.positions.length > 1);
+  const visibleStops = routeStops.filter(({ route }) => displayRouteIds.has(getRouteId(route))).flatMap(({ route, stops }) => stops.map((stop) => ({ ...stop, id: stop._id, name: stop.stopName, routeId: getRouteId(route), routeName: route.routeName, position: [stop.latitude, stop.longitude] }))).filter((stop) => Number.isFinite(stop.position[0]) && Number.isFinite(stop.position[1]));
+  const mapPositions = buses.filter((bus) => bus.status === "active" && bus.position).map((bus) => bus.position);
+  const selectedStops = selectedGeometry?.stops || [];
+  const routeCards = routes.slice(0, 2).map((route) => { const id = getRouteId(route); const stops = routeStops.find((item) => getRouteId(item.route) === id)?.stops || []; return { ...route, id, stops: stops.length, activeBuses: buses.filter((bus) => bus.routeId === id && bus.status === "active").length }; });
 
   function locateUser(map) {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(({ coords }) => {
-      const position = [coords.latitude, coords.longitude];
-      setUserLocation({ position, accuracy: coords.accuracy });
-      map.setView(position, 15);
-    });
+    if (!navigator.geolocation) { setLocationNotice("Your device cannot provide a location."); return; }
+    navigator.geolocation.getCurrentPosition(({ coords }) => { const position = [coords.latitude, coords.longitude]; setUserLocation({ position, accuracy: coords.accuracy }); setLocationNotice(""); map.setView(position, 15); }, () => setLocationNotice("Location permission is unavailable. You can continue using the map."), { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
   }
+  function showAllBuses(map) { if (mapPositions.length) map.fitBounds(mapPositions, { padding: [32, 32], maxZoom: 14 }); setSelectedBusId(null); setSelectedStop(null); setFollowBus(false); }
+  function selectBus(bus) { setSelectedBusId(bus.id); setSelectedRoute(bus.routeId || "All routes"); setSelectedStop(null); setFollowBus(false); }
+  useEffect(() => {
+    if (!cacheReady) return;
+    saveLiveMapState({ searchTerm, selectedRoute, selectedStatus, selectedBusId });
+  }, [cacheReady, searchTerm, selectedBusId, selectedRoute, selectedStatus]);
 
-  function showAllBuses(map) {
-    const positions = buses.filter((bus) => bus.status === "active").map((bus) => bus.position).filter(Boolean);
-    if (positions.length) map.fitBounds(positions, { padding: [32, 32], maxZoom: 14 });
-    setSelectedBus(null);
-    setSelectedStop(null);
-  }
-
-  function selectBus(bus) {
-    setSelectedBus(bus);
-    setSelectedStop(null);
-  }
-
-  return <div className="min-h-screen overflow-x-hidden bg-[var(--background)]"><Navbar /><main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10"><header className="premium-card premium-card--primary premium-card--imagery flex flex-col justify-between gap-5 p-5 sm:flex-row sm:items-end sm:p-7"><CardBackdrop visual="transit" priority /><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary-ink)]">Live transit</p><h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--foreground)] sm:text-4xl">Track buses in real time.</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">See active buses, routes, stops and estimated arrival times across Faisalabad.</p></div><Badge tone={connection === "live" ? "success" : connection === "offline" ? "danger" : "warning"}><span className="mr-1.5">{connection === "live" ? "●" : connection === "offline" ? "×" : "○"}</span>{connection === "live" ? "Live network" : connection === "offline" ? "Offline" : "Connecting"}</Badge></header>
-
-      {connection === "offline" && <div className="mt-6 flex items-center justify-between gap-4 rounded-xl border border-[#f0d7aa] bg-[#fff9ed] px-4 py-3 text-sm text-[#8a611a]"><span>Live updates unavailable. Showing the latest available transit information.</span><WifiOff size={17} className="shrink-0" /></div>}
-      {connection === "connecting" && <div className="mt-6 flex items-center gap-2 rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm text-[var(--muted)]"><Wifi size={16} className="shrink-0 text-[var(--primary-ink)]" /> Connecting to live transit updates...</div>}
-
-      <Card treatment="operational" className="mobile-map-filters mt-6 p-3 sm:p-4"><div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_180px_auto]"><label className="flex min-h-11 items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--background)] px-3.5"><Search size={18} className="shrink-0 text-[var(--primary-ink)]" /><input value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--muted)]" placeholder="Search bus, route or stop..." aria-label="Search bus, route or stop" />{searchTerm && <button type="button" onClick={() => setSearchTerm("")} className="text-[var(--muted)]" aria-label="Clear search"><X size={16} /></button>}</label><label className="grid gap-1 text-xs font-semibold text-[var(--muted)]"><span className="sr-only">Route filter</span><select value={selectedRoute} onChange={(event) => setSelectedRoute(event.target.value)} className="min-h-11 rounded-xl border border-[var(--border)] bg-white px-3 text-sm font-medium text-[var(--foreground)] outline-none focus:border-[var(--primary)]"><option>All routes</option>{routeOptions.map((route) => <option key={route.id} value={route.id}>{route.label}</option>)}</select></label><label className="grid gap-1 text-xs font-semibold text-[var(--muted)]"><span className="sr-only">Bus status filter</span><select value={selectedStatus} onChange={(event) => setSelectedStatus(event.target.value)} className="min-h-11 rounded-xl border border-[var(--border)] bg-white px-3 text-sm font-medium text-[var(--foreground)] outline-none focus:border-[var(--primary)]">{statusOptions.map((status) => <option key={status}>{status}</option>)}</select></label><Button type="button" variant="secondary" className="min-h-11 gap-2" onClick={() => { setSearchTerm(""); setSelectedRoute("All routes"); setSelectedStatus("All"); }}><LocateFixed size={16} /> Reset</Button></div></Card>
-
-      <section className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.85fr)_minmax(300px,1fr)] xl:items-start"><div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-subtle)] p-1 shadow-[0_14px_36px_rgba(15,23,42,0.08)]"><div className="relative"><ClientTransitMap center={[31.416, 73.078]} zoom={13} className="h-[min(58vh,520px)] min-h-[360px] rounded-xl"><MapViewport positions={mapPositions.length ? mapPositions : [routeLine[0], routeLine[routeLine.length - 1]]} focusKey={`${selectedRoute}-${filteredBuses.length}`} /><RoutePolyline positions={selectedRouteLine} color={selectedRoute === "All routes" ? "var(--primary)" : "var(--primary-dark)"} />{operatingBuses.map((bus) => bus.position && <BusMarker key={bus.id} position={bus.position} bus={bus} onSelect={selectBus} />)}{stops.map((stop) => <StopMarker key={stop.id} position={stop.position} stop={stop} onSelect={(nextStop) => { setSelectedStop(nextStop); setSelectedBus(null); }} />)}<UserLocationMarker location={userLocation} /><MapControls onLocate={locateUser} onShowAll={showAllBuses} /></ClientTransitMap><LiveMapLegend showUser={Boolean(userLocation)} /></div>{selectedBus && <div className="absolute bottom-4 left-4 right-4 z-[500] sm:max-w-sm"><BusDetailsPanel bus={selectedBus} onClose={() => setSelectedBus(null)} /></div>}{selectedStop && <div className="absolute bottom-4 left-4 right-4 z-[500] sm:max-w-sm"><StopDetailsPanel stop={selectedStop} onClose={() => setSelectedStop(null)} /></div>}</div>
-
-        <aside className="min-w-0"><Card visual="fleet" treatment="primary" className="p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--primary-ink)]">Network now</p><h2 className="mt-1 text-xl font-bold text-[var(--foreground)]">Fleet</h2></div><span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--success)]"><Wifi size={14} /> Updates on</span></div><p className="mt-1 text-sm text-[var(--muted)]">{filteredBuses.length} of {buses.length} buses shown</p></Card><div className="mt-3 grid gap-3 xl:max-h-[432px] xl:overflow-y-auto xl:pr-1">{dataLoading && !buses.length ? <LoadingSpinner label="Loading live buses..." /> : dataError && !buses.length ? <EmptyState title="Transit data unavailable" description="Unable to load buses. Check your connection and reload the page." /> : filteredBuses.length ? filteredBuses.map((bus) => <div key={bus.id} className="cursor-pointer" onClick={() => selectBus(bus)}><BusCard bus={bus} /></div>) : <EmptyState title="No active buses" description="There are currently no buses matching your filters." action={<Button type="button" variant="secondary" onClick={() => { setSearchTerm(""); setSelectedRoute("All routes"); setSelectedStatus("All"); }}>Clear filters</Button>} />}</div></aside></section>
-
-      <section className="mt-7"><div className="mb-4"><p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--primary-ink)]">Network guide</p><h2 className="mt-1 text-xl font-bold text-[var(--foreground)]">Stops &amp; Popular Routes</h2></div><div className="grid gap-4 md:grid-cols-3"><Card treatment="stat" className="flex min-h-[158px] items-center p-5"><div><span className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary-ink)]"><MapPinned size={18} /></span><p className="mt-4 text-2xl font-bold text-[var(--foreground)]">{stops.length}</p><p className="text-sm font-semibold text-[var(--foreground)]">Stops visible</p><p className="mt-1 text-xs leading-5 text-[var(--muted)]">Tap a stop for route information.</p></div></Card>{popularRoutes.slice(0, 2).map((route) => <RouteCard key={route.id} route={route} />)}</div></section></main><Footer /></div>;
+  return <div className="min-h-screen overflow-x-hidden bg-[var(--background)]"><Navbar /><main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10"><header className="premium-card premium-card--primary premium-card--imagery flex flex-col justify-between gap-5 p-5 sm:flex-row sm:items-end sm:p-7"><CardBackdrop visual="transit" priority /><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary-ink)]">Live transit</p><h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--foreground)] sm:text-4xl">Track buses in real time.</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">See active buses, road-following routes, stops and estimated arrival times across Faisalabad.</p></div><Badge tone={connection === "live" ? "success" : connection === "offline" ? "danger" : "warning"}>{connection === "live" ? "Live network" : connection === "offline" ? "Offline" : "Connecting"}</Badge></header>
+    {connection === "offline" && <Notice icon={<WifiOff size={17} />} text="Live updates are unavailable. Showing the latest transit information." />}{connection === "connecting" && <Notice icon={<Wifi size={16} />} text="Connecting to live transit updates..." />}{locationNotice && <Notice text={locationNotice} />}
+    <Card treatment="operational" className="mobile-map-filters mt-6 p-3 sm:p-4"><div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_180px_auto]"><label className="flex min-h-11 items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--background)] px-3.5"><Search size={18} className="shrink-0 text-[var(--primary-ink)]" /><input value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--muted)]" placeholder="Search bus, route or stop..." aria-label="Search bus, route or stop" />{searchTerm && <button type="button" onClick={() => setSearchTerm("")} className="text-[var(--muted)]" aria-label="Clear search"><X size={16} /></button>}</label><select value={selectedRoute} onChange={(event) => { setSelectedRoute(event.target.value); setSelectedBusId(null); setFollowBus(false); }} className="field-input min-h-11 text-sm" aria-label="Route filter"><option>All routes</option>{routeOptions.map((route) => <option key={route.id} value={route.id}>{route.label}</option>)}</select><select value={selectedStatus} onChange={(event) => setSelectedStatus(event.target.value)} className="field-input min-h-11 text-sm" aria-label="Bus status filter">{statusOptions.map((status) => <option key={status}>{status}</option>)}</select><Button type="button" variant="secondary" className="min-h-11 gap-2" onClick={() => { setSearchTerm(""); setSelectedRoute("All routes"); setSelectedStatus("All"); setSelectedBusId(null); setFollowBus(false); }}><LocateFixed size={16} /> Reset</Button></div></Card>
+    <section className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.85fr)_minmax(300px,1fr)] xl:items-start"><div className="map-v2-surface relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-subtle)] p-1 shadow-[0_14px_36px_rgba(15,23,42,0.08)]"><div className="relative"><ClientTransitMap center={[31.416, 73.078]} zoom={13} onTileError={() => setTileError(true)} className="h-[min(58vh,520px)] min-h-[360px] rounded-xl"><MapViewport positions={selectedBus?.position ? [selectedBus.position] : mapPositions} focusKey={`${selectedBus?.id || selectedRoute}-${filteredBuses.length}`} focusPosition={selectedBus?.position} followPosition={followBus ? selectedBus?.position : null} />{routeLines.map((line) => <RoutePolyline key={line.id} positions={line.positions} color={line.id === selectedRouteId ? "var(--primary)" : "var(--primary-border)"} showArrows={line.id === selectedRouteId} />)}{buses.filter((bus) => bus.status === "active" && bus.position && (selectedRoute === "All routes" || bus.routeId === selectedRoute)).map((bus) => <BusMarker key={bus.id} position={bus.position} bus={bus} selected={bus.id === selectedBus?.id} stale={isStale(bus, now)} onSelect={selectBus} />)}{visibleStops.map((stop) => <StopMarker key={`${stop.routeId}-${stop.routeStopId || stop.id}`} position={stop.position} stop={stop} next={String(stop.id) === String(selectedBus?.nextStopId)} onSelect={(stop) => { setSelectedStop(stop); setSelectedBusId(null); setFollowBus(false); }} />)}<UserLocationMarker location={userLocation} /><MapControls onLocate={locateUser} onShowAll={showAllBuses} onToggleFollow={selectedBus ? () => setFollowBus((value) => !value) : null} followActive={followBus} followDisabled={!selectedBus || isStale(selectedBus, now)} /></ClientTransitMap><LiveMapLegend showUser={Boolean(userLocation)} /></div>{tileError && <div className="absolute inset-x-4 top-4 z-[500] rounded-xl bg-white/95 p-3 text-sm shadow-lg">Unable to load all map tiles. <button type="button" className="font-semibold text-[var(--primary-ink)] underline" onClick={() => setTileError(false)}>Try again</button></div>}{selectedBus && <div className="map-live-sheet absolute bottom-4 left-4 right-4 z-[500] sm:max-w-sm"><BusDetailsPanel bus={selectedBus} stops={selectedStops} stale={isStale(selectedBus, now)} followActive={followBus} onToggleFollow={() => setFollowBus((value) => !value)} onClose={() => { setSelectedBusId(null); setFollowBus(false); }} /></div>}{selectedStop && <div className="map-live-sheet absolute bottom-4 left-4 right-4 z-[500] sm:max-w-sm"><StopDetailsPanel stop={selectedStop} onClose={() => setSelectedStop(null)} /></div>}</div>
+      <aside className="min-w-0"><Card visual="fleet" treatment="primary" className="p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--primary-ink)]">Network now</p><h2 className="mt-1 text-xl font-bold text-[var(--foreground)]">Fleet</h2></div><span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--success)]"><Wifi size={14} /> Updates on</span></div><p className="mt-1 text-sm text-[var(--muted)]">{filteredBuses.length} of {buses.length} buses shown</p></Card><div className="mt-3 grid gap-3 xl:max-h-[432px] xl:overflow-y-auto xl:pr-1">{dataLoading && !buses.length ? <LoadingSpinner label="Preparing live transit map..." /> : dataError && !buses.length ? <EmptyState title="Transit data unavailable" description="Unable to load transit information." action={<Button type="button" variant="secondary" onClick={loadData}>Retry</Button>} /> : filteredBuses.length ? filteredBuses.map((bus) => <button key={bus.id} type="button" className="text-left" onClick={() => selectBus(bus)}><BusCard bus={bus} /></button>) : <EmptyState title="No buses found" description="There are no buses matching your filters." action={<Button type="button" variant="secondary" onClick={() => { setSearchTerm(""); setSelectedRoute("All routes"); setSelectedStatus("All"); }}>Clear filters</Button>} />}</div></aside></section>
+    {selectedRouteId && !routeLines.length && <Card className="mt-4 p-4 text-sm text-[var(--muted)]">Road geometry for this route is still being prepared. Stops remain visible, but no substitute line is shown.</Card>}
+    <section className="mt-7"><div className="mb-4"><p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--primary-ink)]">Network guide</p><h2 className="mt-1 text-xl font-bold text-[var(--foreground)]">Stops &amp; Popular Routes</h2></div><div className="grid gap-4 md:grid-cols-3"><Card treatment="stat" className="flex min-h-[158px] items-center p-5"><div><span className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary-ink)]"><MapPinned size={18} /></span><p className="mt-4 text-2xl font-bold text-[var(--foreground)]">{visibleStops.length}</p><p className="text-sm font-semibold text-[var(--foreground)]">Stops visible</p><p className="mt-1 text-xs leading-5 text-[var(--muted)]">Tap a stop for route information.</p></div></Card>{routeCards.map((route) => <RouteCard key={route.id} route={route} />)}</div></section></main><Footer /></div>;
 }
+
+function Notice({ icon, text }) { return <div className="mt-6 flex items-center gap-2 rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm text-[var(--muted)]">{icon}{text}</div>; }

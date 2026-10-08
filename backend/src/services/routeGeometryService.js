@@ -45,6 +45,10 @@ async function refreshRouteGeometry(routeId) {
   await Route.findByIdAndUpdate(routeId, { $set: { geometryStatus: 'pending' } });
   try {
     const stops = await getStopsForRoute(routeId);
+    if (stops.filter(validStop).length < 2) {
+      await Route.findByIdAndUpdate(routeId, { $set: { geometry: { outbound: [], return: [] }, geometryStatus: 'unavailable', geometryUpdatedAt: new Date() } });
+      return { outbound: [], return: [] };
+    }
     const outbound = await buildRoadGeometry(stops);
     // Request the return trip independently: a road network can have one-way
     // streets, so simply reversing outbound coordinates would be inaccurate.

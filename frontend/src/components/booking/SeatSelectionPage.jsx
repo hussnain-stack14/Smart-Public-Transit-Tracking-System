@@ -68,6 +68,14 @@ export default function SeatSelectionPage({
   const [error, setError] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [seatNotice, setSeatNotice] = useState("");
+  const [online, setOnline] = useState(() => typeof navigator === "undefined" || navigator.onLine);
+
+  useEffect(() => {
+    const sync = () => setOnline(navigator.onLine);
+    window.addEventListener("online", sync);
+    window.addEventListener("offline", sync);
+    return () => { window.removeEventListener("online", sync); window.removeEventListener("offline", sync); };
+  }, []);
 
   const geolocationOptions = useMemo(
     () => ({ enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 }),
@@ -189,6 +197,10 @@ export default function SeatSelectionPage({
 
   async function continueToConfirmation() {
     if (isFull || (configured && (!selectedSeat || seats.find((seat) => seat.label === selectedSeat)?.status !== "available"))) return;
+    if (!online) {
+      setSubmitError("You're offline. Connect to the internet to confirm your booking.");
+      return;
+    }
     if (!isAuthenticated || !getAccessToken()) {
       const target =
         `/booking/${busId}/seat?route=${encodeURIComponent(actualRouteId)}` +
@@ -501,12 +513,14 @@ export default function SeatSelectionPage({
           <Button
             type="button"
             className="mt-6 w-full gap-2"
-            disabled={authLoading || !isAuthenticated || (configured && (!selectedSeat || seats.find((seat) => seat.label === selectedSeat)?.status !== "available")) || isFull || submitting}
+            disabled={!online || authLoading || !isAuthenticated || (configured && (!selectedSeat || seats.find((seat) => seat.label === selectedSeat)?.status !== "available")) || isFull || submitting}
             onClick={continueToConfirmation}
           >
             {submitting
               ? "Creating booking..."
-              : isAuthenticated
+              : !online
+                ? "Connect to book"
+                : isAuthenticated
                 ? "Book and View Confirmation"
                 : "Log in to continue"}
             <ArrowRight size={16} />

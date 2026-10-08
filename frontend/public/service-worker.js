@@ -1,7 +1,7 @@
 /* Public shell and public transit snapshots only. Private sessions, bookings,
    live sockets, map tiles, and mutations are deliberately never cached. */
-const SHELL_CACHE = "smart-safar-shell-v4";
-const TRANSIT_CACHE = "smart-safar-transit-v3";
+const SHELL_CACHE = "smart-safar-shell-v5";
+const TRANSIT_CACHE = "smart-safar-transit-v4";
 const STATIC_ASSETS = [
   "/",
   "/offline.html",
@@ -27,7 +27,11 @@ function isStaticAsset(url) {
 }
 
 function isTransitSnapshot(url) {
-  return /\/api\/(?:routes|buses)(?:\/|$)/.test(url.pathname) || /\/api\/stops\/route\//.test(url.pathname);
+  // Only stable public reference data is safe to serve offline. In
+  // particular, never cache ETA, seats, bookings, alerts, or auth state.
+  return url.pathname === "/api/routes"
+    || url.pathname === "/api/buses"
+    || /^\/api\/stops\/route\/[^/]+$/.test(url.pathname);
 }
 
 function normalizedCacheRequest(request) {

@@ -354,10 +354,15 @@ textarea {
   background: white;
   box-shadow: 0 3px 9px rgba(17, 24, 39, .22);
 }
+.transit-map-bus-rotation { display: grid; place-items: center; transform-origin: center; }
+.transit-map-marker.bus--selected { transform: scale(1.12); filter: drop-shadow(0 0 8px color-mix(in srgb, var(--primary) 55%, transparent)); }
+.transit-map-marker.bus--stale { opacity: .62; filter: grayscale(.4); }
 
 /* Stop pin: transparent wrapper, SVG handles the shape */
 .transit-map-marker--stop { color: var(--primary); filter: drop-shadow(0 2px 4px rgba(15,23,42,.28)); }
 .transit-map-marker--selected-stop { color: var(--primary); filter: drop-shadow(0 3px 6px rgba(233,120,36,.5)); }
+.transit-map-marker--next-stop { color: var(--primary); filter: drop-shadow(0 0 0.55rem color-mix(in srgb, var(--primary) 42%, transparent)); animation: safar-next-stop-pulse 1.8s ease-in-out infinite; }
+@keyframes safar-next-stop-pulse { 50% { transform: scale(1.1); } }
 
 /* Passenger icon */
 .transit-map-marker--passenger { width: 36px; height: 36px; border: 3px solid white; border-radius: 999px; background: #d9900b; color: white; box-shadow: 0 2px 6px rgba(15,23,42,.25); }
@@ -382,7 +387,11 @@ textarea {
 }
 @media (prefers-reduced-motion: reduce) {
   .transit-map-marker--user-pulse-ring { animation: none; opacity: 0; }
+  .transit-map-marker--next-stop { animation: none; }
 }
+
+.live-map-legend-next { width: 12px; height: 12px; border: 2px solid var(--primary); border-radius: 99px; box-shadow: 0 0 0 3px var(--primary-soft); }
+@media (max-width: 639px) { .map-live-sheet { bottom: 12px; } .map-v2-surface:has(.map-live-sheet) .live-map-legend { bottom: auto; top: 12px; left: 12px; right: 64px; } .live-map-legend { max-width: calc(100% - 76px); font-size: 11px; gap: 8px; } }
 
 .leaflet-marker-icon.transit-map-icon { transition: filter .15s ease, opacity .15s ease; }
 .leaflet-marker-icon.transit-map-icon:hover { filter: brightness(1.06) drop-shadow(0 0 6px rgba(255,165,0,.4)); }
@@ -1421,6 +1430,29 @@ button:active:not(:disabled), .ui-button:active:not(:disabled) { transform: tran
 .app-driver-more-menu a:hover { background: var(--primary-soft); color: var(--primary-ink); }
 .app-driver-more-menu button:hover { background: var(--primary-soft); color: var(--primary-ink); }
 @media (min-width: 768px) { .app-driver-more-menu { display: none; } }
+
+/* Live Map is intentionally map-first on compact screens. The existing
+   Leaflet instance stays mounted; only its surface is promoted above the
+   application shell, respecting device safe areas and bottom sheets. */
+@media (max-width: 767px) {
+  .app-content:has(.map-v2-surface) > div > main { padding: 0; }
+  .app-content:has(.map-v2-surface) .premium-card--primary,
+  .app-content:has(.map-v2-surface) .map-v2-surface ~ aside,
+  .app-content:has(.map-v2-surface) .map-v2-surface ~ * { display: none; }
+  .app-content:has(.map-v2-surface) .mobile-map-filters { position: fixed; top: max(10px, env(safe-area-inset-top)); right: 68px; left: max(10px, env(safe-area-inset-left)); z-index: 1100; margin: 0; padding: 8px; box-shadow: var(--shadow-float); }
+  .app-content:has(.map-v2-surface) .mobile-map-filters > div { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
+  .app-content:has(.map-v2-surface) .mobile-map-filters > div > :first-child,
+  .app-content:has(.map-v2-surface) .mobile-map-filters > div > :last-child { grid-column: 1 / -1; }
+  .app-content:has(.map-v2-surface) .map-v2-surface { position: fixed; inset: 0; z-index: 1000; overflow: hidden; border: 0; border-radius: 0; padding: 0; box-shadow: none; }
+  .app-content:has(.map-v2-surface) .map-v2-surface > .relative,
+  .app-content:has(.map-v2-surface) .map-v2-surface .leaflet-container { height: 100dvh !important; min-height: 100dvh; border-radius: 0; }
+  .app-content:has(.map-v2-surface) .map-v2-surface .leaflet-top.leaflet-right { margin-top: max(8px, env(safe-area-inset-top)); margin-right: max(8px, env(safe-area-inset-right)); }
+  .app-content:has(.map-v2-surface) .map-live-sheet { right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); left: max(12px, env(safe-area-inset-left)); }
+  .app-content:has(.map-v2-surface) .live-map-legend { bottom: calc(18px + env(safe-area-inset-bottom)); left: max(12px, env(safe-area-inset-left)); }
+  .map-control-button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+}
+
+.leaflet-container:fullscreen { width: 100vw; height: 100dvh; background: var(--surface-subtle); }
 
 .app-bottom-nav button.app-nav-link { border: 0; background: transparent; }
 

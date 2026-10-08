@@ -12,6 +12,7 @@ import { routeService } from "../../services/routeService";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { BrandMark } from "../common/BrandMark";
 import { PwaInstallAction } from "../pwa/PwaInstallAction";
+import { useSocket } from "../../hooks/useSocket";
 
 const commuter = [
   { href: "/", label: "Home", icon: House },
@@ -98,6 +99,9 @@ function Navigation({ items, pathname, activeHash, onNavigate, onMore, moreOpen 
 }
 
 export function AppExperience({ children }) {
+  // The singleton socket stays mounted while navigating, so Live Map can
+  // re-use it instead of creating a connection on every visit.
+  useSocket();
   const { token } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
@@ -285,7 +289,7 @@ export function AppExperience({ children }) {
     </header>
     <div className="app-frame"><aside className="app-sidebar"><Navigation items={items} pathname={pathname} activeHash={activeHash} onNavigate={navigate} /></aside><div className="app-content">{children}</div></div>
     <Navigation items={mobileItems} pathname={pathname} activeHash={activeHash} onNavigate={navigate} onMore={() => setDriverMoreOpen((open) => !open)} moreOpen={driverMoreOpen} mobile />
-    {role === "driver" && driverMoreOpen && <section className="app-driver-more-menu" aria-label="More driver tools"><Link href="/profile" onClick={() => setDriverMoreOpen(false)}><UserRound size={18} /> Profile</Link><button type="button" onClick={() => { setDriverMoreOpen(false); toggleNotifications(); }}><Bell size={18} /> Alerts</button><Link href="/reports" onClick={() => setDriverMoreOpen(false)}><ChartNoAxesCombined size={18} /> Report an issue</Link><Link href="/settings" onClick={() => setDriverMoreOpen(false)}><Settings size={18} /> Help &amp; settings</Link><button type="button" onClick={() => { setDriverMoreOpen(false); setConfirmLogout(true); }}><LogOut size={18} /> Sign out</button></section>}
+    {role === "driver" && driverMoreOpen && <section className="app-driver-more-menu" aria-label="More driver tools"><Link href="/driver/route" onClick={() => setDriverMoreOpen(false)}><MapPinned size={18} /> Route</Link><Link href="/reports" onClick={() => setDriverMoreOpen(false)}><ChartNoAxesCombined size={18} /> Reports</Link><Link href="/profile" onClick={() => setDriverMoreOpen(false)}><UserRound size={18} /> Profile</Link><button type="button" onClick={() => { setDriverMoreOpen(false); setConfirmLogout(true); }}><LogOut size={18} /> Sign out</button></section>}
     {confirmLogout && <div className="app-dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setConfirmLogout(false); }}><section className="app-logout-dialog" role="alertdialog" aria-modal="true" aria-labelledby="logout-title"><button type="button" className="app-dialog-close" aria-label="Close" onClick={() => setConfirmLogout(false)}><X size={18} /></button><span className="app-dialog-icon"><LogOut size={22} /></span><h2 id="logout-title">Log out?</h2><p>Are you sure you want to log out?</p><div><button type="button" onClick={() => setConfirmLogout(false)}>Cancel</button><button type="button" className="is-danger" onClick={logout}>Log out</button></div></section></div>}
   </div>;
 }
