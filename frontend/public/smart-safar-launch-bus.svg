@@ -17,7 +17,7 @@
     </linearGradient>
     <filter id="busShadow" x="-20%" y="-40%" width="140%" height="190%"><feDropShadow dx="0" dy="9" stdDeviation="7" flood-color="#0f172a" flood-opacity=".22"/></filter>
   </defs>
-  <style>.wheel{transform-box:fill-box;transform-origin:center;animation:wheelSpin .24s linear 4}@keyframes wheelSpin{to{transform:rotate(360deg)}}</style>
+  <style>.wheel{transform-box:fill-box;transform-origin:center;animation:wheelSpin 1.04s cubic-bezier(.22,.7,.42,1) both}@keyframes wheelSpin{0%{transform:rotate(0)}10%{transform:rotate(18deg)}42%{transform:rotate(390deg)}69%{transform:rotate(850deg)}100%{transform:rotate(1440deg)}}</style>
   <g filter="url(#busShadow)">
     <path d="M47 126V73c0-18 14-32 32-32h226c20 0 39 9 52 25l20 24c8 9 12 20 12 32v16c0 12-10 22-22 22H67c-11 0-20-9-20-20v-14Z" fill="url(#busBody)"/>
     <path d="M58 121V77c0-14 10-24 24-24h215c15 0 29 6 39 18l22 27c5 6 8 14 8 22v5H58Z" fill="url(#glass)"/>
