@@ -16,7 +16,7 @@ const { verifyPaymentNotification } = require('../services/paymentService');
 // @access  Private
 const createBooking = async (req, res) => {
   try {
-    const booking = await createBookingFromRequest(req.user._id, req.body);
+    const booking = await createBookingFromRequest(req.user._id, req.body, req.get('Idempotency-Key'));
     await emitSeatUpdateById(req.app.get('io'), booking.bus?._id || booking.bus);
     if (booking.locationSharingActive) {
       await emitPassengerLocation(req.app.get('io'), booking, true);

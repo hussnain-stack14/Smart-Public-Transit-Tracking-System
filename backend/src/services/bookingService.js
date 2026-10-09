@@ -22,6 +22,14 @@ function populatedBooking(id) {
     .populate('driver', 'name');
 }
 
+function normalizeIdempotencyKey(value) {
+  if (!value) return null;
+  if (typeof value !== 'string' || !/^[A-Za-z0-9._-]{8,128}$/.test(value)) {
+    throw new ApiError(400, 'Idempotency-Key must contain 8 to 128 letters, numbers, dots, underscores, or dashes.');
+  }
+  return value;
+}
+
 function validateCreateBody(body) {
   requireObjectBody(body);
   const allowed = [
@@ -220,11 +228,18 @@ async function resolveBookingAssignment(values, session) {
   return { route, bus, driver };
 }
 
-async function createBookingFromRequest(userId, body) {
+async function createBookingFromRequest(userId, body, idempotencyKey) {
   const values = validateCreateBody(body);
+  const requestKey = normalizeIdempotencyKey(idempotencyKey);
   const price = getBookingPrice();
 
-  const bookingId = await runInTransaction(async (session) => {
+  let bookingId;
+  try {
+    bookingId = await runInTransaction(async (session) => {
+    if (requestKey) {
+      const existing = await Booking.findOne({ user: userId, idempotencyKey: requestKey }).select('_id').session(session);
+      if (existing) return existing._id;
+    }
     const { route, bus, driver } = await resolveBookingAssignment(values, session);
 
     const duplicate = await Booking.findOne({
@@ -262,6 +277,7 @@ async function createBookingFromRequest(userId, body) {
           route: route._id,
           driver: driver._id,
           seatNumber: configuredSeat?.label || values.seatNumber,
+          idempotencyKey: requestKey,
           paymentMethod: values.paymentMethod,
           paymentStatus: 'pending',
           fare: price.fare,
@@ -282,7 +298,18 @@ async function createBookingFromRequest(userId, body) {
     }
     await bus.save({ session });
     return booking._id;
-  });
+    });
+  } catch (error) {
+    // A concurrent retry can race the unique index. Resolve it to the same
+    // booking rather than creating a duplicate or asking the client to retry.
+    if (requestKey && error?.code === 11000) {
+      const existing = await Booking.findOne({ user: userId, idempotencyKey: requestKey }).select('_id');
+      if (existing) bookingId = existing._id;
+      else throw error;
+    } else {
+      throw error;
+    }
+  }
 
   return populatedBooking(bookingId);
 }

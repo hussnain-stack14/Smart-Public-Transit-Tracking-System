@@ -224,20 +224,7 @@ textarea {
 .driver-status-card { overflow-wrap: anywhere; }
 .driver-live-grid > * { min-width: 0; }
 
-/* One rotation carries the bus around the road and keeps its nose tangent.
-   Linear timing gives a continuous, constant-speed journey across the loop seam. */
-.safar-loader { display: inline-flex; max-width: 100%; min-width: 0; align-items: center; justify-content: center; gap: 14px; padding: 6px 10px; color: var(--muted); font-size: 14px; line-height: 1.5; vertical-align: middle; }
-.safar-loader-scene { display: block; flex: 0 0 auto; width: 88px; height: 88px; }
-.safar-loader-road { display: block; width: 100%; height: 100%; }
-.safar-loader-orbit { transform-box: view-box; transform-origin: 44px 44px; animation: safar-route-orbit 4s linear infinite; }
-.safar-loader-bus { overflow: visible; }
-.safar-loader-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
-@keyframes safar-route-orbit { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-@media (max-width: 639px) {
-  .safar-loader { width: 100%; flex-direction: column; gap: 6px; text-align: center; }
-
-}
-@media (prefers-reduced-motion: reduce) { .safar-loader-orbit { animation: none; } }
+.safar-loader { display: inline-flex; max-width: 100%; min-width: 0; align-items: center; justify-content: center; padding: 6px 10px; color: var(--muted); font-size: 14px; font-weight: 500; line-height: 1.5; text-align: center; vertical-align: middle; }
 
 @media (max-width: 767px) {
   .app-experience .mobile-map-filters { margin-top: 14px; }
@@ -466,14 +453,6 @@ button:active:not(:disabled),
   font-size: 0;
 }
 
-.safar-loader-orbit {
-  animation-duration: 3.2s;
-  will-change: transform;
-}
-.safar-loader-bus {
-  filter: drop-shadow(0 2px 2px rgba(15,23,42, .2));
-}
-
 @media (hover: hover) {
   .ui-card[data-interactive="true"]:hover { transform: translateY(-2px); border-color: var(--primary-border); box-shadow: 0 12px 32px rgba(15,23,42, .1); }
   .ui-button:hover svg { transform: translateY(-1px); }
@@ -494,8 +473,7 @@ button:active:not(:disabled),
 @media (prefers-reduced-motion: reduce) {
   .app-account-menu,
   .app-notification-panel,
-  .live-transit-value,
-  .safar-loader-orbit {
+  .live-transit-value {
     animation: none !important;
   }
   [data-home-reveal="shown"] { animation: none; }
@@ -748,25 +726,25 @@ body {
   padding: max(24px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
   overflow: hidden;
   background: radial-gradient(circle at 50% 44%, color-mix(in srgb, var(--primary-soft-strong) 74%, #fff) 0, var(--primary-soft) 42%, #fff 100%);
-  animation: safar-launch-fade .24s ease-out 1.56s both;
+  animation: safar-launch-fade .2s ease-out 1.18s both;
 }
 .pwa-launch__scene { display: grid; width: min(560px, 100%); justify-items: center; text-align: center; }
 .pwa-launch__skip { position: absolute; top: max(16px, env(safe-area-inset-top)); right: max(16px, env(safe-area-inset-right)); z-index: 2; min-height: 38px; border: 1px solid var(--primary-border); border-radius: 999px; background: color-mix(in srgb, #fff 85%, transparent); padding: 0 14px; color: var(--primary-ink); font-size: 12px; font-weight: 750; }
 .pwa-launch__skip:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 .pwa-launch__cinema { position: relative; width: 100%; height: clamp(112px, 28vw, 152px); overflow: hidden; }
-.pwa-launch__horizon { position: absolute; inset: 27% -12% 31%; background: linear-gradient(90deg, transparent 0 6%, color-mix(in srgb, var(--primary) 12%, transparent) 20% 26%, transparent 39% 48%, color-mix(in srgb, var(--primary) 10%, transparent) 66% 71%, transparent 88%); opacity: 0; transform: translate3d(-2%, 0, 0); will-change: transform, opacity; animation: safar-launch-horizon 1.2s ease-out both; }
-.pwa-launch__road { position: absolute; z-index: 0; right: -14%; bottom: 9px; left: -14%; height: 28px; overflow: hidden; opacity: 0; transform: perspective(120px) rotateX(58deg) translate3d(-2%, 0, 0); transform-origin: center bottom; will-change: transform, opacity; animation: safar-launch-road 1.12s cubic-bezier(.26,.72,.42,1) both; }
+.pwa-launch__horizon { position: absolute; inset: 27% -12% 31%; background: linear-gradient(90deg, transparent 0 6%, color-mix(in srgb, var(--primary) 12%, transparent) 20% 26%, transparent 39% 48%, color-mix(in srgb, var(--primary) 10%, transparent) 66% 71%, transparent 88%); opacity: 0; transform: translate3d(-2%, 0, 0); will-change: transform, opacity; animation: safar-launch-horizon .98s ease-out both; }
+.pwa-launch__road { position: absolute; z-index: 0; right: -14%; bottom: 9px; left: -14%; height: 28px; overflow: hidden; opacity: 0; transform: perspective(120px) rotateX(58deg) translate3d(-2%, 0, 0); transform-origin: center bottom; will-change: transform, opacity; animation: safar-launch-road .9s cubic-bezier(.26,.72,.42,1) both; }
 .pwa-launch__road i { position: absolute; top: 12px; width: 15%; height: 2px; border-radius: 999px; background: color-mix(in srgb, var(--primary) 36%, transparent); }.pwa-launch__road i:nth-child(1) { left: 11%; }.pwa-launch__road i:nth-child(2) { left: 43%; }.pwa-launch__road i:nth-child(3) { left: 75%; }
-.pwa-launch__glow { position: absolute; z-index: 0; inset: 42% 13% 17%; border-radius: 50%; background: var(--primary-soft-strong); opacity: 0; transform: scaleX(.25); will-change: transform, opacity; animation: safar-launch-glow 1.24s ease-out both; }
-.pwa-launch__bus { position: absolute; z-index: 2; bottom: 15px; left: -52%; width: clamp(190px, 56%, 280px); height: auto; will-change: transform, opacity; animation: safar-launch-bus 1.04s both; }
-.pwa-launch__trail { position: absolute; z-index: 1; bottom: 43px; left: 0; display: flex; width: 56%; height: 16px; align-items: center; gap: 7px; opacity: 0; transform-origin: left center; will-change: transform, opacity; animation: safar-launch-trail 1.04s both; }
+.pwa-launch__glow { position: absolute; z-index: 0; inset: 42% 13% 17%; border-radius: 50%; background: var(--primary-soft-strong); opacity: 0; transform: scaleX(.25); will-change: transform, opacity; animation: safar-launch-glow .98s ease-out both; }
+.pwa-launch__bus { position: absolute; z-index: 2; bottom: 15px; left: -52%; width: clamp(190px, 56%, 280px); height: auto; will-change: transform, opacity; animation: safar-launch-bus .86s both; }
+.pwa-launch__trail { position: absolute; z-index: 1; bottom: 43px; left: 0; display: flex; width: 56%; height: 16px; align-items: center; gap: 7px; opacity: 0; transform-origin: left center; will-change: transform, opacity; animation: safar-launch-trail .86s both; }
 .pwa-launch__trail::before { width: 100%; height: 5px; border-radius: 999px; background: linear-gradient(90deg, transparent, #f6a21a 18%, #ed6c16 70%, transparent); content: ""; }
 .pwa-launch__trail i { position: absolute; width: 18%; height: 3px; border-radius: 999px; background: #f6a21a; box-shadow: 0 0 8px color-mix(in srgb, #ed6c16 56%, transparent); }
 .pwa-launch__trail i:nth-child(1) { top: -5px; left: 27%; }.pwa-launch__trail i:nth-child(2) { top: 13px; left: 53%; width: 12%; }.pwa-launch__trail i:nth-child(3) { top: -9px; left: 74%; width: 9%; }
-.pwa-launch__route { position: absolute; z-index: 3; right: 9%; bottom: 2px; width: min(70%, 360px); height: 96px; overflow: visible; opacity: 0; transform: translate3d(0, 8px, 0); will-change: transform, opacity; animation: safar-launch-route-in .18s ease-out .92s both; }
-.pwa-launch__route path { stroke: var(--primary); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: safar-launch-route-draw .44s cubic-bezier(.2,.76,.35,1) .98s both; }
-.pwa-launch__route path + path { stroke: #f28a1f; stroke-width: 2.5; animation-delay: 1.06s; }
-.pwa-launch__brand { display: grid; justify-items: center; opacity: 0; transform: translate3d(0, 8px, 0) scale(.97); will-change: transform, opacity; animation: safar-launch-brand .32s cubic-bezier(.2,.8,.3,1) 1.15s both; }
+.pwa-launch__route { position: absolute; z-index: 3; right: 9%; bottom: 2px; width: min(70%, 360px); height: 96px; overflow: visible; opacity: 0; transform: translate3d(0, 8px, 0); will-change: transform, opacity; animation: safar-launch-route-in .16s ease-out .74s both; }
+.pwa-launch__route path { stroke: var(--primary); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: safar-launch-route-draw .34s cubic-bezier(.2,.76,.35,1) .8s both; }
+.pwa-launch__route path + path { stroke: #f28a1f; stroke-width: 2.5; animation-delay: .86s; }
+.pwa-launch__brand { display: grid; justify-items: center; opacity: 0; transform: translate3d(0, 8px, 0) scale(.97); will-change: transform, opacity; animation: safar-launch-brand .25s cubic-bezier(.2,.8,.3,1) .96s both; }
 .pwa-launch__brand > img { border-radius: 17px; box-shadow: 0 8px 24px color-mix(in srgb, var(--primary) 18%, transparent); }
 .pwa-launch__brand strong { margin-top: 12px; font-size: 21px; font-weight: 800; letter-spacing: -.03em; }.pwa-launch__brand p { margin-top: 5px; color: var(--muted); font-size: 12px; }
 @keyframes safar-launch-fade { to { opacity: 0; } }
@@ -859,6 +837,7 @@ body {
 .pwa-connectivity small { color: rgba(255, 255, 255, .76); font-size: 11px; line-height: 1.35; }
 .pwa-online { border-color: color-mix(in srgb, var(--success) 70%, transparent); }
 .pwa-online > svg { color: var(--success); }
+.pwa-sync-status { top: calc(132px + env(safe-area-inset-top)); border-color: color-mix(in srgb, var(--primary) 72%, transparent); }
 @keyframes safar-connectivity-in { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 .home-map-summary > a {
   display: grid;

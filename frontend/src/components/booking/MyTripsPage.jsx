@@ -23,6 +23,7 @@ import { bookingService } from "../../services/bookingService";
 import { useAuth } from "../../hooks/useAuth";
 import { getAccessToken } from "../../lib/auth/token";
 import { readPrivateSnapshot, savePrivateSnapshot } from "../../lib/live-map/liveMapStorage";
+import { discardPendingBooking, listPendingBookings, retryPendingBooking, syncPendingBookings } from "../../lib/offline/bookingQueue";
 
 const filters = ["all", "confirmed", "completed", "cancelled"];
 
@@ -67,6 +68,12 @@ export default function MyTripsPage() {
   const [cancellingId, setCancellingId] = useState("");
   const [cancelError, setCancelError] = useState("");
   const [online, setOnline] = useState(() => typeof navigator === "undefined" || navigator.onLine);
+  const [pendingRequests, setPendingRequests] = useState([]);
+
+  const loadPendingRequests = useCallback(async () => {
+    const token = getAccessToken();
+    setPendingRequests(await listPendingBookings(token));
+  }, []);
 
   const loadBookings = useCallback(async () => {
     if (!isAuthenticated) {
@@ -106,6 +113,13 @@ export default function MyTripsPage() {
   }, [loadBookings]);
 
   useEffect(() => {
+    if (!isAuthenticated) return undefined;
+    Promise.resolve().then(() => loadPendingRequests());
+    window.addEventListener("smart-safar:booking-queue", loadPendingRequests);
+    return () => window.removeEventListener("smart-safar:booking-queue", loadPendingRequests);
+  }, [isAuthenticated, loadPendingRequests]);
+
+  useEffect(() => {
     const sync = () => setOnline(navigator.onLine);
     window.addEventListener("online", sync);
     window.addEventListener("offline", sync);
@@ -143,6 +157,16 @@ export default function MyTripsPage() {
     } finally {
       setCancellingId("");
     }
+  }
+
+  async function reviewPendingRequest(request, action) {
+    const token = getAccessToken();
+    if (action === "discard") await discardPendingBooking(token, request.id);
+    else {
+      await retryPendingBooking(token, request.id);
+      if (navigator.onLine) await syncPendingBookings(token);
+    }
+    loadPendingRequests();
   }
 
   if (authLoading || (isAuthenticated && loading && !bookings.length)) {
@@ -201,6 +225,8 @@ export default function MyTripsPage() {
       </header>
 
       {error === "offline" && <p role="status" className="mt-5 rounded-xl border border-[var(--warning-border)] bg-[var(--warning-soft)] p-3 text-sm text-[var(--warning)]">Saved booking information — connect to refresh. Booking changes are unavailable offline.</p>}
+
+      {pendingRequests.some((request) => request.status !== "confirmed") && <section className="mt-5 rounded-2xl border border-[var(--warning-border)] bg-[var(--warning-soft)] p-4"><p className="text-xs font-bold uppercase tracking-[.14em] text-[var(--warning)]">Pending confirmation</p><h2 className="mt-1 text-lg font-bold text-[var(--foreground)]">Saved booking requests</h2><div className="mt-3 grid gap-3">{pendingRequests.filter((request) => request.status !== "confirmed").map((request) => <div key={request.id} className="rounded-xl border border-[var(--warning-border)] bg-white/70 p-3 text-sm"><div className="flex flex-wrap items-start justify-between gap-2"><div><strong>{request.summary?.routeName || "Saved route"}</strong><p className="mt-1 text-[var(--muted)]">{request.summary?.busNumber || "Saved bus"}{request.summary?.seatNumber ? ` · Seat ${request.summary.seatNumber}` : ""}</p></div><Badge tone={request.status === "needs-attention" ? "danger" : "warning"}>{request.status === "needs-attention" ? "Needs attention" : request.status === "synchronizing" ? "Synchronizing" : "Pending"}</Badge></div><p className="mt-2 text-xs leading-5 text-[var(--muted)]">{request.message || "This is not a confirmed ticket. Smart Safar will recheck availability when connected."}</p><div className="mt-3 flex flex-wrap gap-2"><Button type="button" variant="secondary" className="min-h-9 text-xs" disabled={!online || request.status === "synchronizing"} onClick={() => reviewPendingRequest(request, "retry")}>Retry when online</Button><Button type="button" variant="secondary" className="min-h-9 text-xs text-[var(--danger)]" onClick={() => reviewPendingRequest(request, "discard")}>Discard</Button></div></div>)}</div></section>}
 
       <div className="mt-8 flex flex-wrap gap-2" role="tablist" aria-label="Trip filters">
         {filters.map((value) => (

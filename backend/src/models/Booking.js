@@ -19,6 +19,9 @@ const bookingSchema = new mongoose.Schema(
     route: { type: mongoose.Schema.Types.ObjectId, ref: 'Route', default: null },
     driver: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     seatNumber: { type: String, default: null, trim: true },
+    // A client-generated key makes an interrupted/retried booking request
+    // idempotent for its owner. It is never a ticket or payment reference.
+    idempotencyKey: { type: String, trim: true, default: null },
     status: { type: String, enum: ['confirmed', 'cancelled', 'completed'], default: 'confirmed' },
     paymentStatus: {
       type: String,
@@ -54,5 +57,6 @@ bookingSchema.pre('save', function stopLocationForInactiveBooking(next) {
 bookingSchema.index({ user: 1, createdAt: -1 });
 bookingSchema.index({ bus: 1, status: 1, seatNumber: 1 });
 bookingSchema.index({ route: 1, status: 1 });
+bookingSchema.index({ user: 1, idempotencyKey: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('Booking', bookingSchema);

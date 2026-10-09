@@ -32,6 +32,8 @@ import { useAuth } from "../../hooks/useAuth";
 import { getAccessToken } from "../../lib/auth/token";
 import { useGeolocation } from "../../hooks/useGeolocation";
 import { useSocket } from "../../hooks/useSocket";
+import { readCachedBusDetails, saveCachedBusDetails } from "../../lib/live-map/liveMapStorage";
+import { savePendingBooking } from "../../lib/offline/bookingQueue";
 
 function getId(value) {
   return value?._id || value || "";
@@ -95,8 +97,14 @@ export default function SeatSelectionPage({
       setBus(busData);
       const routeData = selectedRouteId ? await routeService.get(selectedRouteId) : null;
       setRoute(routeData);
+      saveCachedBusDetails(busId, { bus: busData, route: routeData });
     } catch (requestError) {
-      if (requestError.response?.status === 404) setError("not-found");
+      const cached = await readCachedBusDetails(busId);
+      if (cached?.bus) {
+        setBus(cached.bus);
+        setRoute(cached.route || null);
+        setError("offline");
+      } else if (requestError.response?.status === 404) setError("not-found");
       else {
         console.error("Unable to load seat selection data", requestError);
         setError("load-error");
@@ -196,10 +204,6 @@ export default function SeatSelectionPage({
 
   async function continueToConfirmation() {
     if (isFull || (configured && (!selectedSeat || seats.find((seat) => seat.label === selectedSeat)?.status !== "available"))) return;
-    if (!online) {
-      setSubmitError("You're offline. Connect to the internet to confirm your booking.");
-      return;
-    }
     if (!isAuthenticated || !getAccessToken()) {
       const target =
         `/booking/${busId}/seat?route=${encodeURIComponent(actualRouteId)}` +
@@ -208,22 +212,28 @@ export default function SeatSelectionPage({
       return;
     }
 
+    const payload = {
+      routeId: actualRouteId,
+      ...(configured ? { seatNumber: selectedSeat } : {}),
+      bus: busId,
+      paymentMethod: "cash",
+      shareLocation: Boolean(pickupLocation),
+      ...(pickupLocation ? { pickupLocation } : {}),
+    };
+    if (bookingMode === "manual") payload.driverId = getId(driver);
+    if (!online) {
+      const operation = await savePendingBooking(getAccessToken(), payload, {
+        routeName: route?.routeName || "Saved route",
+        busNumber: bus?.busNumber || "Saved bus",
+        seatNumber: selectedSeat || null,
+      });
+      setSeatNotice(operation.status === "waiting" ? "Booking request saved on this device. It is pending confirmation and will be checked when you reconnect." : "This pending booking request is already saved.");
+      setSubmitError("");
+      return;
+    }
     setSubmitting(true);
     setSubmitError("");
     try {
-      const payload = {
-        routeId: actualRouteId,
-        ...(configured ? { seatNumber: selectedSeat } : {}),
-        bus: busId,
-        paymentMethod: "cash",
-        shareLocation: Boolean(pickupLocation),
-        ...(pickupLocation ? { pickupLocation } : {}),
-      };
-
-      if (bookingMode === "manual") {
-        payload.driverId = getId(driver);
-      }
-
       const booking = await bookingService.create(payload);
       if (!booking?._id) throw new Error("Booking response did not include an ID");
       router.push(`/booking/${booking._id}/confirmation`);
@@ -259,7 +269,7 @@ export default function SeatSelectionPage({
       </PageShell>
     );
   }
-  if (error || !bus) {
+  if ((error && error !== "offline") || !bus) {
     return (
       <PageShell>
         <ErrorState
@@ -301,6 +311,8 @@ export default function SeatSelectionPage({
       </header>
 
       <BookingProgress currentStep={2} />
+
+      {error === "offline" && <p role="status" className="mt-5 rounded-xl border border-[var(--warning-border)] bg-[var(--warning-soft)] p-3 text-sm text-[var(--warning)]">Offline — showing the last saved seat map. A selected seat is only a pending request until Smart Safar confirms it online.</p>}
 
       <Card className="mt-6 p-4 sm:p-5">
         <div className="grid gap-3 sm:grid-cols-4">
@@ -510,13 +522,13 @@ export default function SeatSelectionPage({
           <Button
             type="button"
             className="mt-6 w-full gap-2"
-            disabled={!online || authLoading || !isAuthenticated || (configured && (!selectedSeat || seats.find((seat) => seat.label === selectedSeat)?.status !== "available")) || isFull || submitting}
+            disabled={authLoading || !isAuthenticated || (configured && (!selectedSeat || seats.find((seat) => seat.label === selectedSeat)?.status !== "available")) || isFull || submitting}
             onClick={continueToConfirmation}
           >
             {submitting
               ? "Creating booking..."
               : !online
-                ? "Connect to book"
+                ? "Save pending request"
                 : isAuthenticated
                 ? "Book and View Confirmation"
                 : "Log in to continue"}

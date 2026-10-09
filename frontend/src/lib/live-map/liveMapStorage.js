@@ -3,8 +3,9 @@ const STORE_NAME = "snapshots";
 const MAP_STATE_KEY = "map-state";
 const TRANSIT_SNAPSHOT_KEY = "transit-snapshot";
 const ROUTE_CATALOGUE_KEY = "route-catalogue";
+const BUS_DETAILS_KEY = "bus-details";
 const MAX_CACHED_ROUTE_DETAILS = 50;
-const PRIVATE_SNAPSHOT_TYPES = ["profile", "my-trips"];
+const PRIVATE_SNAPSHOT_TYPES = ["profile", "my-trips", "booking-queue"];
 
 function openStore(mode) {
   return new Promise((resolve, reject) => {
@@ -51,6 +52,16 @@ export async function saveLiveMapState(state) {
 export function saveLiveMapViewport(mapViewport) { return saveLiveMapState({ mapViewport }); }
 export function readTransitSnapshot() { return read(TRANSIT_SNAPSHOT_KEY); }
 export function saveTransitSnapshot(snapshot) { return write(TRANSIT_SNAPSHOT_KEY, snapshot); }
+export async function readCachedBusDetails(busId) {
+  const current = await read(BUS_DETAILS_KEY);
+  return current?.data?.[String(busId)] || null;
+}
+export async function saveCachedBusDetails(busId, data) {
+  const current = await read(BUS_DETAILS_KEY);
+  const entries = { ...(current?.data || {}), [String(busId)]: { ...data, cachedAt: Date.now() } };
+  const retained = Object.entries(entries).sort(([, left], [, right]) => (right.cachedAt || 0) - (left.cachedAt || 0)).slice(0, 40);
+  return write(BUS_DETAILS_KEY, Object.fromEntries(retained));
+}
 
 export function readCachedRoutes() { return read(ROUTE_CATALOGUE_KEY); }
 
