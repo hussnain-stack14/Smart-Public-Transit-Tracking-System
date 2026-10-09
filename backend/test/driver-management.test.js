@@ -23,7 +23,7 @@ const Shift = require('../src/models/Shift');
 
 const testDatabase = 'transit_driver_test_' + crypto.randomBytes(8).toString('hex');
 const password = crypto.randomBytes(18).toString('hex');
-let baseUrl, adminToken, commuter, commuterToken, driverA, driverB, driverTokenA, driverTokenB, route, busA, busB, routeFirstBooking;
+let baseUrl, adminToken, commuter, commuterToken, driverA, driverB, driverTokenA, driverTokenB, route, busA, busB, routeFirstBooking, routeFirstContext;
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function request(path, token, method = 'GET', body, extraHeaders = {}) {
@@ -75,6 +75,50 @@ async function createDriver(email, name = 'Integration Driver') {
 
 async function assign(bus, driver) {
   return request('/api/buses/' + bus._id, adminToken, 'PUT', { driver: driver ? driver._id : null });
+}
+
+function requireRouteFirstContext() {
+  assert.ok(routeFirstContext, 'Route-first booking fixture is missing; the route-first booking test must run first.');
+  assert.ok(routeFirstBooking, 'Route-first booking is missing; the route-first booking test did not create its prerequisite booking.');
+  return routeFirstContext;
+}
+
+async function createRouteFirstFixture() {
+  const fixtureId = crypto.randomBytes(6).toString('hex');
+  const driver = await createDriver(`route-first-driver-${fixtureId}@integration.example`, 'Route-first Driver');
+  const driverIdentity = await login(driver.email);
+  const routeResponse = await request('/api/routes', adminToken, 'POST', {
+    routeName: `Route-first ${fixtureId}`,
+    startPoint: 'Route-first Start',
+    endPoint: 'Route-first End',
+  });
+  assert.equal(routeResponse.status, 201);
+  const fixtureRoute = routeResponse.data;
+  const stopResponse = await request('/api/stops', adminToken, 'POST', {
+    route: fixtureRoute._id,
+    stopName: 'Route-first Stop',
+    latitude: 31.45,
+    longitude: 73.11,
+    stopOrder: 1,
+  });
+  assert.equal(stopResponse.status, 201);
+  const busResponse = await request('/api/buses', adminToken, 'POST', {
+    busNumber: `ROUTE-FIRST-${fixtureId}`,
+    route: fixtureRoute._id,
+    capacity: 12,
+    driver: driver._id,
+  });
+  assert.equal(busResponse.status, 201);
+  const fixtureBus = busResponse.data;
+  const started = await request('/api/buses/assigned/start-shift', driverIdentity.token, 'POST');
+  assert.equal(started.status, 201, `Route-first fixture shift did not start: ${JSON.stringify(started.data)}`);
+  const passenger = await request('/api/auth/register', null, 'POST', {
+    name: 'Route-first Passenger',
+    email: `route-first-passenger-${fixtureId}@integration.example`,
+    password,
+  });
+  assert.equal(passenger.status, 201);
+  return { fixtureId, route: fixtureRoute, bus: fixtureBus, driver, driverToken: driverIdentity.token, passengerToken: passenger.data.token };
 }
 
 async function profile(token) {
@@ -538,10 +582,12 @@ test('existing GPS, real Socket.IO delivery, ETA, seats, bookings, routes and an
 });
 
 test('route-first and manual bookings resolve only valid active assignments and protect seats/payment state', async () => {
-  const seatsBefore = (await Bus.findById(busA._id)).availableSeats;
+  routeFirstContext = await createRouteFirstFixture();
+  const { bus, driver, fixtureId, passengerToken, route: fixtureRoute } = routeFirstContext;
+  const seatsBefore = (await Bus.findById(bus._id)).availableSeats;
 
-  const fakePaid = await request('/api/bookings', commuterToken, 'POST', {
-    routeId: route._id,
+  const fakePaid = await request('/api/bookings', passengerToken, 'POST', {
+    routeId: fixtureRoute._id,
     seatNumber: 'RF-FAKE',
     paymentMethod: 'online',
     paymentStatus: 'paid',
@@ -549,74 +595,75 @@ test('route-first and manual bookings resolve only valid active assignments and 
   });
   assert.equal(fakePaid.status, 400);
 
-  const created = await request('/api/bookings', commuterToken, 'POST', {
-    routeId: route._id,
+  const created = await request('/api/bookings', passengerToken, 'POST', {
+    routeId: fixtureRoute._id,
     seatNumber: 'RF-1',
     paymentMethod: 'online',
     fare: 1,
   });
-  assert.equal(created.status, 201);
+  assert.equal(created.status, 201, `Route-first booking failed: ${JSON.stringify(created.data)}`);
   routeFirstBooking = created.data;
-  assert.equal(routeFirstBooking.route._id, route._id);
-  assert.equal(routeFirstBooking.bus._id, busA._id);
-  assert.equal(routeFirstBooking.driver._id, driverA._id);
+  assert.equal(routeFirstBooking.route._id, fixtureRoute._id);
+  assert.equal(routeFirstBooking.bus._id, bus._id);
+  assert.equal(routeFirstBooking.driver._id, driver._id);
   assert.equal(routeFirstBooking.fare, 50);
   assert.equal(routeFirstBooking.currency, 'PKR');
   assert.equal(routeFirstBooking.paymentStatus, 'pending');
-  assert.equal((await Bus.findById(busA._id)).availableSeats, seatsBefore - 1);
+  assert.equal((await Bus.findById(bus._id)).availableSeats, seatsBefore - 1);
 
-  const duplicate = await request('/api/bookings', commuterToken, 'POST', {
-    routeId: route._id,
+  const duplicate = await request('/api/bookings', passengerToken, 'POST', {
+    routeId: fixtureRoute._id,
     seatNumber: 'RF-OTHER',
   });
   assert.equal(duplicate.status, 409);
 
   const manualIdentity = await request('/api/auth/register', null, 'POST', {
     name: 'Manual Booking Passenger',
-    email: 'manual.booking@integration.example',
+    email: `manual.booking-${fixtureId}@integration.example`,
     password,
   });
   assert.equal(manualIdentity.status, 201);
   const manualToken = manualIdentity.data.token;
 
   const wrongDriver = await request('/api/bookings', manualToken, 'POST', {
-    routeId: route._id,
-    bus: busA._id,
-    driverId: driverB._id,
+    routeId: fixtureRoute._id,
+    bus: bus._id,
+    driverId: new mongoose.Types.ObjectId().toString(),
     seatNumber: 'RF-2',
   });
   assert.equal(wrongDriver.status, 400);
 
   const occupiedSeat = await request('/api/bookings', manualToken, 'POST', {
-    routeId: route._id,
-    bus: busA._id,
-    driverId: driverA._id,
+    routeId: fixtureRoute._id,
+    bus: bus._id,
+    driverId: driver._id,
     seatNumber: 'RF-1',
   });
   assert.equal(occupiedSeat.status, 409);
 
   const manual = await request('/api/bookings', manualToken, 'POST', {
-    routeId: route._id,
-    bus: busA._id,
-    driverId: driverA._id,
+    routeId: fixtureRoute._id,
+    bus: bus._id,
+    driverId: driver._id,
     seatNumber: 'RF-2',
     fare: 0,
   });
   assert.equal(manual.status, 201);
-  assert.equal(manual.data.driver._id, driverA._id);
+  assert.equal(manual.data.driver._id, driver._id);
   assert.equal(manual.data.fare, 50);
   assert.equal(
     (await request('/api/bookings/' + manual.data._id + '/cancel', manualToken, 'PATCH')).status,
     200
   );
-  assert.equal((await Bus.findById(busA._id)).availableSeats, seatsBefore - 1);
+  assert.equal((await Bus.findById(bus._id)).availableSeats, seatsBefore - 1);
 });
 
 test('consensual passenger locations reach only the assigned active driver and stop on cancellation', async () => {
-  const otherDriver = await createDriver('location.driver@integration.example', 'Other Route Driver');
+  const { bus, driver, driverToken, fixtureId, passengerToken: routeFirstPassengerToken, route: fixtureRoute } = requireRouteFirstContext();
+  const otherDriver = await createDriver(`location-driver-${fixtureId}@integration.example`, 'Other Route Driver');
   const otherIdentity = await login(otherDriver.email);
   const otherRouteResponse = await request('/api/routes', adminToken, 'POST', {
-    routeName: 'Other Location Route',
+    routeName: `Other Location Route ${fixtureId}`,
     startPoint: 'Other Start',
     endPoint: 'Other End',
   });
@@ -635,7 +682,7 @@ test('consensual passenger locations reach only the assigned active driver and s
     201
   );
   const otherBusResponse = await request('/api/buses', adminToken, 'POST', {
-    busNumber: 'LOCATION-OTHER',
+    busNumber: `LOCATION-OTHER-${fixtureId}`,
     route: otherRoute._id,
     capacity: 20,
     driver: otherDriver._id,
@@ -648,7 +695,7 @@ test('consensual passenger locations reach only the assigned active driver and s
 
   const passengerIdentity = await request('/api/auth/register', null, 'POST', {
     name: 'Location Passenger',
-    email: 'location.passenger@integration.example',
+    email: `location-passenger-${fixtureId}@integration.example`,
     password,
   });
   assert.equal(passengerIdentity.status, 201);
@@ -665,11 +712,11 @@ test('consensual passenger locations reach only the assigned active driver and s
       socket.once('connect_error', reject);
     });
     const subscription = await new Promise((resolve) => {
-      socket.emit('watchDriverBookings', { token: driverTokenA }, resolve);
+      socket.emit('watchDriverBookings', { token: driverToken }, resolve);
     });
     assert.equal(subscription.ok, true);
-    assert.equal(subscription.busId, busA._id);
-    assert.ok(io.sockets.adapter.rooms.has('driver:' + driverA._id));
+    assert.equal(subscription.busId, bus._id);
+    assert.ok(io.sockets.adapter.rooms.has('driver:' + driver._id));
 
     const initialEventPromise = new Promise((resolve, reject) => {
       const timeout = setTimeout(() => reject(new Error('Initial passenger location was not delivered')), 60000);
@@ -679,7 +726,7 @@ test('consensual passenger locations reach only the assigned active driver and s
       });
     });
     const booking = await request('/api/bookings', passengerToken, 'POST', {
-      routeId: route._id,
+      routeId: fixtureRoute._id,
       seatNumber: 'LOC-1',
       pickupLocation: {
         latitude: 31.418,
@@ -697,7 +744,7 @@ test('consensual passenger locations reach only the assigned active driver and s
 
     const assignedLocations = await request(
       '/api/bookings/assigned/passenger-locations',
-      driverTokenA
+      driverToken
     );
     assert.equal(assignedLocations.status, 200);
     assert.equal(
@@ -705,7 +752,7 @@ test('consensual passenger locations reach only the assigned active driver and s
       true
     );
     assert.equal(
-      (await request('/api/bookings/assigned/passenger-locations', commuterToken)).status,
+      (await request('/api/bookings/assigned/passenger-locations', routeFirstPassengerToken)).status,
       403
     );
     const unrelatedLocations = await request(
@@ -717,7 +764,7 @@ test('consensual passenger locations reach only the assigned active driver and s
 
     const unauthorizedUpdate = await request(
       '/api/bookings/' + booking.data._id + '/location',
-      commuterToken,
+      routeFirstPassengerToken,
       'PATCH',
       { shareLocation: false }
     );
@@ -771,7 +818,7 @@ test('consensual passenger locations reach only the assigned active driver and s
 
     const locationsAfterCancel = await request(
       '/api/bookings/assigned/passenger-locations',
-      driverTokenA
+      driverToken
     );
     assert.equal(locationsAfterCancel.status, 200);
     assert.equal(
@@ -785,6 +832,7 @@ test('consensual passenger locations reach only the assigned active driver and s
 });
 
 test('signed payment notifications verify success/failure and release failed bookings', async () => {
+  const { bus, fixtureId, route: fixtureRoute } = requireRouteFirstContext();
   const successNotification = {
     paymentReference: routeFirstBooking.paymentReference,
     status: 'paid',
@@ -805,19 +853,19 @@ test('signed payment notifications verify success/failure and release failed boo
 
   const failureIdentity = await request('/api/auth/register', null, 'POST', {
     name: 'Failed Payment Passenger',
-    email: 'failed.payment@integration.example',
+    email: `failed.payment-${fixtureId}@integration.example`,
     password,
   });
   assert.equal(failureIdentity.status, 201);
-  const seatsBefore = (await Bus.findById(busA._id)).availableSeats;
+  const seatsBefore = (await Bus.findById(bus._id)).availableSeats;
   const pending = await request('/api/bookings', failureIdentity.data.token, 'POST', {
-    routeId: route._id,
+    routeId: fixtureRoute._id,
     seatNumber: 'PAY-FAIL',
     paymentMethod: 'online',
   });
   assert.equal(pending.status, 201);
   assert.equal(pending.data.paymentStatus, 'pending');
-  assert.equal((await Bus.findById(busA._id)).availableSeats, seatsBefore - 1);
+  assert.equal((await Bus.findById(bus._id)).availableSeats, seatsBefore - 1);
 
   const failureNotification = {
     paymentReference: pending.data.paymentReference,
@@ -847,16 +895,17 @@ test('signed payment notifications verify success/failure and release failed boo
   assert.equal(failed.status, 200);
   assert.equal(failed.data.booking.paymentStatus, 'failed');
   assert.equal(failed.data.booking.status, 'cancelled');
-  assert.equal((await Bus.findById(busA._id)).availableSeats, seatsBefore);
+  assert.equal((await Bus.findById(bus._id)).availableSeats, seatsBefore);
 });
 test('ending a shift is atomic, disables GPS and preserves completed history', async () => {
+  const { bus, driver, driverToken, passengerToken } = requireRouteFirstContext();
   const endpoint = '/api/buses/assigned/end-shift';
   assert.equal((await request(endpoint, null, 'POST')).status, 401);
-  assert.equal((await request(endpoint, commuterToken, 'POST')).status, 403);
+  assert.equal((await request(endpoint, passengerToken, 'POST')).status, 403);
   assert.equal((await request(endpoint, adminToken, 'POST')).status, 403);
   const sharedBeforeEnd = await request(
     '/api/bookings/' + routeFirstBooking._id + '/location',
-    commuterToken,
+    passengerToken,
     'PATCH',
     {
       shareLocation: true,
@@ -873,10 +922,10 @@ test('ending a shift is atomic, disables GPS and preserves completed history', a
 
   const socket = createSocket(baseUrl, { transports: ['websocket'], reconnection: false, timeout: 5000 });
   await new Promise((resolve, reject) => { socket.once('connect', resolve); socket.once('connect_error', reject); });
-  socket.emit('watchBus', busA._id);
-  for (let n = 0; n < 100 && !io.sockets.adapter.rooms.has('bus:' + busA._id); n++) await delay(25);
+  socket.emit('watchBus', bus._id);
+  for (let n = 0; n < 100 && !io.sockets.adapter.rooms.has('bus:' + bus._id); n++) await delay(25);
   const driverSubscription = await new Promise((resolve) => {
-    socket.emit('watchDriverBookings', { token: driverTokenA }, resolve);
+    socket.emit('watchDriverBookings', { token: driverToken }, resolve);
   });
   assert.equal(driverSubscription.ok, true);
   const accessEnded = new Promise((resolve, reject) => {
@@ -892,8 +941,8 @@ test('ending a shift is atomic, disables GPS and preserves completed history', a
   });
 
   const attempts = await Promise.all([
-    request(endpoint, driverTokenA, 'POST'),
-    request(endpoint, driverTokenA, 'POST'),
+    request(endpoint, driverToken, 'POST'),
+    request(endpoint, driverToken, 'POST'),
   ]);
   assert.deepEqual(attempts.map((result) => result.status).sort(), [200, 409]);
   const success = attempts.find((result) => result.status === 200).data;
@@ -903,28 +952,28 @@ test('ending a shift is atomic, disables GPS and preserves completed history', a
   assert.equal(success.shift.bus.status, 'idle');
 
   const endEvent = await statusEvent;
-  assert.equal(endEvent.busId, busA._id);
+  assert.equal(endEvent.busId, bus._id);
   assert.equal(endEvent.status, 'idle');
   const accessEndEvent = await accessEnded;
   assert.equal(accessEndEvent.reason, 'shift-ended');
-  for (let n = 0; n < 100 && io.sockets.adapter.rooms.has('driver:' + driverA._id); n++) await delay(25);
-  assert.equal(io.sockets.adapter.rooms.has('driver:' + driverA._id), false);
+  for (let n = 0; n < 100 && io.sockets.adapter.rooms.has('driver:' + driver._id); n++) await delay(25);
+  assert.equal(io.sockets.adapter.rooms.has('driver:' + driver._id), false);
 
   const savedShift = await Shift.findById(success.shift._id);
   assert.equal(savedShift.status, 'completed');
   assert.ok(savedShift.endedAt);
-  assert.equal(await Shift.countDocuments({ driver: driverA._id }), 1);
-  assert.equal((await Bus.findById(busA._id)).status, 'idle');
+  assert.equal(await Shift.countDocuments({ driver: driver._id }), 1);
+  assert.equal((await Bus.findById(bus._id)).status, 'idle');
   assert.equal((await Booking.findById(routeFirstBooking._id)).locationSharingActive, false);
-  assert.equal((await profile(driverTokenA)).activeShift, null);
+  assert.equal((await profile(driverToken)).activeShift, null);
   const commuterFleet = await request('/api/buses');
   assert.equal(commuterFleet.status, 200);
-  const endedBus = commuterFleet.data.find((bus) => bus._id === busA._id);
+  const endedBus = commuterFleet.data.find((item) => item._id === bus._id);
   assert.equal(endedBus.status, 'idle');
 
-  const rejectedLocation = await request('/api/buses/' + busA._id + '/location', driverTokenA, 'PATCH', { latitude: 31.42, longitude: 73.082 });
+  const rejectedLocation = await request('/api/buses/' + bus._id + '/location', driverToken, 'PATCH', { latitude: 31.42, longitude: 73.082 });
   assert.equal(rejectedLocation.status, 409);
-  const duplicateEnd = await request(endpoint, driverTokenA, 'POST');
+  const duplicateEnd = await request(endpoint, driverToken, 'POST');
   assert.equal(duplicateEnd.status, 409);
   assert.equal(duplicateEnd.data.message, 'No active shift found.');
 
