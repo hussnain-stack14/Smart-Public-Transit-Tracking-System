@@ -204,18 +204,28 @@ export function PwaSupport() {
   useEffect(() => {
     if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator) || !navigator.onLine) return undefined;
     let cancelled = false;
+    let idleHandle;
+    const schedule = window.requestIdleCallback
+      ? (callback) => window.requestIdleCallback(callback, { timeout: 4000 })
+      : (callback) => window.setTimeout(callback, 1200);
+    const cancel = window.cancelIdleCallback
+      ? (handle) => window.cancelIdleCallback(handle)
+      : (handle) => window.clearTimeout(handle);
     navigator.serviceWorker.ready.then(() => {
       if (cancelled) return;
-      const appDocuments = ["/", "/routes", "/live-map"];
-      const loadedAssets = performance.getEntriesByType("resource")
-        .map((entry) => entry.name)
-        .filter((name) => name.startsWith(window.location.origin + "/_next/static/"))
-        .slice(0, 80);
-      // Fetch through the active worker so the current shell's chunks and the
-      // three essential public documents are available after a cold restart.
-      Promise.all([...appDocuments, ...loadedAssets].map((resource) => fetch(resource, { headers: resource.startsWith("/") ? { Accept: "text/html" } : undefined }).catch(() => null)));
+      idleHandle = schedule(() => {
+        if (cancelled) return;
+        const appDocuments = ["/", "/routes", "/live-map"];
+        const loadedAssets = performance.getEntriesByType("resource")
+          .map((entry) => entry.name)
+          .filter((name) => name.startsWith(window.location.origin + "/_next/static/"))
+          .slice(0, 40);
+        // Warm the offline shell only after the current page is interactive so
+        // its network work never competes with a cold app launch.
+        Promise.all([...appDocuments, ...loadedAssets].map((resource) => fetch(resource, { headers: resource.startsWith("/") ? { Accept: "text/html" } : undefined }).catch(() => null)));
+      });
     });
-    return () => { cancelled = true; };
+    return () => { cancelled = true; if (idleHandle != null) cancel(idleHandle); };
   }, []);
 
   useEffect(() => {

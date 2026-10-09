@@ -1,5 +1,6 @@
 "use client";
 
+import "leaflet/dist/leaflet.css";
 import { MapContainer as LeafletMap, TileLayer } from "react-leaflet";
 import { useEffect } from "react";
 import { useMap } from "react-leaflet";

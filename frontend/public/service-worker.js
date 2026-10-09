@@ -1,7 +1,7 @@
 /* Public shell and public transit snapshots only. Private sessions, bookings,
    live sockets, map tiles, and mutations are deliberately never cached. */
-const SHELL_CACHE = "smart-safar-shell-v8";
-const TRANSIT_CACHE = "smart-safar-transit-v6";
+const SHELL_CACHE = "smart-safar-shell-v9";
+const TRANSIT_CACHE = "smart-safar-transit-v7";
 const STATIC_ASSETS = [
   "/",
   "/routes",
@@ -45,10 +45,9 @@ function isStaticAsset(url) {
 }
 
 function isTransitSnapshot(url) {
-  // Only stable public reference data is safe to serve offline. In
-  // particular, never cache ETA, seats, bookings, alerts, or auth state.
+  // Only stable public reference data is safe to serve from cache. Live bus
+  // positions, ETAs, seats, bookings, alerts, and auth state stay network-only.
   return url.pathname === "/api/routes"
-    || url.pathname === "/api/buses"
     || /^\/api\/stops\/route\/[^/]+$/.test(url.pathname);
 }
 
@@ -57,40 +56,20 @@ function normalizedCacheRequest(request) {
   return new Request(url.origin + url.pathname + url.search, { method: "GET" });
 }
 
-async function networkFirstShell(request) {
+async function cacheFirst(request, cacheName, fallback) {
   const cacheKey = normalizedCacheRequest(request);
-  try {
-    const response = await fetch(request);
-    if (response?.ok) (await caches.open(SHELL_CACHE)).put(cacheKey, response.clone());
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(cacheKey);
+  const refresh = fetch(request).then((response) => {
+    if (response?.ok && response.type !== "opaque") cache.put(cacheKey, response.clone());
     return response;
-  } catch {
-    const cache = await caches.open(SHELL_CACHE);
-    return (await cache.match(cacheKey)) || (await caches.match("/")) || (await caches.match("/offline.html"));
+  });
+  if (cached) {
+    // Revalidate quietly; a cold offline launch never waits on a connection.
+    refresh.catch(() => null);
+    return cached;
   }
-}
-
-async function networkFirstFlight(request) {
-  const cacheKey = normalizedCacheRequest(request);
-  try {
-    const response = await fetch(request);
-    if (response?.ok) (await caches.open(SHELL_CACHE)).put(cacheKey, response.clone());
-    return response;
-  } catch {
-    return (await caches.open(SHELL_CACHE).then((cache) => cache.match(cacheKey)))
-      || new Response("", { status: 503, statusText: "Offline" });
-  }
-}
-
-async function networkFirstTransit(request) {
-  const cacheKey = normalizedCacheRequest(request);
-  try {
-    const response = await fetch(request);
-    if (response?.ok && response.type !== "opaque") (await caches.open(TRANSIT_CACHE)).put(cacheKey, response.clone());
-    return response;
-  } catch {
-    const cached = await caches.open(TRANSIT_CACHE).then((cache) => cache.match(cacheKey));
-    return cached || new Response("Transit data is unavailable offline.", { status: 503, statusText: "Offline" });
-  }
+  return refresh.catch(async () => fallback || (await caches.match("/offline.html")) || new Response("Offline", { status: 503, statusText: "Offline" }));
 }
 
 self.addEventListener("fetch", (event) => {
@@ -99,16 +78,16 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
 
   if (isTransitSnapshot(url)) {
-    event.respondWith(networkFirstTransit(request));
+    event.respondWith(cacheFirst(request, TRANSIT_CACHE, new Response("Transit data is unavailable offline.", { status: 503, statusText: "Offline" })));
     return;
   }
   if (isFlightRequest(request, url)) {
-    if (isPublicPage(url)) event.respondWith(networkFirstFlight(request));
+    if (isPublicPage(url)) event.respondWith(cacheFirst(request, SHELL_CACHE, new Response("", { status: 503, statusText: "Offline" })));
     return;
   }
   const acceptsHtml = request.headers.get("accept")?.includes("text/html");
   if ((request.mode === "navigate" || acceptsHtml) && url.origin === self.location.origin) {
-    event.respondWith(isPublicPage(url) ? networkFirstShell(request) : fetch(request).catch(() => caches.match("/offline.html")));
+    event.respondWith(isPublicPage(url) ? cacheFirst(request, SHELL_CACHE) : fetch(request).catch(() => caches.match("/offline.html")));
     return;
   }
   if (isStaticAsset(url)) event.respondWith(caches.match(request).then((cached) => cached || fetch(request).then((response) => {

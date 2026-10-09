@@ -13,7 +13,6 @@ import { routeService } from "../../services/routeService";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { BrandMark } from "../common/BrandMark";
 import { PwaInstallAction } from "../pwa/PwaInstallAction";
-import { useSocket } from "../../hooks/useSocket";
 
 const commuter = [
   { href: "/", label: "Home", icon: House },
@@ -104,9 +103,6 @@ function Navigation({ items, pathname, activeHash, onNavigate, onMore, moreOpen 
 }
 
 export function AppExperience({ children }) {
-  // The singleton socket stays mounted while navigating, so Live Map can
-  // re-use it instead of creating a connection on every visit.
-  useSocket();
   const { token } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
@@ -130,7 +126,15 @@ export function AppExperience({ children }) {
   useEffect(() => {
     if (!token) return;
     let active = true;
-    getProfile().then(user => { if (active) { const nextOwner = user?._id || user?.id || user?.email || ""; if (notificationOwnerRef.current !== nextOwner) { notificationOwnerRef.current = nextOwner; setNotifications({ status: "idle", items: [] }); } setProfile({ token, user, error: "" }); } }).catch(async (error) => {
+    let freshProfileApplied = false;
+    // A token-scoped IndexedDB snapshot can restore the shell while the
+    // authoritative profile refresh runs. It never grants access on its own:
+    // protected mutations remain authenticated by the backend.
+    getCachedProfile(token).then((cachedUser) => {
+      if (active && cachedUser && !freshProfileApplied) setProfile({ token, user: cachedUser, error: "", offline: true });
+    });
+    getProfile().then(user => { freshProfileApplied = true; if (active) { const nextOwner = user?._id || user?.id || user?.email || ""; if (notificationOwnerRef.current !== nextOwner) { notificationOwnerRef.current = nextOwner; setNotifications({ status: "idle", items: [] }); } setProfile({ token, user, error: "" }); } }).catch(async (error) => {
+      freshProfileApplied = true;
       if (!active) return;
       if (![401, 403].includes(error.response?.status) && typeof navigator !== "undefined" && !navigator.onLine) {
         const cachedUser = await getCachedProfile(token);
